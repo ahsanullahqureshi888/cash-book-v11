@@ -13,24 +13,26 @@ import {
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Printer, RotateCcw } from 'lucide-react';
 
-export default function Sidebar({ activeView, setView, mobileOpen, setMobileOpen, companyName, isCollapsed, setIsCollapsed, currentUser }) {
+export default function Sidebar({ activeView, setView, mobileOpen, setMobileOpen, companyName, isCollapsed, setIsCollapsed, currentUser, onPrint, onBackup, onRestore }) {
+  const { t } = useTranslation();
   const userRole = currentUser?.role || 'Viewer';
   const isSuperOrAdmin = userRole === 'Super Administrator' || userRole === 'Administrator';
 
   const allItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'cashbook', label: 'Cash Book', icon: ReceiptText },
-    { id: 'ledger', label: 'Ledger', icon: ClipboardList },
-    { id: 'accounts', label: 'Accounts', icon: Users, roles: ['Super Administrator', 'Administrator', 'Manager'] },
-    { id: 'salary', label: 'Employees & Salary', icon: UserRoundCog, roles: ['Super Administrator', 'Administrator'] },
-    { id: 'reports', label: 'Reports', icon: BarChart3, roles: ['Super Administrator', 'Administrator', 'Manager', 'Accountant'] },
-    { id: 'converter', label: 'Converter', icon: Calculator },
+    { id: 'dashboard', label: t('Dashboard'), icon: LayoutDashboard },
+    { id: 'cashbook', label: t('Cash Book'), icon: ReceiptText },
+    { id: 'ledger', label: t('Ledger'), icon: ClipboardList },
+    { id: 'accounts', label: t('Accounts'), icon: Users, roles: ['Super Administrator', 'Administrator', 'Manager'] },
+    { id: 'salary', label: t('Employees & Salary'), icon: UserRoundCog, roles: ['Super Administrator', 'Administrator'] },
+    { id: 'reports', label: t('Reports'), icon: BarChart3, roles: ['Super Administrator', 'Administrator', 'Manager', 'Accountant'] },
+    { id: 'converter', label: t('Converter'), icon: Calculator },
   ];
 
   const systemItems = [
-    { id: 'backup', label: 'Backup', icon: DatabaseBackup, roles: ['Super Administrator', 'Administrator'] },
-    { id: 'settings', label: 'Settings', icon: Settings, roles: ['Super Administrator', 'Administrator'] }
+    { id: 'settings', label: t('Settings'), icon: Settings, roles: ['Super Administrator', 'Administrator'] }
   ];
 
   const hasAccess = (item) => {
@@ -91,8 +93,8 @@ export default function Sidebar({ activeView, setView, mobileOpen, setMobileOpen
             <img src="/logo192.png" alt="Cashbook Logo" className="brand-logo" style={{ width: isCollapsed ? '32px' : '40px', height: isCollapsed ? '32px' : '40px', transition: 'all 0.2s' }} />
             {!isCollapsed && (
               <div className="brand-text" style={{ overflow: 'hidden' }}>
-                <h1 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Cashbook</h1>
-                <p style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{companyName || 'All Companies'}</p>
+                <h1 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t('Cashbook')}</h1>
+                <p style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{companyName || t('All Companies')}</p>
               </div>
             )}
             <button className="collapse-btn hidden md:flex" onClick={() => setIsCollapsed(!isCollapsed)} style={{ marginLeft: isCollapsed ? '0' : 'auto', background: 'transparent', color: 'var(--text-soft)', padding: '4px', borderRadius: '8px' }}>
@@ -126,26 +128,61 @@ export default function Sidebar({ activeView, setView, mobileOpen, setMobileOpen
           </nav>
 
           {/* 3. Compact Bottom User/System Area */}
-          {bottomItems.length > 0 && (
-            <div className="system-links" style={{ flexShrink: 0, padding: '16px 18px', borderTop: '1px solid var(--border-muted)', display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--surface-soft)' }}>
-              {bottomItems.map(({ id, label, icon: Icon }) => {
-                const active = activeView === id;
-                return (
-                  <button
-                    key={id}
-                    className={`nav-btn ${active ? 'active' : ''}`}
-                    onClick={() => navigate(id)}
-                    aria-label={label}
-                    style={!active ? { color: 'var(--text-soft)' } : {}}
-                    title={isCollapsed ? label : undefined}
-                  >
-                    <SidebarIcon icon={Icon} size={20} active={active} />
-                    {!isCollapsed && <span style={{ whiteSpace: 'nowrap' }}>{label}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <div className="system-links" style={{ flexShrink: 0, padding: '16px 18px', borderTop: '1px solid var(--border-muted)', display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--surface-soft)' }}>
+            {/* Quick Tools */}
+            {!isCollapsed && <h3 className="eyebrow" style={{ paddingLeft: '8px', marginBottom: '4px' }}>{t('QUICK TOOLS')}</h3>}
+            <button
+              className="nav-btn"
+              onClick={onPrint}
+              aria-label={t('Print Preview')}
+              title={isCollapsed ? t('Print Preview') : undefined}
+              style={{ color: 'var(--text-soft)' }}
+            >
+              <SidebarIcon icon={Printer} size={20} />
+              {!isCollapsed && <span style={{ whiteSpace: 'nowrap' }}>{t('Print Preview')}</span>}
+            </button>
+            {isSuperOrAdmin && (
+              <>
+                <button
+                  className="nav-btn"
+                  onClick={onBackup}
+                  aria-label={t('Backup')}
+                  title={isCollapsed ? t('Backup') : undefined}
+                  style={{ color: 'var(--text-soft)' }}
+                >
+                  <SidebarIcon icon={DatabaseBackup} size={20} />
+                  {!isCollapsed && <span style={{ whiteSpace: 'nowrap' }}>{t('Backup')}</span>}
+                </button>
+                <button
+                  className="nav-btn"
+                  onClick={onRestore}
+                  aria-label={t('Restore')}
+                  title={isCollapsed ? t('Restore') : undefined}
+                  style={{ color: 'var(--text-soft)' }}
+                >
+                  <SidebarIcon icon={RotateCcw} size={20} />
+                  {!isCollapsed && <span style={{ whiteSpace: 'nowrap' }}>{t('Restore')}</span>}
+                </button>
+              </>
+            )}
+
+            {bottomItems.length > 0 && bottomItems.map(({ id, label, icon: Icon }) => {
+              const active = activeView === id;
+              return (
+                <button
+                  key={id}
+                  className={`nav-btn ${active ? 'active' : ''}`}
+                  onClick={() => navigate(id)}
+                  aria-label={label}
+                  style={!active ? { color: 'var(--text-soft)', marginTop: '8px' } : { marginTop: '8px' }}
+                  title={isCollapsed ? label : undefined}
+                >
+                  <SidebarIcon icon={Icon} size={20} active={active} />
+                  {!isCollapsed && <span style={{ whiteSpace: 'nowrap' }}>{label}</span>}
+                </button>
+              );
+            })}
+          </div>
           
         </div>
       </aside>

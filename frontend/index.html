@@ -9,6 +9,15 @@
     <link rel="manifest" href="/manifest.json" />
   </head>
   <body>
+    <div id="error-log" style="color:red; background:white; position:fixed; top:0; left:0; z-index:9999; padding: 10px;"></div>
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        document.getElementById('error-log').innerHTML += '<p>' + message + '</p>';
+      };
+      window.addEventListener('unhandledrejection', function(event) {
+        document.getElementById('error-log').innerHTML += '<p>' + event.reason + '</p>';
+      });
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

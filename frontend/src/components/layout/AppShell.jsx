@@ -10,6 +10,8 @@ export default function AppShell({
   title, 
   onThemeToggle, 
   onPrint, 
+  onBackup,
+  onRestore,
   currentUser, 
   onLogout, 
   companyLogo, 
@@ -31,6 +33,8 @@ export default function AppShell({
         companyName={companyName}
         currentUser={currentUser}
         onPrint={onPrint}
+        onBackup={onBackup}
+        onRestore={onRestore}
       />
       <div className="app-main">
         <TopHeader 

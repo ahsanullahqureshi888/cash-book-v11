@@ -1219,6 +1219,8 @@ export default function App() {
           theme={theme}
           onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           onPrint={onPrint}
+          onBackup={onBackup}
+          onRestore={onImportClick}
           currentUser={currentUser}
           onLogout={onLogout}
           onSearchClick={() => setSearchOpen(true)}
