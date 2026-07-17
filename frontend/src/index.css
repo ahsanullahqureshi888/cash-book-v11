@@ -118,10 +118,8 @@ button {
 .sidebar-inner {
   display: flex;
   flex-direction: column;
-  padding: 24px 18px;
-  gap: 24px;
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 body.light .app-sidebar { 

@@ -29,6 +29,8 @@ export default function AppShell({
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
         companyName={companyName}
+        currentUser={currentUser}
+        onPrint={onPrint}
       />
       <div className="app-main">
         <TopHeader 
