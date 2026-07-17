@@ -1,7 +1,6 @@
 import { lazy, startTransition, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
-import Sidebar from './components/Sidebar';
-import Topbar from './components/Topbar';
+import AppShell from './components/layout/AppShell';
 import ReceiptModal from './components/ReceiptModal';
 import ConfirmDialog from './components/ConfirmDialog';
 import ToastNotification from './components/ToastNotification';
@@ -116,11 +115,11 @@ export default function App() {
     const safeLang = ['English', 'Dari', 'Pashto'].includes(lang) ? lang : 'English';
     const dict = appTranslations[safeLang];
     if (dict && Object.prototype.hasOwnProperty.call(dict, key)) {
-      return dict[key];
+      return Reflect.get(dict, key);
     }
     const defaultDict = appTranslations['English'];
     if (defaultDict && Object.prototype.hasOwnProperty.call(defaultDict, key)) {
-      return defaultDict[key];
+      return Reflect.get(defaultDict, key);
     }
     return key;
   };
@@ -1204,28 +1203,28 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell relative overflow-hidden ${theme}`}>
+    <div className={`app-root relative overflow-hidden ${theme}`}>
       {/* Background Spheres for macOS Glassmorphism */}
       <div className="fixed top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-emerald-500/20 blur-[120px] pointer-events-none z-0" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-indigo-500/20 blur-[120px] pointer-events-none z-0" />
       <div className="fixed top-[30%] left-[50%] w-[30vw] h-[30vw] rounded-full bg-violet-500/15 blur-[120px] pointer-events-none z-0" />
       
-      <div className="relative z-10 flex w-full h-full">
-        <Sidebar activeView={activeView} setView={setActiveView} onPrint={onPrint} onBackup={onBackup} onRestore={onImportClick} />
-        <main className="main-panel w-full">
-        <Topbar
+      <div className="relative z-10 w-full h-full">
+        <AppShell
+          activeView={activeView}
+          setView={setActiveView}
+          companyName={companyName}
+          companyLogo={companyLogo}
           title={activeView === 'cashbook' ? 'Cash Book' : activeView === 'salary' ? 'Employees & Salary' : activeView.charAt(0).toUpperCase() + activeView.slice(1)}
+          theme={theme}
           onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           onPrint={onPrint}
           currentUser={currentUser}
           onLogout={onLogout}
-          companyName={companyName}
-          companyLogo={companyLogo}
-          theme={theme}
           onSearchClick={() => setSearchOpen(true)}
-        />
+        >
         <Suspense fallback={<div className="loading-strip">{t('Loading workspace...')}</div>}>
-        <div>
+          <>
           {isLoading && <div className="loading-strip">{t('Loading latest cash book data...')}</div>}
           {pageError && <div className="error-banner">{pageError}</div>}
           {activeView === 'dashboard' && (
@@ -1246,6 +1245,8 @@ export default function App() {
           )}
           {activeView === 'cashbook' && (
             <CashBook
+              summary={summary}
+              transactions={transactions}
               search={cashSearch}
               setSearch={setCashSearch}
               startDate={cashStartDate}
@@ -1516,9 +1517,9 @@ export default function App() {
               lastBackup={lastBackupAt || 'Never'}
             />
           )}
-        </div>
+          </>
         </Suspense>
-      </main>
+        </AppShell>
       <ReceiptModal transaction={receipt} companyName={companyName} dateDisplayFormat={dateDisplayFormat} onClose={() => setReceipt(null)} onPrint={printReceipt} />
       {printPreviewOpen && <Suspense fallback={<div className="loading-strip">{t('Loading print studio...')}</div>}><GlassPrintPreview
         open={printPreviewOpen}

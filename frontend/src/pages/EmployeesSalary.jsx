@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 import { currency, csvCell, dateLabel } from '../utils/format';
 import { employeeSalarySnapshot } from '../utils/payroll';
+import BaseModal from '../components/BaseModal';
+import SideDrawer from '../components/SideDrawer';
 
 function escapeHtml(str) {
   if (typeof str !== 'string') return String(str ?? '');
@@ -335,37 +337,66 @@ export default function EmployeesSalary({
               <div className="salary-progress"><span style={{ width: summary.total_monthly_salary ? `${Math.min((summary.total_paid_this_month / summary.total_monthly_salary) * 100, 100)}%` : '0%' }} /></div>
               <p className="salary-muted">{t('payroll.paymentsNote')}</p>
             </article>
-            <EmployeeList employees={employees} transactions={transactions} reportRows={report?.rows} onPay={(row) => { setActiveTab('Reports'); setPayingRow(row); }} onEditEmployee={currentUser?.role === 'Administrator' ? handleEditEmployee : null} onEditSalary={currentUser?.role === 'Administrator' ? setEditingSalaryRow : null} onDeleteEmployee={currentUser?.role === 'Administrator' ? deleteEmployee : null} onChangeAvatar={currentUser?.role === 'Administrator' ? updateEmployeeAvatar : null} deletingEmployeeId={deletingEmployeeId} uploadingAvatarId={uploadingAvatarId} />
+            <EmployeeList 
+              employees={employees} 
+              transactions={transactions} 
+              reportRows={report?.rows} 
+              onPay={(row) => { setActiveTab('Reports'); setPayingRow(row); }} 
+              onEditEmployee={currentUser?.role === 'Administrator' ? handleEditEmployee : null} 
+              onAddEmployee={currentUser?.role === 'Administrator' ? () => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees_Add'); } : null}
+              onEditSalary={currentUser?.role === 'Administrator' ? setEditingSalaryRow : null} 
+              onDeleteEmployee={currentUser?.role === 'Administrator' ? deleteEmployee : null} 
+              onChangeAvatar={currentUser?.role === 'Administrator' ? updateEmployeeAvatar : null} 
+              deletingEmployeeId={deletingEmployeeId} 
+              uploadingAvatarId={uploadingAvatarId} 
+            />
           </div>
         </>
       )}
 
-      {activeTab === 'Employees' && (
-        <div className="salary-management-grid">
-          <article className="glass-card salary-panel">
-            <div className="salary-panel-heading"><div><p className="eyebrow">{t('payroll.employeeManagement')}</p><h3>{editingEmployeeId ? t('payroll.edit') : t('payroll.addEmployee')}</h3></div></div>
-            <form id="employeeForm" className="entry-form" onSubmit={submitEmployee}>
+      {(activeTab === 'Employees' || activeTab === 'Employees_Add') && (
+        <>
+          <EmployeeList 
+            employees={employees} 
+            transactions={transactions} 
+            reportRows={report?.rows} 
+            expanded 
+            onPay={(row) => { setActiveTab('Reports'); setPayingRow(row); }} 
+            onEditEmployee={currentUser?.role === 'Administrator' ? handleEditEmployee : null} 
+            onAddEmployee={currentUser?.role === 'Administrator' ? () => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees_Add'); } : null}
+            onEditSalary={currentUser?.role === 'Administrator' ? setEditingSalaryRow : null} 
+            onDeleteEmployee={currentUser?.role === 'Administrator' ? deleteEmployee : null} 
+            onChangeAvatar={currentUser?.role === 'Administrator' ? updateEmployeeAvatar : null} 
+            deletingEmployeeId={deletingEmployeeId} 
+            uploadingAvatarId={uploadingAvatarId} 
+          />
+          <SideDrawer 
+            isOpen={editingEmployeeId !== null || activeTab === 'Employees_Add'} 
+            onClose={() => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees'); }}
+            title={editingEmployeeId ? t('payroll.edit') : t('payroll.addEmployee')}
+            width="450px"
+          >
+            <form id="employeeForm" className="entry-form" onSubmit={submitEmployee} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <input name="fullName" value={employeeForm.full_name} onChange={(event) => setEmployeeForm({ ...employeeForm, full_name: event.target.value })} placeholder="Full Name" required />
               <input name="fatherName" value={employeeForm.father_name} onChange={(event) => setEmployeeForm({ ...employeeForm, father_name: event.target.value })} placeholder="Father Name" />
               <input name="phoneNumber" value={employeeForm.phone} onChange={(event) => setEmployeeForm({ ...employeeForm, phone: event.target.value })} placeholder="Phone Number" />
               <input name="position" value={employeeForm.position} onChange={(event) => setEmployeeForm({ ...employeeForm, position: event.target.value })} placeholder="Position / Job Title" required />
               <input name="department" value={employeeForm.department} onChange={(event) => setEmployeeForm({ ...employeeForm, department: event.target.value })} placeholder="Department" />
-              <label className="salary-month-field"><span>{t('payroll.joiningDate')}</span><input name="joiningDate" type="date" value={employeeForm.joining_date} onChange={(event) => setEmployeeForm({ ...employeeForm, joining_date: event.target.value })} required /></label>
+              <label className="salary-month-field" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-soft)' }}>{t('payroll.joiningDate')}</span>
+                <input name="joiningDate" type="date" value={employeeForm.joining_date} onChange={(event) => setEmployeeForm({ ...employeeForm, joining_date: event.target.value })} required />
+              </label>
               <input name="monthlySalary" type="number" min="0" step="0.01" value={employeeForm.monthly_salary} onChange={(event) => setEmployeeForm({ ...employeeForm, monthly_salary: event.target.value })} placeholder="Monthly Salary" required />
               <select name="currency" value={employeeForm.currency} onChange={(event) => setEmployeeForm({ ...employeeForm, currency: event.target.value })}><option value="AFN">{t('payroll.afn')}</option><option value="USD">{t('payroll.usd')}</option></select>
-              <textarea name="notes" value={employeeForm.notes} onChange={(event) => setEmployeeForm({ ...employeeForm, notes: event.target.value })} placeholder="Notes" />
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button className="primary-btn" type="submit" disabled={saving}>{saving ? 'Saving...' : (editingEmployeeId ? 'Update Employee' : 'Save Employee')}</button>
-                {editingEmployeeId && (
-                  <button className="ghost-btn" type="button" onClick={() => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); }}>{t('payroll.cancel')}</button>
-                )}
+              <textarea name="notes" value={employeeForm.notes} onChange={(event) => setEmployeeForm({ ...employeeForm, notes: event.target.value })} placeholder="Notes" rows={3} />
+              <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '16px' }}>
+                <button className="primary-btn" type="submit" disabled={saving} style={{ flex: 1 }}>{saving ? 'Saving...' : (editingEmployeeId ? 'Update Employee' : 'Save Employee')}</button>
+                <button className="ghost-btn" type="button" onClick={() => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees'); }} style={{ flex: 1 }}>{t('payroll.cancel')}</button>
               </div>
             </form>
-          </article>
-          <EmployeeList employees={employees} transactions={transactions} reportRows={report?.rows} expanded onPay={(row) => { setActiveTab('Reports'); setPayingRow(row); }} onEditEmployee={currentUser?.role === 'Administrator' ? handleEditEmployee : null} onEditSalary={currentUser?.role === 'Administrator' ? setEditingSalaryRow : null} onDeleteEmployee={currentUser?.role === 'Administrator' ? deleteEmployee : null} onChangeAvatar={currentUser?.role === 'Administrator' ? updateEmployeeAvatar : null} deletingEmployeeId={deletingEmployeeId} uploadingAvatarId={uploadingAvatarId} />
-        </div>
+          </SideDrawer>
+        </>
       )}
-
       {activeTab === 'Salary Payments' && (
         <article className="glass-card salary-panel">
           <div className="salary-panel-heading"><div><p className="eyebrow">{t('payroll.paymentHistory')}</p><h3>{t('payroll.salaryCashOutRecords')}</h3></div><button className="primary-btn" type="button" onClick={() => setActiveTab('Reports')}>{t('payroll.paySalary')}</button></div>
@@ -540,9 +571,8 @@ function SalaryPaymentModal({ row, month, year, onClose, onSave }) {
   const closingCarryForward = Number((currentCarryForward - amount).toFixed(2));
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <form className="glass-card salary-pay-modal" onSubmit={submit}>
-        <div className="salary-panel-heading"><div><p className="eyebrow">{t('payroll.salaryPayment')}</p><h3>{t('payroll.paySalary')}</h3></div><button className="ghost-btn" type="button" onClick={onClose}>{t('payroll.close')}</button></div>
+    <BaseModal isOpen={true} onClose={onClose} title={t('payroll.paySalary')} maxWidth="600px">
+      <form className="salary-pay-modal" onSubmit={submit}>
         <div className="salary-pay-grid">
           <ReadOnlyMetric label="Employee name" value={row.employee_name} />
           <ReadOnlyMetric label="Base monthly salary" value={currency(row.monthly_salary)} />
@@ -560,7 +590,7 @@ function SalaryPaymentModal({ row, month, year, onClose, onSave }) {
         {error && <div className="error-banner">{error}</div>}
         <button className="primary-btn" type="submit" disabled={saving || payableLimit <= 0}>{saving ? 'Saving...' : 'Save Salary Payment'}</button>
       </form>
-    </div>
+    </BaseModal>
   );
 }
 
@@ -601,9 +631,8 @@ function EditEmployeeSalaryModal({ row, currentUser, onClose, onSave }) {
   }
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <form className="glass-card salary-pay-modal salary-edit-modal" onSubmit={submit}>
-        <div className="salary-panel-heading"><div><p className="eyebrow">{t('payroll.adminControl')}</p><h3>{t('payroll.editSalary')}</h3></div><button className="ghost-btn" type="button" onClick={onClose}>{t('payroll.close')}</button></div>
+    <BaseModal isOpen={true} onClose={onClose} title={t('payroll.editSalary')} maxWidth="600px">
+      <form className="salary-pay-modal salary-edit-modal" onSubmit={submit}>
         <div className="salary-pay-grid">
           <ReadOnlyMetric label="Employee Name" value={row.employee_name} />
           <ReadOnlyMetric label="Employee ID" value={row.employee_code} />
@@ -623,7 +652,7 @@ function EditEmployeeSalaryModal({ row, currentUser, onClose, onSave }) {
           {history.length ? history.map((change) => <div className="salary-history-item" key={change.id}><strong>{currency(change.old_salary, change.old_currency)} → {currency(change.new_salary, change.new_currency)}</strong><span>{t('payroll.effectiveFrom')}{dateLabel(change.effective_date)}</span><span>{t('payroll.reason')}{change.reason}</span><span>{t('payroll.changedByPrefix')}{change.changed_by}</span></div>) : <p className="salary-muted">{t('payroll.noPreviousChanges')}</p>}
         </div>
       </form>
-    </div>
+    </BaseModal>
   );
 }
 
@@ -759,12 +788,15 @@ function EmployeeAvatar({ employee, onChangeAvatar, uploading }) {
   );
 }
 
-function EmployeeList({ employees, transactions, reportRows = [], expanded = false, onPay, onEditSalary, onEditEmployee, onDeleteEmployee, onChangeAvatar, deletingEmployeeId, uploadingAvatarId }) {
+function EmployeeList({ employees, transactions, reportRows = [], expanded = false, onPay, onEditSalary, onEditEmployee, onAddEmployee, onDeleteEmployee, onChangeAvatar, deletingEmployeeId, uploadingAvatarId }) {
   const { t } = useTranslation();
   const rowByEmployee = new Map((reportRows || []).map((row) => [Number(row.employee_id), row]));
   return (
     <article className={`glass-card salary-panel ${expanded ? 'salary-panel-wide' : ''}`}>
-      <div className="salary-panel-heading"><div><p className="eyebrow">{t('payroll.employeeDirectory')}</p><h3>{t('payroll.salaryBalances')}</h3></div></div>
+      <div className="salary-panel-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div><p className="eyebrow">{t('payroll.employeeDirectory')}</p><h3>{t('payroll.salaryBalances')}</h3></div>
+        {onAddEmployee && <button className="primary-btn" type="button" onClick={onAddEmployee} style={{ padding: '8px 16px', fontSize: '0.9rem' }}>{t('payroll.addEmployee')}</button>}
+      </div>
       {employees.length ? <div className="salary-employee-list">{employees.map((employee) => {
         const fallback = employeeSalarySnapshot(employee, transactions);
         const row = rowByEmployee.get(Number(employee.id)) || {
@@ -802,7 +834,7 @@ function EmployeeList({ employees, transactions, reportRows = [], expanded = fal
             </div>
           </div>
         );
-      })}</div> : <EmptyState title="No employees found" body="Add an employee with a monthly salary to begin." action="Add Employee" onAction={() => {}} />}
+      })}</div> : <EmptyState title="No employees found" body="Add an employee with a monthly salary to begin." action="Add Employee" onAction={onAddEmployee || (() => {})} />}
     </article>
   );
 }

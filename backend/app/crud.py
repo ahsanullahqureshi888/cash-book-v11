@@ -359,8 +359,15 @@ def list_transactions(db: Session) -> list[models.Transaction]:
     return db.query(models.Transaction).order_by(models.Transaction.date.asc(), models.Transaction.id.asc()).all()
 
 
-def get_transaction(db: Session, transaction_id: int) -> models.Transaction | None:
-    return db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
+def get_transaction(db: Session, transaction_id: int, user: models.User | None = None) -> models.Transaction | None:
+    query = db.query(models.Transaction).filter(models.Transaction.id == transaction_id)
+    if user and user.role not in ["Administrator", "Super Admin"]:
+        if user.assigned_branch_id is not None:
+            query = query.filter(models.Transaction.branch_id == user.assigned_branch_id)
+        elif user.assigned_group_id is not None:
+            group_branch_ids = [b.id for b in db.query(models.Branch).filter(models.Branch.group_id == user.assigned_group_id).all()]
+            query = query.filter(models.Transaction.branch_id.in_(group_branch_ids))
+    return query.first()
 
 
 def _cash_to_afn(payload: schemas.TransactionBase) -> float:
@@ -625,7 +632,7 @@ def delete_transaction(db: Session, transaction: models.Transaction) -> None:
     db.commit()
 
 
-def summary(db: Session, group_id: int | None = None, branch_id: int | None = None) -> dict:
+def summary(db: Session, user: models.User | None = None, group_id: int | None = None, branch_id: int | None = None) -> dict:
     today = date.today()
     month_start = today.replace(day=1)
     next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
@@ -636,6 +643,13 @@ def summary(db: Session, group_id: int | None = None, branch_id: int | None = No
     elif group_id:
         branch_ids = [b.id for b in db.query(models.Branch).filter(models.Branch.group_id == group_id).all()]
         base_q = base_q.filter(models.Transaction.branch_id.in_(branch_ids))
+
+    if user and user.role not in ["Administrator", "Super Admin"]:
+        if user.assigned_branch_id is not None:
+            base_q = base_q.filter(models.Transaction.branch_id == user.assigned_branch_id)
+        elif user.assigned_group_id is not None:
+            group_branch_ids = [b.id for b in db.query(models.Branch).filter(models.Branch.group_id == user.assigned_group_id).all()]
+            base_q = base_q.filter(models.Transaction.branch_id.in_(group_branch_ids))
 
     cash_in_afn = _amount(base_q.with_entities(func.sum(models.Transaction.cash_in_afn)).scalar())
     cash_out_afn = _amount(base_q.with_entities(func.sum(models.Transaction.cash_out_afn)).scalar())
@@ -669,6 +683,7 @@ def summary(db: Session, group_id: int | None = None, branch_id: int | None = No
 
 def filtered_transactions(
     db: Session,
+    user: models.User | None = None,
     start_date: date | None = None,
     end_date: date | None = None,
     type: str | None = None,
@@ -680,6 +695,13 @@ def filtered_transactions(
     branch_id: int | None = None,
 ) -> list[models.Transaction]:
     query = db.query(models.Transaction)
+    if user and user.role not in ["Administrator", "Super Admin"]:
+        if user.assigned_branch_id is not None:
+            query = query.filter(models.Transaction.branch_id == user.assigned_branch_id)
+        elif user.assigned_group_id is not None:
+            group_branch_ids = [b.id for b in db.query(models.Branch).filter(models.Branch.group_id == user.assigned_group_id).all()]
+            query = query.filter(models.Transaction.branch_id.in_(group_branch_ids))
+
     if start_date:
         query = query.filter(models.Transaction.date >= start_date)
     if end_date:
@@ -1001,4 +1023,100 @@ def clear_all(db: Session) -> dict:
         "deleted_accounts": account_count,
         "deleted_employees": employee_count,
         "deleted_transactions": transaction_count,
+    }
+
+def dashboard_summary(db: Session, branch_id: int | None = None) -> dict:
+    today = date.today()
+    month_start = today.replace(day=1)
+    next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+
+    base_q = db.query(models.Transaction)
+    if branch_id:
+        base_q = base_q.filter(models.Transaction.branch_id == branch_id)
+
+    today_q = base_q.filter(models.Transaction.date == today)
+    month_q = base_q.filter(models.Transaction.date >= month_start, models.Transaction.date < next_month)
+
+    def get_sum(q, col):
+        return _amount(q.with_entities(func.sum(col)).scalar())
+
+    afn_in_today = get_sum(today_q, models.Transaction.cash_in_afn)
+    afn_out_today = get_sum(today_q, models.Transaction.cash_out_afn)
+    afn_in_month = get_sum(month_q, models.Transaction.cash_in_afn)
+    afn_out_month = get_sum(month_q, models.Transaction.cash_out_afn)
+    afn_balance = get_sum(base_q, models.Transaction.cash_in_afn) - get_sum(base_q, models.Transaction.cash_out_afn)
+
+    usd_in_today = get_sum(today_q, models.Transaction.usd_in)
+    usd_out_today = get_sum(today_q, models.Transaction.usd_out)
+    usd_in_month = get_sum(month_q, models.Transaction.usd_in)
+    usd_out_month = get_sum(month_q, models.Transaction.usd_out)
+    usd_balance = get_sum(base_q, models.Transaction.usd_in) - get_sum(base_q, models.Transaction.usd_out)
+
+    toman_balance = 0.0
+    toman_in_today = 0.0
+    toman_out_today = 0.0
+    toman_in_month = 0.0
+    toman_out_month = 0.0
+
+    entries_today = today_q.count()
+    entries_month = month_q.count()
+
+    active_accounts = db.query(models.Account).count()
+    # Handle both boolean and integer is_active representation
+    active_employees = db.query(models.Employee).filter(
+        or_(models.Employee.is_active == True, models.Employee.is_active == 1)
+    ).count()
+
+    recent_transactions = base_q.order_by(models.Transaction.id.desc()).limit(10).all()
+
+    thirty_days_ago = today - timedelta(days=30)
+    cf_rows = base_q.filter(models.Transaction.date >= thirty_days_ago).all()
+    cf_map = {}
+    for r in cf_rows:
+        d = r.date.isoformat()
+        if d not in cf_map:
+            cf_map[d] = {"date": d, "in_afn": 0, "out_afn": 0, "in_usd": 0, "out_usd": 0}
+        cf_map[d]["in_afn"] += _amount(r.cash_in_afn)
+        cf_map[d]["out_afn"] += _amount(r.cash_out_afn)
+        cf_map[d]["in_usd"] += _amount(r.usd_in)
+        cf_map[d]["out_usd"] += _amount(r.usd_out)
+    
+    cash_flow = sorted(list(cf_map.values()), key=lambda x: x["date"])
+
+    return {
+        "period": { "start": month_start.isoformat(), "end": today.isoformat() },
+        "branch": { "id": branch_id, "name": "Consolidated" if not branch_id else str(branch_id) },
+        "currencies": {
+            "AFN": { 
+                "balance": round(afn_balance, 2), 
+                "cash_in_today": round(afn_in_today, 2), 
+                "cash_out_today": round(afn_out_today, 2), 
+                "cash_in_month": round(afn_in_month, 2), 
+                "cash_out_month": round(afn_out_month, 2) 
+            },
+            "USD": { 
+                "balance": round(usd_balance, 2), 
+                "cash_in_today": round(usd_in_today, 2), 
+                "cash_out_today": round(usd_out_today, 2), 
+                "cash_in_month": round(usd_in_month, 2), 
+                "cash_out_month": round(usd_out_month, 2) 
+            },
+            "TOMAN": { 
+                "balance": round(toman_balance, 2), 
+                "cash_in_today": round(toman_in_today, 2), 
+                "cash_out_today": round(toman_out_today, 2), 
+                "cash_in_month": round(toman_in_month, 2), 
+                "cash_out_month": round(toman_out_month, 2) 
+            }
+        },
+        "totals": { 
+            "entries_today": entries_today, 
+            "entries_month": entries_month, 
+            "active_accounts": active_accounts, 
+            "active_employees": active_employees 
+        },
+        "cash_flow": cash_flow,
+        "recent_transactions": recent_transactions,
+        "account_balances": [],
+        "system_status": { "status": "operational" }
     }

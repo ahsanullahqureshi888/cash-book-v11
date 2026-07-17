@@ -159,6 +159,8 @@ def ensure_user_schema():
         ("updated_at", timestamp_type),
         ("must_change_password", boolean_type),
         ("password_changed_at", timestamp_type),
+        ("assigned_group_id", "INTEGER"),
+        ("assigned_branch_id", "INTEGER"),
     ]
 
     with engine.begin() as conn:

@@ -1,6 +1,7 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { currency } from '../utils/format';
 import DateDisplay from './DateDisplay';
+import DataTable from './DataTable';
 
 function TransactionTable({ 
   rows, 
@@ -30,126 +31,77 @@ function TransactionTable({
     return <span className="category-badge badge-other">{cat.replaceAll('_', ' ')}</span>;
   };
 
+  const columns = useMemo(() => [
+    { key: 'index', label: 'SN', render: (row, i, offset) => row.isOpeningBalance ? 'BF' : offset + i + 1, className: 'w-12 text-zinc-500 font-mono text-xs' },
+    { key: 'date', label: 'Date', render: (row) => <DateDisplay value={row.date} format={dateDisplayFormat} />, className: 'w-24 whitespace-nowrap' },
+    { key: 'transaction_no', label: 'TX No', render: (row) => <span title={row.transaction_no} className="text-zinc-500 text-xs font-mono">{row.transaction_no || '-'}</span>, className: 'w-20' },
+    { key: 'account_name', label: 'Account', render: (row) => <strong className="font-semibold text-zinc-800 dark:text-zinc-200">{row.account_name}</strong>, className: 'w-40' },
+    { key: 'detail', label: 'Detail', render: (row) => <span className="text-zinc-600 dark:text-zinc-400 text-xs">{row.detail}</span>, className: 'min-w-[150px]' },
+    { key: 'category', label: 'Category', render: (row) => renderCategoryBadge(row.category, row.isOpeningBalance), className: 'w-24' },
+    { key: 'cash_in_afn', label: 'Cash In AFN', render: (row) => <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{row.cash_in_afn ? currency(row.cash_in_afn) : '-'}</span>, className: 'w-28 text-right' },
+    { key: 'cash_out_afn', label: 'Cash Out AFN', render: (row) => <span className="font-mono text-rose-600 dark:text-rose-400 font-semibold">{row.cash_out_afn ? currency(row.cash_out_afn) : '-'}</span>, className: 'w-28 text-right' },
+    { key: 'balance', label: 'Balance', render: (row) => <span className={`font-mono font-bold ${row.runningBalance >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>{currency(row.runningBalance)}</span>, className: 'w-28 text-right' },
+    { key: 'usd_in', label: 'USD In', render: (row) => <span className="font-mono text-zinc-700 dark:text-zinc-300">{row.usd_in ? currency(row.usd_in, 'USD') : '-'}</span>, className: 'w-24 text-right' },
+    { key: 'usd_out', label: 'USD Out', render: (row) => <span className="font-mono text-zinc-700 dark:text-zinc-300">{row.usd_out ? currency(row.usd_out, 'USD') : '-'}</span>, className: 'w-24 text-right' },
+    { key: 'exchange_rate', label: 'Rate', render: (row) => <span className="text-xs font-mono text-zinc-500">{row.exchange_rate || '-'}</span>, className: 'w-20 text-right' },
+    { key: 'note', label: 'Note', render: (row) => <span className="text-xs text-zinc-500 truncate max-w-[100px] block" title={row.note}>{row.note || '-'}</span>, className: 'w-32' },
+    { 
+      key: 'actions', 
+      label: 'Actions', 
+      className: 'w-32 text-right',
+      render: (row) => row.isOpeningBalance ? (
+        <span className="text-xs text-zinc-400 italic">Opening</span>
+      ) : (
+        <div className="flex items-center justify-end gap-2">
+          <button type="button" className="text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors" onClick={() => onEdit(row)}>Edit</button>
+          <button type="button" className="text-xs font-medium text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors" onClick={() => onReceipt(row)}>Receipt</button>
+          <button type="button" className="text-xs font-medium text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 transition-colors" onClick={() => onDelete(row.id)}>Delete</button>
+        </div>
+      )
+    }
+  ], [dateDisplayFormat, onEdit, onReceipt, onDelete]);
+
+  const headerContent = (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h3 className="text-lg font-bold text-zinc-900 dark:text-white drop-shadow-sm flex items-center gap-2">
+          Live Ledger
+        </h3>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          {totalRows.toLocaleString('en-US')} {totalRows === 1 ? 'record' : 'records'}
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-zinc-500 dark:text-zinc-400 hidden md:inline-block">
+          {fullscreen ? 'Scroll horizontally to review every column' : 'Open a focused table workspace'}
+        </span>
+        <button
+          className="px-4 py-2 text-xs font-semibold rounded-lg bg-white/50 hover:bg-white dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 shadow-sm transition-all"
+          type="button"
+          onClick={onToggleFullscreen}
+        >
+          {fullscreen ? 'Exit Full Screen' : 'Full Screen'}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className={`glass-card table-card cashbook-records-card ${fullscreen ? 'table-card-fullscreen-active' : ''}`} ref={tableRef}>
-      <div className="card-header records-table-header">
-        <div className="records-table-heading">
-          <p className="eyebrow">Live Ledger</p>
-          <div className="records-table-title">
-            <h3>Cash Book Records</h3>
-            <span>{totalRows.toLocaleString('en-US')} {totalRows === 1 ? 'record' : 'records'}</span>
-          </div>
-        </div>
-        <div className="records-table-actions">
-          <span className="fullscreen-hint">{fullscreen ? 'Scroll horizontally to review every column' : 'Open a focused table workspace'}</span>
-          <button className="ghost-btn fullscreen-toggle" type="button" onClick={onToggleFullscreen}>
-            {fullscreen ? 'Exit Full Screen' : 'Full Screen'}
-          </button>
-        </div>
-      </div>
-      
-      <div className="table-wrapper">
-        <table className="accounting-table cashbook-screen-table">
-          <thead>
-            <tr>
-              <th className="col-index">SN</th>
-              <th className="col-date">Date</th>
-              <th className="col-tx">TX No</th>
-              <th className="col-account">Account</th>
-              <th className="col-detail">Detail</th>
-              <th className="col-category">Category</th>
-              <th className="col-amount">Cash In AFN</th>
-              <th className="col-amount">Cash Out AFN</th>
-              <th className="col-amount">Balance</th>
-              <th className="col-amount">USD In</th>
-              <th className="col-amount">USD Out</th>
-              <th className="col-rate">Rate</th>
-              <th className="col-note">Note</th>
-              <th className="col-actions">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              Array.from({ length: 8 }).map((_, idx) => (
-                <tr key={`skeleton-${idx}`} className="skeleton-row">
-                  <td className="col-index"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '20px' }}></div></td>
-                  <td className="col-date"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '70px' }}></div></td>
-                  <td className="col-tx"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '50px' }}></div></td>
-                  <td className="col-account"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '100px' }}></div></td>
-                  <td className="col-detail"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '120px' }}></div></td>
-                  <td className="col-category"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '60px' }}></div></td>
-                  <td className="col-amount"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '60px', marginLeft: 'auto' }}></div></td>
-                  <td className="col-amount"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '60px', marginLeft: 'auto' }}></div></td>
-                  <td className="col-amount"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '75px', marginLeft: 'auto' }}></div></td>
-                  <td className="col-amount"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '50px', marginLeft: 'auto' }}></div></td>
-                  <td className="col-amount"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '50px', marginLeft: 'auto' }}></div></td>
-                  <td className="col-rate"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '40px' }}></div></td>
-                  <td className="col-note"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '80px' }}></div></td>
-                  <td className="col-actions"><div className="skeleton-box animate-pulse" style={{ height: '16px', width: '120px' }}></div></td>
-                </tr>
-              ))
-            ) : !rows.length ? (
-              <tr>
-                <td colSpan="14">
-                  <div className="empty-state flex flex-col items-center justify-center py-12 px-4 text-center">
-                    <div className="empty-state-illustration mb-3 text-zinc-400 dark:text-zinc-600">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 mx-auto">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-                      </svg>
-                    </div>
-                    <h4 className="text-zinc-900 dark:text-zinc-100 font-semibold text-base">No records found</h4>
-                    <p className="text-zinc-500 dark:text-zinc-400 text-xs max-w-sm mt-1 mx-auto">
-                      No cash book records match the current filters. Try adjusting dates or keywords.
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              rows.map((row, index) => (
-                <tr key={row.id} dir="auto" className={row.isOpeningBalance ? 'opening-balance-row' : undefined}>
-                  <td className="col-index">{row.isOpeningBalance ? 'BF' : rowOffset + index + 1}</td>
-                  <td className="col-date"><DateDisplay value={row.date} format={dateDisplayFormat} /></td>
-                  <td className="col-tx" title={row.transaction_no}>{row.transaction_no || '-'}</td>
-                  <td className="col-account">{row.account_name}</td>
-                  <td className="col-detail">{row.detail}</td>
-                  <td className="col-category">
-                    {renderCategoryBadge(row.category, row.isOpeningBalance)}
-                  </td>
-                  <td className="money-cell col-amount balance-positive">{row.cash_in_afn ? currency(row.cash_in_afn) : '-'}</td>
-                  <td className="money-cell col-amount balance-negative">{row.cash_out_afn ? currency(row.cash_out_afn) : '-'}</td>
-                  <td className={`money-cell col-amount ${row.runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}`}>{currency(row.runningBalance)}</td>
-                  <td className="money-cell col-amount">{row.usd_in ? currency(row.usd_in, 'USD') : '-'}</td>
-                  <td className="money-cell col-amount">{row.usd_out ? currency(row.usd_out, 'USD') : '-'}</td>
-                  <td className="col-rate">{row.exchange_rate}</td>
-                  <td className="col-note">{row.note || '-'}</td>
-                  <td className="col-actions">
-                    {row.isOpeningBalance ? (
-                      <span className="muted">Opening</span>
-                    ) : (
-                      <div className="row-actions">
-                        <button className="ghost-btn table-action" onClick={() => onEdit(row)}>Edit</button>
-                        <button className="ghost-btn table-action" onClick={() => onReceipt(row)}>Receipt</button>
-                        <button className="ghost-btn table-action" onClick={() => onDelete(row.id)}>Delete</button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      
-      {totalRows > 0 && !isLoading && (
-        <div className="table-pagination" aria-label="Cash book pagination">
-          <span>{rowOffset + 1}-{Math.min(rowOffset + rows.length, totalRows)} of {totalRows.toLocaleString('en-US')}</span>
-          <div>
-            <button className="ghost-btn" type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Previous</button>
-            <strong>Page {page} of {pageCount}</strong>
-            <button className="ghost-btn" type="button" disabled={page >= pageCount} onClick={() => onPageChange(page + 1)}>Next</button>
-          </div>
-        </div>
-      )}
+    <div ref={tableRef} className={fullscreen ? 'fixed inset-4 z-50 overflow-hidden rounded-2xl shadow-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col' : ''}>
+      <DataTable
+        className={fullscreen ? 'h-full shadow-none border-none rounded-none' : ''}
+        columns={columns}
+        data={rows}
+        keyField="id"
+        isLoading={isLoading}
+        page={page}
+        pageCount={pageCount}
+        totalRows={totalRows}
+        rowOffset={rowOffset}
+        onPageChange={onPageChange}
+        headerContent={headerContent}
+        rowClassName={(row) => row.isOpeningBalance ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}
+      />
     </div>
   );
 }

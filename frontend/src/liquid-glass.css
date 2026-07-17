@@ -1,0 +1,259 @@
+/* Liquid Glass Theme Overrides */
+
+/* Global Sizing & Scroll Architecture */
+*, *::before, *::after { box-sizing: border-box !important; }
+html, body, #root { width: 100%; min-height: 100%; margin: 0; padding: 0; }
+body { overflow: hidden !important; background: var(--bg); }
+
+@media screen {
+  /* Globals */
+  .app-shell {
+    background: var(--bg) !important;
+  }
+
+  .brand, .sidebar-card, .glass-card, .topbar, .section-header, .sidebar {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-sm), var(--glass-inner-light) !important;
+    -webkit-backdrop-filter: var(--glass-blur) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    border-radius: 20px !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  }
+
+  .sidebar {
+    border-radius: 0 !important;
+  }
+
+  /* Glass Cards Hover */
+  .glass-card:hover, .stat-card:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: var(--shadow) !important;
+  }
+
+  /* Inputs & Forms */
+  .entry-form input, .entry-form select, .settings-form input, .settings-form select, .converter-form input, .converter-form select, .filters input, .filters select {
+    padding: 14px 16px !important;
+    border-radius: 14px !important;
+    border: 1px solid var(--border) !important;
+    background: var(--surface-strong) !important;
+    color: var(--text) !important;
+    transition: all 0.2s ease !important;
+    outline: none !important;
+  }
+
+  .entry-form input:focus, .entry-form select:focus, .settings-form input:focus, .settings-form select:focus, .filters input:focus, .filters select:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-focus) !important;
+    background: var(--surface-hover) !important;
+  }
+
+  /* Buttons */
+  .primary-btn { 
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%) !important; 
+    color: #fff !important; 
+    border: 1px solid rgba(255, 255, 255, 0.2) !important; 
+    box-shadow: 0 4px 15px var(--gold-glow), var(--glass-inner-light) !important; 
+  }
+
+  .primary-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+
+  .danger-btn, .primary-btn.danger { 
+    background: linear-gradient(120deg, var(--danger), #e11d48) !important; 
+    color: white !important; 
+    box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3), var(--glass-inner-light) !important; 
+  }
+
+  .ghost-btn { 
+    background: var(--surface-strong) !important; 
+    color: var(--text) !important; 
+    border: 1px solid var(--border) !important; 
+    backdrop-filter: var(--glass-blur) !important; 
+  }
+
+  .ghost-btn:hover { 
+    background: var(--surface-hover) !important; 
+  }
+
+  /* Tables */
+  .table-wrapper {
+    border: 1px solid var(--border) !important;
+    border-radius: 16px !important;
+    background: rgba(255,255,255,.02) !important;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.05) !important;
+  }
+
+  th, td {
+    padding: 14px 16px !important;
+    border-bottom: 1px solid var(--border-muted) !important;
+  }
+
+  th {
+    background: var(--surface) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    color: var(--text-soft) !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+
+  body.light th { 
+    background: var(--surface) !important; 
+  }
+
+  td { 
+    color: var(--text) !important; 
+  }
+
+  tbody tr:nth-child(even) { 
+    background: rgba(255,255,255,.015) !important; 
+  }
+  body.light tbody tr:nth-child(even) { 
+    background: rgba(0,0,0,.015) !important; 
+  }
+
+  tbody tr:hover { 
+    background: var(--surface-hover) !important; 
+  }
+
+  /* Topbar Extras */
+  .time-chip, .signed-in-user {
+    background: var(--surface-strong) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 8px 12px !important;
+    backdrop-filter: var(--glass-blur) !important;
+  }
+
+  .topbar-search-input-container {
+    background: var(--surface-strong) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    backdrop-filter: var(--glass-blur) !important;
+  }
+
+  /* Modal */
+  .modal-card {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-lg), var(--glass-inner-light) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    border-radius: 24px !important;
+  }
+
+  /* Dashboard Widgets */
+  .dashboard-overview-card, .dashboard-financial-summary {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-sm), var(--glass-inner-light) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    border-radius: 24px !important;
+  }
+
+  .financial-metric-card {
+    background: var(--surface-strong) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 16px !important;
+  }
+
+  /* Definitively reset the app shell */
+  .app-shell {
+    display: grid !important;
+    grid-template-columns: 280px minmax(0, 1fr) !important;
+    min-height: 100dvh !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .app-main {
+    min-width: 0 !important;
+    min-height: 100dvh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .app-content {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 24px !important;
+  }
+
+  /* Reset any inner containers trying to force 100vh */
+  .page-container {
+    height: auto !important;
+    min-height: auto !important;
+    margin-top: 0 !important;
+    position: relative !important;
+    width: 100% !important;
+    max-width: 1600px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* Sidebar Constraints */
+  .sidebar {
+    width: 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
+    height: 100dvh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    border-radius: 0 !important;
+    transform: none !important;
+  }
+  
+  .sidebar .nav-btn {
+    width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* Top Header Responsive Grid */
+  .top-header {
+    flex: 0 0 auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(240px, 1fr) minmax(260px, 420px) auto !important;
+    align-items: center !important;
+    gap: 16px !important;
+    padding: 16px 24px !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  @media (max-width: 1279px) {
+    .top-header {
+      grid-template-columns: 1fr auto !important;
+      grid-template-rows: auto auto !important;
+    }
+    .topbar-search-wrapper {
+      grid-column: 1 / -1 !important;
+      grid-row: 2 !important;
+    }
+  }
+
+  /* Dashboard Page Wrapper */
+  .dashboard-page {
+    width: 100% !important;
+    max-width: 1600px !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 24px !important;
+  }
+}
+
+/* Expanded & Collapsed Sidebar */
+.app-shell.sidebar-expanded .app-main { width: calc(100% - 260px); }
+.app-shell.sidebar-collapsed .app-main { width: calc(100% - 84px); }
+.sidebar { width: 260px !important; transition: width 0.3s ease; }
+.app-shell.sidebar-collapsed .sidebar { width: 84px !important; }
+

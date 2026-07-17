@@ -1,6 +1,9 @@
 import { formatApiErrorDetail } from './errorFormatting.js';
 
-export const API_BASE = import.meta.env?.PROD ? '' : (import.meta.env?.VITE_API_URL || 'http://localhost:8000');
+// We default to relative paths to utilize Vite's dev proxy and Vercel's same-origin routes.
+// We ignore hardcoded localhost URLs to prevent LAN access issues.
+const envUrl = import.meta.env?.VITE_API_URL || '';
+export const API_BASE = envUrl.includes('localhost') ? '' : envUrl;
 let authToken = localStorage.getItem('cashbook-session-token') || '';
 
 export function setAuthToken(token) {
@@ -22,8 +25,14 @@ export function setAuthToken(token) {
 async function request(path, options = {}) {
   let response;
   const isFormData = options.body instanceof FormData;
+  
+  // Add a 15-second timeout for robust frontend behavior
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  
   try {
     response = await fetch(`${API_BASE}${path}`, {
+      signal: controller.signal,
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(authToken ? { 'X-Session-Token': authToken, 'Authorization': `Bearer ${authToken}` } : {}),
@@ -32,8 +41,14 @@ async function request(path, options = {}) {
       ...options
     });
   } catch (error) {
-    throw new Error(`Backend connection failed: ${error.message}`);
+    if (error.name === 'AbortError') {
+      throw new Error('Backend connection timed out.');
+    }
+    throw new Error(`Failed to fetch from backend. Ensure the server is running.`);
+  } finally {
+    clearTimeout(timeoutId);
   }
+  
   if (!response.ok) {
     const text = await response.text();
     let message = `Server error (${response.status}): `;
@@ -45,7 +60,7 @@ async function request(path, options = {}) {
       if (text.includes('<!doctype') || text.includes('<html')) {
         message += response.statusText || 'HTML Error Page';
       } else {
-        message += text.substring(0, 200) || response.statusText;
+        message += text.substring(0, 150) || response.statusText;
       }
     }
     throw new Error(message);
@@ -61,7 +76,7 @@ async function request(path, options = {}) {
     if (responseText.includes('<!doctype') || responseText.includes('<html')) {
       throw new Error(`Server returned HTML error. Status: ${response.status}. Check backend server.`);
     }
-    throw new Error(`Failed to parse response as JSON: ${error.message}. Response: ${responseText.substring(0, 100)}`);
+    throw new Error(`Failed to parse response as JSON. Status: ${response.status}.`);
   }
 }
 

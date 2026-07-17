@@ -3,8 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
-import './dashboard-polish.css';
-import './modern-theme.css';
+import './liquid-glass.css';
 import './i18n';
 import { injectSpeedInsights } from '@vercel/speed-insights';
 

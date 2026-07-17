@@ -47,7 +47,7 @@ function BranchSelector({ selectedBranch, setSelectedBranch }) {
       <div>
         <button
           type="button"
-          className="inline-flex justify-between items-center w-64 rounded-full px-5 py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white text-xs font-semibold shadow-lg transition-all focus:outline-none"
+          className="inline-flex justify-between items-center w-64 rounded-full px-5 py-2.5 glass-card shadow-sm transition-all focus:outline-none"
           onClick={() => setIsOpen(!isOpen)}
         >
           <span className="text-zinc-800 dark:text-zinc-100">{branchMapping[selectedBranch] || 'All Branches (Consolidated)'}</span>
@@ -56,7 +56,7 @@ function BranchSelector({ selectedBranch, setSelectedBranch }) {
       </div>
 
       {isOpen && (
-        <div className="origin-top-right absolute right-0 mt-2 w-64 rounded-2xl shadow-xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/30 dark:border-zinc-700/50 focus:outline-none max-h-80 overflow-y-auto">
+        <div className="origin-top-right absolute right-0 mt-2 w-64 glass-card focus:outline-none max-h-80 overflow-y-auto">
           <div className="py-2">
             {branches.map((b, idx) => {
               if (b.type === 'header') {
@@ -94,6 +94,43 @@ function BranchSelector({ selectedBranch, setSelectedBranch }) {
   );
 }
 
+function MetricCard({ title, value, icon: Icon, color, trendData, subtext }) {
+  return (
+    <div className="glass-card p-5 flex flex-col justify-between group transition-all relative overflow-hidden" style={{ minHeight: '140px' }}>
+      <div className="flex justify-between items-start z-10 relative">
+        <div>
+          <div className="flex items-center gap-2 mb-2 text-zinc-600 dark:text-zinc-400">
+            <span className={`p-2 rounded-xl bg-${color}-500/10 text-${color}-600 dark:text-${color}-400`}>
+              <Icon size={16} />
+            </span>
+            <span className="text-xs font-semibold tracking-wider uppercase drop-shadow-sm">{title}</span>
+          </div>
+          <strong className="text-2xl font-extrabold tracking-tight tabular-nums text-zinc-900 dark:text-zinc-50 block font-mono drop-shadow-sm">
+            {value}
+          </strong>
+          {subtext && <div className="mt-2 text-[10.5px] font-semibold text-zinc-500 dark:text-zinc-400">{subtext}</div>}
+        </div>
+      </div>
+      
+      {trendData && (
+        <div className="absolute bottom-0 right-0 w-32 h-20 opacity-60 group-hover:opacity-100 transition-opacity z-0 pointer-events-none">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={trendData}>
+              <defs>
+                <linearGradient id={`color-${color}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={`var(--${color}-500, #8884d8)`} stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor={`var(--${color}-500, #8884d8)`} stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <Area type="monotone" dataKey="val" stroke={`var(--${color}-500, #8884d8)`} strokeWidth={2} fillOpacity={1} fill={`url(#color-${color})`} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ConsolidatedMetrics({ summary }) {
   const afnData = [
     { val: 12000 }, { val: 24000 }, { val: 18000 }, { val: 32000 }, 
@@ -105,73 +142,42 @@ function ConsolidatedMetrics({ summary }) {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mt-6">
-      {/* Consolidated AFN */}
-      <div className="relative overflow-hidden p-6 flex justify-between items-center group bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md border border-white/30 dark:border-zinc-800/30 shadow-lg rounded-2xl transition-shadow">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-            <span className="p-2 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"><WalletCards size={18} /></span>
-            <span className="text-xs font-semibold tracking-wider uppercase drop-shadow-sm">Consolidated AFN</span>
-          </div>
-          <strong className="text-3xl font-extrabold tracking-tight tabular-nums text-zinc-900 dark:text-zinc-50 block mt-3 font-mono drop-shadow-sm">
-            {currency(summary.afn_balance, 'AFN')}
-          </strong>
-          <div className="flex gap-4 mt-2 text-[10px] font-semibold text-zinc-600 dark:text-zinc-400">
-            <span>In: <strong className="text-emerald-600 dark:text-emerald-400">{currency(summary.cash_in_afn, 'AFN')}</strong></span>
-            <span>Out: <strong className="text-rose-600 dark:text-rose-400">{currency(summary.cash_out_afn, 'AFN')}</strong></span>
-          </div>
-        </div>
-        <div className="w-28 h-16 opacity-70 group-hover:opacity-100 transition-opacity">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={afnData}>
-              <defs>
-                <linearGradient id="colorAfn" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.5}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <Area type="monotone" dataKey="val" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorAfn)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Consolidated USD */}
-      <div className="relative overflow-hidden p-6 flex justify-between items-center group bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md border border-white/30 dark:border-zinc-800/30 shadow-lg rounded-2xl transition-shadow">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-            <span className="p-2 rounded-xl bg-indigo-500/20 text-indigo-600 dark:text-indigo-400"><WalletCards size={18} /></span>
-            <span className="text-xs font-semibold tracking-wider uppercase drop-shadow-sm">Consolidated USD</span>
-          </div>
-          <strong className="text-3xl font-extrabold tracking-tight tabular-nums text-zinc-900 dark:text-zinc-50 block mt-3 font-mono drop-shadow-sm">
-            {currency(summary.usd_balance, 'USD')}
-          </strong>
-          <div className="flex gap-4 mt-2 text-[10px] font-semibold text-zinc-600 dark:text-zinc-400">
-            <span>In: <strong className="text-indigo-600 dark:text-indigo-400">{currency(summary.usd_in, 'USD')}</strong></span>
-            <span>Out: <strong className="text-rose-600 dark:text-rose-400">{currency(summary.usd_out, 'USD')}</strong></span>
-          </div>
-        </div>
-        <div className="w-28 h-16 opacity-70 group-hover:opacity-100 transition-opacity">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={usdData}>
-              <defs>
-                <linearGradient id="colorUsd" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.5}/>
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <Area type="monotone" dataKey="val" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorUsd)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full mt-6">
+      <MetricCard 
+        title="AFN Balance" 
+        value={currency(summary.afn_balance, 'AFN')} 
+        icon={WalletCards} 
+        color="emerald" 
+        trendData={afnData}
+        subtext={<span>In: <strong className="text-emerald-600 dark:text-emerald-400">{currency(summary.cash_in_afn, 'AFN')}</strong> | Out: <strong className="text-rose-600 dark:text-rose-400">{currency(summary.cash_out_afn, 'AFN')}</strong></span>}
+      />
+      <MetricCard 
+        title="USD Balance" 
+        value={currency(summary.usd_balance, 'USD')} 
+        icon={WalletCards} 
+        color="indigo" 
+        trendData={usdData}
+        subtext={<span>In: <strong className="text-indigo-600 dark:text-indigo-400">{currency(summary.usd_in, 'USD')}</strong> | Out: <strong className="text-rose-600 dark:text-rose-400">{currency(summary.usd_out, 'USD')}</strong></span>}
+      />
+      <MetricCard 
+        title="Total Cash In (AFN)" 
+        value={currency(summary.cash_in_afn, 'AFN')} 
+        icon={ArrowDownLeft} 
+        color="emerald" 
+      />
+      <MetricCard 
+        title="Total Cash Out (AFN)" 
+        value={currency(summary.cash_out_afn, 'AFN')} 
+        icon={ArrowUpRight} 
+        color="rose" 
+      />
     </div>
   );
 }
 
 function QuickActions({ activeTransactionType, setActiveTransactionType, onNavigate, onPrint, onBackup, onRestore }) {
   return (
-    <div className="dashboard-actions-card p-6 bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md border border-white/30 dark:border-zinc-800/30 shadow-lg rounded-2xl mt-6">
+    <div className="glass-card dashboard-actions-card p-6 mt-6">
       <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 tracking-wide mb-4">Quick Actions & Controls</h3>
       <div className="flex flex-wrap items-center gap-3">
         {/* Add Cash In */}
@@ -307,7 +313,7 @@ export default function Dashboard({
   ];
 
   return (
-    <>
+    <div className="dashboard-page">
       <div className="flex flex-row items-center justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-extrabold text-zinc-900 dark:text-white drop-shadow-sm">{displayCompanyName}</h2>
@@ -316,7 +322,7 @@ export default function Dashboard({
         <BranchSelector selectedBranch={selectedBranch} setSelectedBranch={setSelectedBranch} />
       </div>
 
-      <div className="p-6 bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md border border-white/30 dark:border-zinc-800/30 shadow-lg rounded-2xl">
+      <div className="glass-card p-6">
         <div className="dashboard-overview-content flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="dashboard-company-summary flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-bold text-lg tracking-wide shadow-lg shrink-0 border border-white/20">
@@ -397,7 +403,7 @@ export default function Dashboard({
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full mt-6">
-        <div className="p-6 bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md border border-white/30 dark:border-zinc-800/30 shadow-lg rounded-2xl">
+        <div className="glass-card p-6">
           <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 tracking-wide mb-4 font-sans drop-shadow-sm">Recent Cash Book Activity</h3>
           <div className="flex flex-col gap-3">
             {!filteredTransactions.length ? (
@@ -424,11 +430,11 @@ export default function Dashboard({
           </div>
         </div>
 
-        <div className="p-6 bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md border border-white/30 dark:border-zinc-800/30 shadow-lg rounded-2xl">
+        <div className="glass-card p-6">
           <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 tracking-wide mb-4 font-sans drop-shadow-sm">Chronological Cash Flow</h3>
           <SimpleCashChart transactions={filteredTransactions} />
         </div>
       </div>
-    </>
+    </div>
   );
 }

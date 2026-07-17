@@ -16,8 +16,9 @@ import {
   WalletCards
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
-export default function Sidebar({ activeView, setView, onPrint, onBackup, onRestore }) {
+export default function Sidebar({ activeView, setView, onPrint, onBackup, onRestore, mobileOpen, setMobileOpen, isCollapsed, setIsCollapsed }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const items = [
@@ -34,9 +35,13 @@ export default function Sidebar({ activeView, setView, onPrint, onBackup, onRest
 
   const ActionIconFallback = Circle;
 
-  function SidebarIcon({ icon: Icon, size = 18 }) {
+  function SidebarIcon({ icon: Icon, size = 18, active }) {
     const IconComponent = Icon || ActionIconFallback;
-    return <IconComponent className="shrink-0" size={size} strokeWidth={1.9} aria-hidden="true" />;
+    return (
+      <div style={{ filter: active ? 'drop-shadow(0 2px 4px var(--gold-glow))' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <IconComponent className="shrink-0" size={size} strokeWidth={active ? 2.5 : 2} aria-hidden="true" />
+      </div>
+    );
   }
 
   useEffect(() => {
@@ -51,7 +56,13 @@ export default function Sidebar({ activeView, setView, onPrint, onBackup, onRest
   return (
     <>
       <button
-        className={`fixed top-4 left-4 z-50 p-2 rounded-xl bg-zinc-900/80 backdrop-blur border border-white/10 text-white md:hidden ${mobileOpen ? 'hidden' : ''}`}
+        style={{
+          position: 'fixed', top: '16px', left: '16px', zIndex: 50,
+          padding: '8px', borderRadius: '12px', 
+          background: 'var(--surface-strong)', color: 'var(--text)',
+          border: '1px solid var(--border)', backdropFilter: 'var(--glass-blur)'
+        }}
+        className={`md:hidden ${mobileOpen ? 'hidden' : ''}`}
         type="button"
         aria-label="Open navigation menu"
         onClick={() => setMobileOpen(true)}
@@ -61,52 +72,49 @@ export default function Sidebar({ activeView, setView, onPrint, onBackup, onRest
 
       {mobileOpen && (
         <button
-          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"
+          style={{ position: 'fixed', inset: 0, zIndex: 30, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}
+          className="md:hidden"
           type="button"
           aria-label="Close navigation menu"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      <aside className={`w-64 min-h-screen bg-zinc-900/90 text-white backdrop-blur-xl flex flex-col p-4 justify-between transition-transform duration-300 border-r border-white/10 ${mobileOpen ? 'fixed inset-y-0 left-0 z-40 translate-x-0' : 'fixed inset-y-0 -translate-x-full md:relative md:translate-x-0'}`}>
+      <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`} style={mobileOpen ? { position: 'fixed', left: 0, top: 0, bottom: 0, transform: 'translateX(0)' } : {}}>
         <div>
-          {/* CB Circle Logo & Brand */}
-          <div className="flex items-center justify-between px-2 mb-8 mt-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-bold text-sm tracking-wide shadow-lg shrink-0 select-none border border-white/20">
-                CB
+          {/* Brand */}
+          <div className="brand" style={{ marginBottom: '32px', border: 'none', background: 'transparent', boxShadow: 'none' }}>
+            <img src="/logo192.png" alt="Cashbook Logo" style={{ width: isCollapsed ? '32px' : '40px', height: isCollapsed ? '32px' : '40px', borderRadius: '12px', objectFit: 'cover', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', transition: 'all 0.2s' }} />
+            {!isCollapsed && (
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                <h1 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text)' }}>Cashbook</h1>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-soft)', margin: 0, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>All Companies</p>
               </div>
-              <div className="flex flex-col">
-                <h1 className="text-sm font-extrabold tracking-tight leading-tight">Cashbook</h1>
-                <p className="text-[10px] text-zinc-400 font-medium font-sans">All Companies</p>
-              </div>
-            </div>
+            )}
+            <button className="collapse-btn hidden md:flex" onClick={() => setIsCollapsed(!isCollapsed)} style={{ marginLeft: isCollapsed ? '0' : 'auto', background: 'transparent', color: 'var(--text-soft)', padding: '4px', borderRadius: '8px', marginTop: isCollapsed ? '16px' : '0' }}>
+              {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </button>
             {mobileOpen && (
-              <button onClick={() => setMobileOpen(false)} className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition md:hidden">
+              <button onClick={() => setMobileOpen(false)} style={{ marginLeft: 'auto', background: 'transparent', color: 'var(--text-soft)' }}>
                 <X size={18} />
               </button>
             )}
           </div>
 
           {/* Navigation Links */}
-          <nav className="flex flex-col gap-1" aria-label="Primary navigation">
+          <nav className="nav-links" aria-label="Primary navigation">
             {items.map(({ id, label, icon: Icon }) => {
               const active = activeView === id;
               return (
                 <button
                   key={id}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    active
-                      ? 'bg-white/10 text-white shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white/10'
-                      : 'text-zinc-400 hover:bg-white/5 hover:text-white border border-transparent'
-                  }`}
+                  className={`nav-btn ${active ? 'active' : ''}`}
                   onClick={() => navigate(id)}
                   aria-label={label}
+                  style={!active ? { color: 'var(--text-soft)' } : {}}
                 >
-                  <div className={`shrink-0 ${active ? 'text-indigo-400 drop-shadow-md' : 'text-zinc-500 group-hover:text-zinc-300'}`}>
-                    <SidebarIcon icon={Icon} size={18} />
-                  </div>
-                  <span className="font-sans tracking-wide">{label}</span>
+                  <SidebarIcon icon={Icon} size={20} active={active} />
+                  {!isCollapsed && <span>{label}</span>}
                 </button>
               );
             })}
@@ -114,19 +122,19 @@ export default function Sidebar({ activeView, setView, onPrint, onBackup, onRest
         </div>
 
         {/* System Actions section */}
-        <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex flex-col gap-2 mt-auto shadow-xl">
-          <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2 font-sans pl-1">System Actions</h3>
-          <button className="w-full flex items-center gap-3 text-left px-3 py-2 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10 transition-all font-sans" onClick={onPrint} title="Print Preview" aria-label="Print Preview">
-            <Printer size={15} className="text-zinc-400" />
-            <span>Print Preview</span>
+        <div className="glass-card" style={{ marginTop: 'auto', padding: isCollapsed ? '16px 8px' : '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {!isCollapsed && <h3 className="eyebrow" style={{ paddingLeft: '8px', marginBottom: '8px' }}>System</h3>}
+          <button className="nav-btn" style={{ padding: isCollapsed ? '8px' : '8px 12px', fontSize: '0.85rem', justifyContent: isCollapsed ? 'center' : 'flex-start' }} onClick={onPrint} title="Print Preview">
+            <Printer size={18} />
+            {!isCollapsed && <span>Print</span>}
           </button>
-          <button className="w-full flex items-center gap-3 text-left px-3 py-2 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10 transition-all font-sans" onClick={onBackup} title="Backup Database" aria-label="Backup Database">
-            <DatabaseBackup size={15} className="text-zinc-400" />
-            <span>Backup Database</span>
+          <button className="nav-btn" style={{ padding: isCollapsed ? '8px' : '8px 12px', fontSize: '0.85rem', justifyContent: isCollapsed ? 'center' : 'flex-start' }} onClick={onBackup} title="Backup Database">
+            <DatabaseBackup size={18} />
+            {!isCollapsed && <span>Backup</span>}
           </button>
-          <button className="w-full flex items-center gap-3 text-left px-3 py-2 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10 transition-all font-sans" onClick={onRestore} title="Restore Database" aria-label="Restore Database">
-            <RotateCcw size={15} className="text-zinc-400" />
-            <span>Restore Database</span>
+          <button className="nav-btn" style={{ padding: isCollapsed ? '8px' : '8px 12px', fontSize: '0.85rem', justifyContent: isCollapsed ? 'center' : 'flex-start' }} onClick={onRestore} title="Restore Database">
+            <RotateCcw size={18} />
+            {!isCollapsed && <span>Restore</span>}
           </button>
         </div>
       </aside>
