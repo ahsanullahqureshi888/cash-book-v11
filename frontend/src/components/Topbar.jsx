@@ -1,8 +1,8 @@
-import { Clock3, LogOut, Moon, Printer, Sun } from 'lucide-react';
+import { Clock3, LogOut, Moon, Printer, Sun, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import CompanyLogo from './CompanyLogo';
 
-export default function Topbar({ title, onThemeToggle, onPrint, currentUser, onLogout, companyName, companyLogo, theme }) {
+export default function Topbar({ title, onThemeToggle, onPrint, currentUser, onLogout, companyName, companyLogo, theme, onSearchClick }) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -20,9 +20,33 @@ export default function Topbar({ title, onThemeToggle, onPrint, currentUser, onL
         <div>
           <p className="eyebrow">Professional Business Management</p>
           <h2>{title}</h2>
-          <small>{companyName || 'BAWAR STAR PLASTIC INDUSTRY'}</small>
+          <div className="branch-selector-wrapper">
+            <small className="company-title">{companyName || 'Cashbook Of All companies'}</small>
+            <div className="branch-dropdown-pill">
+              <select className="branch-select-input" aria-label="Branch select filter">
+                <option value="consolidated">All Branches (Consolidated)</option>
+                <option value="branch-a">Branch A</option>
+                <option value="branch-b">Branch B</option>
+                <option value="branch-c">Branch C</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
+      
+      <div className="topbar-search-wrapper" onClick={onSearchClick}>
+        <div className="topbar-search-input-container">
+          <Search size={16} className="search-icon" />
+          <input 
+            type="text" 
+            placeholder="Search transactions, accounts..." 
+            className="topbar-search-input"
+            readOnly
+          />
+          <kbd className="search-kbd">⌘K</kbd>
+        </div>
+      </div>
+
       <div className="topbar-actions">
         <div className="time-chip" aria-label="Current date and time">
           <Clock3 size={18} aria-hidden="true" />

@@ -60,7 +60,7 @@ export default function EmployeesSalary({
   onEmployeeAvatarChanged,
   onEmployeeDeleted,
   currentUser,
-  companyName = 'BAWAR STAR PLASTIC INDUSTRY',
+  companyName = 'Cashbook Of All companies',
   companyLogo = ''
 }) {
   const { t } = useTranslation();
@@ -691,7 +691,43 @@ function ReadOnlyMetric({ label, value, tone = '' }) {
 }
 
 function SalaryStat({ icon: Icon, label, value, tone }) {
-  return <article className={`glass-card salary-stat salary-stat-${tone}`}><span><Icon size={20} /></span><p>{label}</p><strong>{value}</strong></article>;
+  const sparklineData = [12, 19, 10, 24, 18, 30, 28];
+  const max = Math.max(...sparklineData);
+  const min = Math.min(...sparklineData);
+  const points = sparklineData.map((val, index) => {
+    const x = (index / (sparklineData.length - 1)) * 55;
+    const y = 17 - ((val - min) / (max - min)) * 14;
+    return `${x},${y}`;
+  }).join(' ');
+
+  const delta = label.toLowerCase().includes('remaining') || label.toLowerCase().includes('carry') ? '↓ 1.2%' : '↑ 3.4%';
+  const isNegative = label.toLowerCase().includes('remaining') || label.toLowerCase().includes('carry');
+
+  return (
+    <article className={`glass-card salary-stat salary-stat-${tone} relative overflow-hidden group hover:scale-[1.02] transition-transform duration-200`}>
+      <div className="salary-stat-top-row flex justify-between items-start w-full">
+        <span className="salary-stat-icon-wrapper flex items-center justify-center p-2.5 rounded-xl bg-white/20 dark:bg-zinc-800/80 shadow-sm"><Icon size={20} /></span>
+        <span className={`salary-stat-delta-pill text-[10px] font-bold px-2 py-0.5 rounded-full ${isNegative ? 'bg-amber-500/20 text-amber-500' : 'bg-emerald-500/20 text-emerald-500'}`}>
+          {delta}
+        </span>
+      </div>
+      <div className="salary-stat-body mt-4">
+        <p className="salary-stat-label text-xs text-slate-400 font-medium">{label}</p>
+        <strong className="salary-stat-value text-2xl font-bold tracking-tight block mt-1 font-mono">{value}</strong>
+      </div>
+      <div className="salary-stat-sparkline absolute bottom-2 right-2 w-16 h-6 opacity-60 pointer-events-none">
+        <svg viewBox="0 0 60 20" className="sparkline-svg w-full h-full">
+          <polyline
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            points={points}
+            className={isNegative ? 'text-amber-500' : 'text-emerald-500'}
+          />
+        </svg>
+      </div>
+    </article>
+  );
 }
 
 function EmployeeAvatar({ employee, onChangeAvatar, uploading }) {

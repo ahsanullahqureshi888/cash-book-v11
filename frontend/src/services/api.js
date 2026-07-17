@@ -26,7 +26,7 @@ async function request(path, options = {}) {
     response = await fetch(`${API_BASE}${path}`, {
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-        ...(authToken ? { 'X-Session-Token': authToken } : {}),
+        ...(authToken ? { 'X-Session-Token': authToken, 'Authorization': `Bearer ${authToken}` } : {}),
         ...(options.headers || {})
       },
       ...options

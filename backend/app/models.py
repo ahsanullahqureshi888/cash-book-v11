@@ -6,6 +6,26 @@ from sqlalchemy.orm import relationship
 from .database import Base
 
 
+class Group(Base):
+    __tablename__ = "groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), unique=True, nullable=False, index=True)
+
+    branches = relationship("Branch", back_populates="group", cascade="all, delete-orphan")
+
+
+class Branch(Base):
+    __tablename__ = "branches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False, index=True)
+    group_id = Column(Integer, ForeignKey("groups.id"), nullable=False, index=True)
+
+    group = relationship("Group", back_populates="branches")
+    transactions = relationship("Transaction", back_populates="branch")
+
+
 class Account(Base):
     __tablename__ = "accounts"
 
@@ -72,12 +92,14 @@ class Transaction(Base):
     payment_method = Column(String(30), default="cash", nullable=False, index=True)
     category = Column(String(40), default="other", nullable=False, index=True)
     note = Column(Text, default="", nullable=False)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     account = relationship("Account", back_populates="transactions")
     employee = relationship("Employee", back_populates="transactions")
     salary_payment = relationship("SalaryPayment", back_populates="cashbook_entry", uselist=False)
+    branch = relationship("Branch", back_populates="transactions")
 
 
 class SalaryPayment(Base):
@@ -124,7 +146,7 @@ class Setting(Base):
     __tablename__ = "settings"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_name = Column(String(255), default="BAWAR STAR PLASTIC INDUSTRY", nullable=False)
+    company_name = Column(String(255), default="Cashbook Of All companies", nullable=False)
     company_phone = Column(String(100), default="", nullable=False)
     company_email = Column(String(180), default="", nullable=False)
     company_website = Column(String(180), default="", nullable=False)
@@ -137,7 +159,7 @@ class Setting(Base):
     theme = Column(String(20), default="dark", nullable=False)
     language = Column(String(20), default="English", nullable=False)
     date_display_format = Column(String(20), default="dual", nullable=False)
-    print_footer_text = Column(Text, default="Prepared by BAWAR STAR PLASTIC INDUSTRY", nullable=False)
+    print_footer_text = Column(Text, default="Prepared by Cashbook Of All companies", nullable=False)
     auto_logout_minutes = Column(Integer, default=30, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -172,6 +194,8 @@ class User(Base):
     username = Column(String(120), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(30), default="Administrator", nullable=False, index=True)
+    assigned_group_id = Column(Integer, ForeignKey("groups.id"), nullable=True, index=True)
+    assigned_branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True, index=True)
     avatar_path = Column(Text, default="", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     created_date = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -182,6 +206,9 @@ class User(Base):
     locked_until = Column(DateTime, nullable=True)
     must_change_password = Column(Boolean, default=False, nullable=False)
     password_changed_at = Column(DateTime, nullable=True)
+
+    assigned_group = relationship("Group")
+    assigned_branch = relationship("Branch")
 
 
 class UserSession(Base):

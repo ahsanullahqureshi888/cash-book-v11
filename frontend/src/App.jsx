@@ -5,6 +5,7 @@ import Topbar from './components/Topbar';
 import ReceiptModal from './components/ReceiptModal';
 import ConfirmDialog from './components/ConfirmDialog';
 import ToastNotification from './components/ToastNotification';
+import SearchModal from './components/SearchModal';
 import Dashboard from './pages/Dashboard';
 import CashBook from './pages/CashBook';
 import LoginScreen from './pages/LoginScreen';
@@ -16,7 +17,7 @@ import { buildPrintReport, reportDateRange, waitForCondition, waitForPrintReady,
 import { buildCashBookRows, CASH_BOOK_PAGE_SIZE, currentMonthDateRange, filterCashBookRows, monthDateRangeForDate, summarizeCashBookRows } from './utils/transactions';
 import { employeeSalarySnapshot, salaryMonthStart } from './utils/payroll';
 import useDebouncedValue from './hooks/useDebouncedValue';
-import { Analytics } from '@vercel/analytics/react';
+import { transactionSchema } from './utils/validation';
 
 const AccountLedger = lazy(() => import('./pages/AccountLedger'));
 const Accounts = lazy(() => import('./pages/Accounts'));
@@ -97,7 +98,8 @@ const emptyCashForm = (type) => ({
 export default function App() {
   const [activeView, setActiveView] = useState('dashboard');
   const [theme, setTheme] = useState(() => localStorage.getItem('cashbook-theme') || 'dark');
-  const [companyName, setCompanyName] = useState('BAWAR STAR PLASTIC INDUSTRY');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [companyName, setCompanyName] = useState('Cashbook Of All companies');
   const [companyPhone, setCompanyPhone] = useState('');
   const [companyEmail, setCompanyEmail] = useState('');
   const [companyWebsite, setCompanyWebsite] = useState('');
@@ -123,7 +125,7 @@ export default function App() {
     return key;
   };
   const [dateDisplayFormat, setDateDisplayFormat] = useState('dual');
-  const [printFooterText, setPrintFooterText] = useState('Prepared by BAWAR STAR PLASTIC INDUSTRY');
+  const [printFooterText, setPrintFooterText] = useState('Prepared by Cashbook Of All companies');
   const [autoLogoutMinutes, setAutoLogoutMinutes] = useState(30);
   const [summary, setSummary] = useState({ cash_in_afn: 0, cash_out_afn: 0, afn_balance: 0, usd_in: 0, usd_out: 0, usd_balance: 0, today_transactions: 0, monthly_transactions: 0 });
   const [transactions, setTransactions] = useState([]);
@@ -212,6 +214,17 @@ export default function App() {
       setActiveView('cashbook');
     }
   }, [activeTransactionType]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (activeView !== 'cashbook') {
@@ -442,11 +455,10 @@ export default function App() {
   }
 
   async function submitTransaction(form, type) {
-    if (!form.account_name.trim() || !form.detail.trim()) {
-      return `${type === 'cash_in' ? 'Cash In' : 'Cash Out'} requires name and detail.`;
-    }
-    if (Number(form.cash_amount || 0) <= 0 && Number(form.usd_amount || 0) <= 0) {
-      return 'Enter an AFN or USD amount greater than zero.';
+    const validation = transactionSchema.validate(form, type);
+    if (!validation.isValid) {
+      const errorMsg = Object.values(validation.errors)[0];
+      return errorMsg;
     }
     try {
       setTransactionSavingType(type);
@@ -1192,9 +1204,15 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell ${theme}`}>
-      <Sidebar activeView={activeView} setView={setActiveView} onPrint={onPrint} onBackup={onBackup} onRestore={onImportClick} />
-      <main className="main-panel">
+    <div className={`app-shell relative overflow-hidden ${theme}`}>
+      {/* Background Spheres for macOS Glassmorphism */}
+      <div className="fixed top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-emerald-500/20 blur-[120px] pointer-events-none z-0" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-indigo-500/20 blur-[120px] pointer-events-none z-0" />
+      <div className="fixed top-[30%] left-[50%] w-[30vw] h-[30vw] rounded-full bg-violet-500/15 blur-[120px] pointer-events-none z-0" />
+      
+      <div className="relative z-10 flex w-full h-full">
+        <Sidebar activeView={activeView} setView={setActiveView} onPrint={onPrint} onBackup={onBackup} onRestore={onImportClick} />
+        <main className="main-panel w-full">
         <Topbar
           title={activeView === 'cashbook' ? 'Cash Book' : activeView === 'salary' ? 'Employees & Salary' : activeView.charAt(0).toUpperCase() + activeView.slice(1)}
           onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -1204,6 +1222,7 @@ export default function App() {
           companyName={companyName}
           companyLogo={companyLogo}
           theme={theme}
+          onSearchClick={() => setSearchOpen(true)}
         />
         <Suspense fallback={<div className="loading-strip">{t('Loading workspace...')}</div>}>
         <div>
@@ -1213,6 +1232,7 @@ export default function App() {
             <Dashboard
               summary={summary}
               latestTransactions={latestTransactions}
+              transactions={transactions}
               onNavigate={setActiveView}
               onBackup={onBackup}
               onRestore={onImportClick}
@@ -1221,6 +1241,7 @@ export default function App() {
               companyLogo={companyLogo}
               activeTransactionType={activeTransactionType}
               setActiveTransactionType={setActiveTransactionType}
+              isLoading={isLoading}
             />
           )}
           {activeView === 'cashbook' && (
@@ -1307,6 +1328,7 @@ export default function App() {
               onExportJson={onExportCashBookJson}
               activeTransactionType={activeTransactionType}
               setActiveTransactionType={setActiveTransactionType}
+              isLoading={isLoading}
             />
           )}
           {activeView === 'ledger' && (
@@ -1519,9 +1541,19 @@ export default function App() {
         }}
         onLogout={onLogout}
       /></Suspense>}
+      <SearchModal
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        accounts={accounts}
+        transactions={transactions}
+        setView={setActiveView}
+        setSelectedAccount={setSelectedAccount}
+        setCashSearch={setCashSearch}
+      />
       <ConfirmDialog open={!!confirm} title={confirm?.title} message={confirm?.message} onCancel={() => setConfirm(null)} onConfirm={confirm?.onConfirm} />
       <ToastNotification toast={toast} />
       <Analytics />
+      </div>
     </div>
   );
 }

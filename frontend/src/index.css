@@ -7,25 +7,25 @@
   --gold-dark: #1d4ed8;
   --gold-glow: rgba(59, 130, 246, 0.35);
   --gold-text: #bfdbfe;
-  --glass-bg: rgba(15, 23, 42, 0.62);
+  --glass-bg: rgba(15, 23, 42, 0.45);
   --glass-border: rgba(59, 130, 246, 0.22);
   
   --bg: radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.20) 0%, transparent 45%),
         radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.14) 0%, transparent 45%),
         radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 55%, #060b18 100%);
-  --surface: rgba(15, 23, 42, 0.58);
+  --surface: rgba(15, 23, 42, 0.52);
   --surface-strong: rgba(255, 255, 255, 0.15);
   --text: #f8fafc;
   --text-soft: #94a3b8;
   --accent: #3b82f6;
   --accent-2: #93c5fd;
-  --success: #22c55e;
-  --danger: #ef4444;
-  --border: rgba(59, 130, 246, 0.22);
-  --border-muted: rgba(59, 130, 246, 0.18);
-  --border-soft: rgba(59, 130, 246, 0.16);
+  --success: #10b981;
+  --danger: #e0a96d;
+  --border: rgba(59, 130, 246, 0.18);
+  --border-muted: rgba(59, 130, 246, 0.15);
+  --border-soft: rgba(59, 130, 246, 0.12);
   --accent-focus: rgba(59, 130, 246, 0.38);
-  --shadow: 0 24px 70px rgba(2, 6, 18, 0.65);
+  --shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
 }
 
 body.light {
@@ -35,25 +35,25 @@ body.light {
   --gold-dark: #1d4ed8;
   --gold-glow: rgba(37, 99, 235, 0.22);
   --gold-text: #1e3a8a;
-  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg: rgba(255, 255, 255, 0.55);
   --glass-border: rgba(37, 99, 235, 0.16);
 
   --bg: radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.12) 0%, transparent 42%),
         radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.10) 0%, transparent 42%),
         radial-gradient(circle at 50% 50%, #ffffff 0%, #f1f5f9 60%, #e2e8f0 100%);
-  --surface: rgba(255, 255, 255, 0.72);
+  --surface: rgba(255, 255, 255, 0.65);
   --surface-strong: rgba(255, 255, 255, 0.92);
   --text: #0f172a;
   --text-soft: #475569;
   --accent: #2563eb;
   --accent-2: #1d4ed8;
-  --success: #16a34a;
-  --danger: #dc2626;
-  --border: rgba(37, 99, 235, 0.16);
-  --border-muted: rgba(37, 99, 235, 0.13);
-  --border-soft: rgba(37, 99, 235, 0.11);
+  --success: #10b981;
+  --danger: #dda875;
+  --border: rgba(37, 99, 235, 0.12);
+  --border-muted: rgba(37, 99, 235, 0.10);
+  --border-soft: rgba(37, 99, 235, 0.08);
   --accent-focus: rgba(37, 99, 235, 0.38);
-  --shadow: 0 22px 60px rgba(15, 23, 42, 0.10);
+  --shadow: 0 16px 40px rgba(15, 23, 42, 0.05);
 }
 
 * { box-sizing: border-box; }
@@ -93,9 +93,73 @@ body.light .sidebar { background: var(--glass-bg); border-right: 1px solid var(-
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  -webkit-backdrop-filter: blur(32px) saturate(155%);
-  backdrop-filter: blur(32px) saturate(155%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
   border-radius: 18px;
+}
+
+/* Custom Rebrand Styles */
+.font-mono, td.money, strong.text-3xl {
+  font-family: 'Inter', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-metrics-panel strong.text-3xl {
+  font-size: 2.5rem !important;
+  font-weight: 800 !important;
+  line-height: 1;
+  margin-top: 4px;
+  display: block;
+}
+
+.branch-selector-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.branch-dropdown-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.branch-select-input {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  padding: 2px 28px 2px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-soft);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+}
+
+body.light .branch-select-input {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: var(--text-soft);
+}
+
+.branch-select-input:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--text);
+}
+
+body.light .branch-select-input:hover {
+  background-color: rgba(0, 0, 0, 0.07);
+  border-color: rgba(0, 0, 0, 0.15);
+  color: var(--text);
 }
 .brand {
   display: flex;

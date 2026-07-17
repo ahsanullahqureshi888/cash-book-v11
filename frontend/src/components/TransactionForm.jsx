@@ -116,40 +116,58 @@ function TransactionForm({
     }));
   }
 
+  const isEditing = Boolean(form.editingId);
+
   return (
     <div className={`glass-card form-card ${type === 'cash_in' ? 'cash-in-card' : 'cash-out-card'}`}>
-      <div className="card-header">
-        <h3>{title}</h3>
+      <div className="card-header flex items-center justify-between pb-3 mb-4 border-b border-zinc-100 dark:border-zinc-800">
+        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{title}</h3>
+        {isEditing && (
+          <span className="text-xs font-medium text-amber-500 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-200/50">
+            Editing Mode
+          </span>
+        )}
       </div>
-      <form className="entry-form" onSubmit={onSubmit}>
-        <DateField value={form.date} onChange={(e) => update('date', e.target.value)} displayFormat={dateDisplayFormat} required />
-        <SmartAccountAutocomplete
-          value={form.account_name}
-          employees={employees}
-          accounts={accounts}
-          onChange={(value) => onAccountNameChange ? onAccountNameChange(value) : update('account_name', value)}
-          onSelect={onAccountSelect}
-          onQuickAddEmployee={(name) => setQuickAddName(name)}
-        />
+      
+      <form className="entry-form flex flex-col gap-4" onSubmit={onSubmit}>
+        <div className="form-group flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Date</label>
+          <DateField value={form.date} onChange={(e) => update('date', e.target.value)} displayFormat={dateDisplayFormat} required />
+        </div>
+
+        <div className="form-group flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Account / Contact Name</label>
+          <SmartAccountAutocomplete
+            value={form.account_name}
+            employees={employees}
+            accounts={accounts}
+            onChange={(value) => onAccountNameChange ? onAccountNameChange(value) : update('account_name', value)}
+            onSelect={onAccountSelect}
+            onQuickAddEmployee={(name) => setQuickAddName(name)}
+          />
+        </div>
+
         {type === 'cash_out' && form.employee_id && (
           <>
-            <div className="employee-info-preview">
-              <header className="employee-info-header">
-                <span className="employee-info-avatar" aria-hidden="true"><UserRound size={22} /></span>
-                <div className="employee-info-copy">
-                  <span>{t('Employee Information')}</span>
-                  <strong>{selectedEmployee?.full_name || form.account_name || 'Selected Employee'}</strong>
-                  <small><BriefcaseBusiness size={14} /> {selectedEmployee?.position || 'Employee'}</small>
+            <div className="employee-info-preview bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800/80">
+              <header className="employee-info-header flex items-center gap-3 pb-3 mb-3 border-b border-zinc-100 dark:border-zinc-800">
+                <span className="employee-info-avatar flex items-center justify-center w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300" aria-hidden="true">
+                  <UserRound size={20} />
+                </span>
+                <div className="employee-info-copy flex flex-col">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 dark:text-zinc-500">{t('Employee Information')}</span>
+                  <strong className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{selectedEmployee?.full_name || form.account_name || 'Selected Employee'}</strong>
+                  <small className="text-xs text-zinc-500 flex items-center gap-1 mt-0.5"><BriefcaseBusiness size={12} /> {selectedEmployee?.position || 'Employee'}</small>
                 </div>
               </header>
-              <div className="employee-info-grid">
-                <div className="salary-metric-row">
-                  <span>{t('Base Monthly Salary')}</span>
-                  <strong>{salaryAmount(selectedEmployeeSalary?.monthly_salary)}</strong>
+              <div className="employee-info-grid grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                <div className="salary-metric-row flex justify-between py-1 border-b border-zinc-100/50 dark:border-zinc-800/30">
+                  <span className="text-zinc-500">{t('Base Monthly Salary')}</span>
+                  <strong className="font-semibold text-zinc-800 dark:text-zinc-200">{salaryAmount(selectedEmployeeSalary?.monthly_salary)}</strong>
                 </div>
-                <div className="salary-metric-row">
+                <div className="salary-metric-row flex justify-between py-1 border-b border-zinc-100/50 dark:border-zinc-800/30">
                   <span>{t('Previous Month Balance')}</span>
-                  <strong style={{
+                  <strong className="font-semibold" style={{
                     color: (selectedEmployeeSalary?.previous_carry_forward_balance || 0) < 0 
                       ? '#ef4444' 
                       : (selectedEmployeeSalary?.previous_carry_forward_balance || 0) > 0 
@@ -159,59 +177,128 @@ function TransactionForm({
                     {salaryAmount(selectedEmployeeSalary?.previous_carry_forward_balance)}
                   </strong>
                 </div>
-                <div className="salary-metric-row">
-                  <span>{t('Adjusted Available Salary')}</span>
-                  <strong>{salaryAmount(selectedEmployeeSalary?.total_payable_salary)}</strong>
+                <div className="salary-metric-row flex justify-between py-1 border-b border-zinc-100/50 dark:border-zinc-800/30">
+                  <span className="text-zinc-500">{t('Adjusted Available Salary')}</span>
+                  <strong className="font-semibold text-zinc-800 dark:text-zinc-200">{salaryAmount(selectedEmployeeSalary?.total_payable_salary)}</strong>
                 </div>
-                <div className="salary-metric-row is-paid">
-                  <span>{t('Paid This Month')}</span>
-                  <strong>{salaryAmount(selectedEmployeeSalary?.paid_amount)}</strong>
+                <div className="salary-metric-row is-paid flex justify-between py-1 border-b border-zinc-100/50 dark:border-zinc-800/30">
+                  <span className="text-zinc-500">{t('Paid This Month')}</span>
+                  <strong className="font-semibold text-zinc-800 dark:text-zinc-200">{salaryAmount(selectedEmployeeSalary?.paid_amount)}</strong>
                 </div>
-                <div className="salary-metric-row is-remaining">
-                  <span>{t('Remaining Salary')}</span>
-                  <strong>{salaryAmount(selectedEmployeeSalary?.remaining_salary)}</strong>
+                <div className="salary-metric-row is-remaining flex justify-between py-1">
+                  <span className="text-zinc-500">{t('Remaining Salary')}</span>
+                  <strong className="font-bold text-indigo-500">{salaryAmount(selectedEmployeeSalary?.remaining_salary)}</strong>
                 </div>
-                <div className="salary-metric-row">
-                  <span>{t('Advance Taken')}</span>
-                  <strong>{salaryAmount(selectedEmployeeSalary?.advance_taken)}</strong>
+                <div className="salary-metric-row flex justify-between py-1">
+                  <span className="text-zinc-500">{t('Advance Taken')}</span>
+                  <strong className="font-semibold text-amber-500">{salaryAmount(selectedEmployeeSalary?.advance_taken)}</strong>
                 </div>
               </div>
             </div>
-            <div className="payroll-kind-toggle" role="group" aria-label="Employee salary transaction type">
-              <button type="button" className={(form.payroll_kind || 'salary') === 'salary' ? 'active' : ''} onClick={() => changePayrollKind('salary')}><Banknote size={17} /> Salary Payment</button>
-              <button type="button" className={form.payroll_kind === 'advance' ? 'active' : ''} onClick={() => changePayrollKind('advance')}><Banknote size={17} /> Salary Advance</button>
+
+            <div className="transaction-mode-toggle w-full mt-1" role="group" aria-label="Employee salary transaction type">
+              <button 
+                type="button" 
+                className={`flex-1 text-center py-2 ${(form.payroll_kind || 'salary') === 'salary' ? 'active cash-out' : ''}`} 
+                onClick={() => changePayrollKind('salary')}
+              >
+                Salary Payment
+              </button>
+              <button 
+                type="button" 
+                className={`flex-1 text-center py-2 ${form.payroll_kind === 'advance' ? 'active cash-out' : ''}`} 
+                onClick={() => changePayrollKind('advance')}
+              >
+                Salary Advance
+              </button>
             </div>
-            <label className="salary-month-field">
-              <span>{t('Salary Month')}</span>
+
+            <div className="form-group flex flex-col gap-1.5 mt-1">
+              <label className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{t('Salary Month')}</label>
               <input type="month" value={String(form.salary_month || '').slice(0, 7)} onChange={(e) => update('salary_month', `${e.target.value}-01`)} required />
-            </label>
-            {exceedsRemaining ? <div className="salary-overpayment-warning"><AlertTriangle size={18} /><span>{t('Payment exceeds the remaining salary by ')}{(enteredAmount - selectedEmployeeSalary.remaining_salary).toLocaleString(undefined, { maximumFractionDigits: 2 })} {selectedEmployeeSalary.currency}.</span></div> : null}
+            </div>
+
+            {exceedsRemaining ? (
+              <div className="salary-overpayment-warning flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-lg border border-red-100 dark:border-red-950/50 text-xs">
+                <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
+                <span>{t('Payment exceeds the remaining salary by ')}{(enteredAmount - selectedEmployeeSalary.remaining_salary).toLocaleString(undefined, { maximumFractionDigits: 2 })} {selectedEmployeeSalary.currency}.</span>
+              </div>
+            ) : null}
           </>
         )}
-        <input type="text" value={form.detail} onChange={(e) => update('detail', e.target.value)} placeholder="Detail" required dir="auto" />
-        <input type="number" value={form.cash_amount} onChange={(e) => update('cash_amount', e.target.value)} placeholder="AFN Amount" step="0.01" min="0" />
-        <input type="number" value={form.usd_amount} onChange={(e) => update('usd_amount', e.target.value)} placeholder="USD Amount" step="0.01" min="0" />
-        <input type="number" value={form.exchange_rate} onChange={(e) => update('exchange_rate', e.target.value)} placeholder="Exchange Rate" step="0.01" min="0" />
-        <select value={form.category} onChange={(e) => update('category', e.target.value)}>
-          <option value="other">{t('Other')}</option>
-          <option value="salary">{t('Salary')}</option>
-          <option value="rent">{t('Rent')}</option>
-          <option value="factory_expense">{t('Factory Expense')}</option>
-          <option value="home_expense">{t('Home Expense')}</option>
-          <option value="bottles_account">{t('Bottles Account')}</option>
-          <option value="office_expense">{t('Office Expense')}</option>
-        </select>
-        <select value={form.payment_method} onChange={(e) => update('payment_method', e.target.value)}>
-          <option value="cash">{t('Cash')}</option>
-          <option value="bank">{t('Bank')}</option>
-          <option value="hawala">{t('Hawala')}</option>
-          <option value="other">{t('Other')}</option>
-        </select>
-        <input type="text" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="Note" dir="auto" />
-        <button className="ghost-btn full-width" type="button" onClick={onClear} disabled={saving}>{t('Clear')}</button>
-        <button className={`primary-btn ${type === 'cash_out' ? 'danger' : ''} full-width`} type="submit" disabled={saving}>{saving ? 'Saving...' : type === 'cash_out' ? 'Save Cash Out' : 'Save Cash In'}</button>
-        <div className="form-message" aria-live="polite">{message}</div>
+
+        <div className="form-group flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Detail</label>
+          <input type="text" value={form.detail} onChange={(e) => update('detail', e.target.value)} placeholder="Entry description..." required dir="auto" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="form-group flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">AFN Amount</label>
+            <input type="number" value={form.cash_amount} onChange={(e) => update('cash_amount', e.target.value)} placeholder="0.00" step="0.01" min="0" />
+          </div>
+
+          <div className="form-group flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">USD Amount</label>
+            <input type="number" value={form.usd_amount} onChange={(e) => update('usd_amount', e.target.value)} placeholder="0.00" step="0.01" min="0" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="form-group flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Exchange Rate</label>
+            <input type="number" value={form.exchange_rate} onChange={(e) => update('exchange_rate', e.target.value)} placeholder="64.30" step="0.01" min="0" />
+          </div>
+
+          <div className="form-group flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Category</label>
+            <select value={form.category} onChange={(e) => update('category', e.target.value)}>
+              <option value="other">{t('Other')}</option>
+              <option value="salary">{t('Salary')}</option>
+              <option value="rent">{t('Rent')}</option>
+              <option value="factory_expense">{t('Factory Expense')}</option>
+              <option value="home_expense">{t('Home Expense')}</option>
+              <option value="bottles_account">{t('Bottles Account')}</option>
+              <option value="office_expense">{t('Office Expense')}</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="form-group flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Payment Method</label>
+            <select value={form.payment_method} onChange={(e) => update('payment_method', e.target.value)}>
+              <option value="cash">{t('Cash')}</option>
+              <option value="bank">{t('Bank')}</option>
+              <option value="hawala">{t('Hawala')}</option>
+              <option value="other">{t('Other')}</option>
+            </select>
+          </div>
+
+          <div className="form-group flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Note</label>
+            <input type="text" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="Optional note..." dir="auto" />
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-2">
+          <button className="ghost-btn flex-1 py-2.5" type="button" onClick={onClear} disabled={saving}>{t('Clear')}</button>
+          <button 
+            className={`primary-btn ${type === 'cash_out' ? 'danger' : ''} flex-1 py-2.5`} 
+            type="submit" 
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : type === 'cash_out' ? 'Save Cash Out' : 'Save Cash In'}
+          </button>
+        </div>
+        
+        {message && (
+          <div className={`form-message text-center text-xs mt-2 py-2 px-3 rounded-lg ${message.includes('Saved') ? 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' : 'text-rose-500 bg-rose-50 dark:bg-rose-500/10'}`} aria-live="polite">
+            {message}
+          </div>
+        )}
       </form>
+      
       {quickAddName && (
         <QuickAddEmployeeModal
           initialName={quickAddName}

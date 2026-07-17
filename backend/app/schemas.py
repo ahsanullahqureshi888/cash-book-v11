@@ -4,6 +4,7 @@ from datetime import date as DateType, datetime
 from typing import Dict, List, Literal, Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from .utils import sanitize_xss
 
 
 class AccountBase(BaseModel):
@@ -14,6 +15,13 @@ class AccountBase(BaseModel):
     opening_balance_afn: float = 0
     opening_balance_usd: float = 0
     note: str = ""
+
+    @field_validator("name", "phone", "address", "note", mode="before")
+    @classmethod
+    def sanitize_account_fields(cls, v):
+        if isinstance(v, str):
+            return sanitize_xss(v)
+        return v
 
 
 class AccountCreate(AccountBase):
@@ -29,6 +37,13 @@ class AccountUpdate(BaseModel):
     opening_balance_usd: Optional[float] = None
     note: Optional[str] = None
 
+    @field_validator("name", "phone", "address", "note", mode="before")
+    @classmethod
+    def sanitize_account_fields(cls, v):
+        if isinstance(v, str):
+            return sanitize_xss(v)
+        return v
+
 
 class TransactionBase(BaseModel):
     date: DateType
@@ -36,18 +51,26 @@ class TransactionBase(BaseModel):
     employee_id: Optional[int] = None
     salary_month: Optional[DateType] = None
     payroll_kind: Optional[Literal["salary", "advance"]] = None
+    branch_id: Optional[int] = None
     account_name: str
     detail: str
     transaction_type: Literal["cash_in", "cash_out"]
-    cash_in_afn: float = 0
-    cash_out_afn: float = 0
-    usd_in: float = 0
-    usd_out: float = 0
-    exchange_rate: float = 0
-    converted_afn: float = 0
+    cash_in_afn: float = Field(default=0, ge=0)
+    cash_out_afn: float = Field(default=0, ge=0)
+    usd_in: float = Field(default=0, ge=0)
+    usd_out: float = Field(default=0, ge=0)
+    exchange_rate: float = Field(default=0, ge=0)
+    converted_afn: float = Field(default=0, ge=0)
     payment_method: Literal["cash", "bank", "hawala", "other"] = "cash"
     category: Literal["salary", "rent", "factory_expense", "home_expense", "bottles_account", "office_expense", "other"] = "other"
     note: str = ""
+
+    @field_validator("account_name", "detail", "note", mode="before")
+    @classmethod
+    def sanitize_transaction_fields(cls, v):
+        if isinstance(v, str):
+            return sanitize_xss(v)
+        return v
 
 
 class TransactionCreate(TransactionBase):
@@ -60,22 +83,30 @@ class TransactionUpdate(BaseModel):
     employee_id: Optional[int] = None
     salary_month: Optional[DateType] = None
     payroll_kind: Optional[Literal["salary", "advance"]] = None
+    branch_id: Optional[int] = None
     account_name: Optional[str] = None
     detail: Optional[str] = None
     transaction_type: Optional[Literal["cash_in", "cash_out"]] = None
-    cash_in_afn: Optional[float] = None
-    cash_out_afn: Optional[float] = None
-    usd_in: Optional[float] = None
-    usd_out: Optional[float] = None
-    exchange_rate: Optional[float] = None
-    converted_afn: Optional[float] = None
+    cash_in_afn: Optional[float] = Field(default=None, ge=0)
+    cash_out_afn: Optional[float] = Field(default=None, ge=0)
+    usd_in: Optional[float] = Field(default=None, ge=0)
+    usd_out: Optional[float] = Field(default=None, ge=0)
+    exchange_rate: Optional[float] = Field(default=None, ge=0)
+    converted_afn: Optional[float] = Field(default=None, ge=0)
     payment_method: Optional[Literal["cash", "bank", "hawala", "other"]] = None
     category: Optional[Literal["salary", "rent", "factory_expense", "home_expense", "bottles_account", "office_expense", "other"]] = None
     note: Optional[str] = None
 
+    @field_validator("account_name", "detail", "note", mode="before")
+    @classmethod
+    def sanitize_transaction_fields(cls, v):
+        if isinstance(v, str):
+            return sanitize_xss(v)
+        return v
+
 
 class SettingBase(BaseModel):
-    company_name: str = "BAWAR STAR PLASTIC INDUSTRY"
+    company_name: str = "Cashbook Of All companies"
     company_phone: str = ""
     company_email: str = ""
     company_website: str = ""
@@ -88,7 +119,7 @@ class SettingBase(BaseModel):
     theme: str = "dark"
     language: str = "English"
     date_display_format: Literal["persian", "gregorian", "dual"] = "dual"
-    print_footer_text: str = "Prepared by BAWAR STAR PLASTIC INDUSTRY"
+    print_footer_text: str = "Prepared by Cashbook Of All companies"
     auto_logout_minutes: int = 30
 
 
@@ -123,6 +154,8 @@ class UserPublic(BaseModel):
     updated_at: Optional[datetime] = None
     is_active: bool = True
     must_change_password: bool = False
+    assigned_group_id: Optional[int] = None
+    assigned_branch_id: Optional[int] = None
 
 
 class UserCreate(BaseModel):
@@ -131,9 +164,11 @@ class UserCreate(BaseModel):
     full_name: str = Field(validation_alias=AliasChoices("full_name", "fullName", "name"))
     username: str
     password: str
-    role: Literal["Administrator", "Manager", "Cashier", "Viewer"] = "Cashier"
+    role: Literal["Administrator", "Manager", "Cashier", "Viewer", "Super Admin", "Branch Manager", "Clerk"] = "Clerk"
     avatar_path: str = Field(default="", validation_alias=AliasChoices("avatar_path", "avatar", "avatarUrl"))
     is_active: bool = Field(default=True, validation_alias=AliasChoices("is_active", "status"))
+    assigned_group_id: Optional[int] = None
+    assigned_branch_id: Optional[int] = None
 
     @field_validator("is_active", mode="before")
     @classmethod
@@ -148,9 +183,11 @@ class UserUpdate(BaseModel):
 
     full_name: Optional[str] = Field(default=None, validation_alias=AliasChoices("full_name", "fullName", "name"))
     username: Optional[str] = None
-    role: Optional[Literal["Administrator", "Manager", "Cashier", "Viewer"]] = None
+    role: Optional[Literal["Administrator", "Manager", "Cashier", "Viewer", "Super Admin", "Branch Manager", "Clerk"]] = None
     avatar_path: Optional[str] = Field(default=None, validation_alias=AliasChoices("avatar_path", "avatar", "avatarUrl"))
     is_active: Optional[bool] = Field(default=None, validation_alias=AliasChoices("is_active", "status"))
+    assigned_group_id: Optional[int] = None
+    assigned_branch_id: Optional[int] = None
 
     @field_validator("is_active", mode="before")
     @classmethod
@@ -214,6 +251,13 @@ class EmployeeCreate(BaseModel):
     status: Literal["active", "inactive"] = "active"
     notes: str = ""
 
+    @field_validator("full_name", "father_name", "phone", "position", "department", "notes", mode="before")
+    @classmethod
+    def sanitize_employee_fields(cls, v):
+        if isinstance(v, str):
+            return sanitize_xss(v)
+        return v
+
 
 class EmployeeUpdate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -229,6 +273,13 @@ class EmployeeUpdate(BaseModel):
     avatar_url: Optional[str] = Field(default=None, validation_alias=AliasChoices("avatar_url", "avatarUrl", "avatar"))
     status: Optional[Literal["active", "inactive"]] = None
     notes: Optional[str] = None
+
+    @field_validator("full_name", "father_name", "phone", "position", "department", "notes", mode="before")
+    @classmethod
+    def sanitize_employee_fields(cls, v):
+        if isinstance(v, str):
+            return sanitize_xss(v)
+        return v
 
 
 class EmployeeRead(EmployeeCreate):
@@ -250,12 +301,26 @@ class SalaryPaymentCreate(BaseModel):
     payment_method: Literal["cash", "bank", "hawala", "other"] = "cash"
     notes: str = ""
 
+    @field_validator("notes", mode="before")
+    @classmethod
+    def sanitize_payment_fields(cls, v):
+        if isinstance(v, str):
+            return sanitize_xss(v)
+        return v
+
 
 class SalaryPaymentUpdate(BaseModel):
     amount: Optional[float] = Field(default=None, gt=0)
     payment_date: Optional[DateType] = None
     payment_method: Optional[Literal["cash", "bank", "hawala", "other"]] = None
     notes: Optional[str] = None
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def sanitize_payment_fields(cls, v):
+        if isinstance(v, str):
+            return sanitize_xss(v)
+        return v
 
 
 class SalaryPaymentRead(BaseModel):
@@ -385,3 +450,34 @@ class BackupPayload(BaseModel):
 class CsvImportRequest(BaseModel):
     content: str
     filename: str = "cashbook.csv"
+
+
+class GroupBase(BaseModel):
+    name: str
+
+class GroupCreate(GroupBase):
+    pass
+
+class GroupUpdate(GroupBase):
+    name: Optional[str] = None
+
+class GroupRead(GroupBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+
+
+class BranchBase(BaseModel):
+    name: str
+    group_id: int
+
+class BranchCreate(BranchBase):
+    pass
+
+class BranchUpdate(BaseModel):
+    name: Optional[str] = None
+    group_id: Optional[int] = None
+
+class BranchRead(BranchBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+

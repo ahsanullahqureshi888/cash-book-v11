@@ -439,6 +439,7 @@ def create_transaction(db: Session, payload: schemas.TransactionCreate) -> model
         payment_method=payload.payment_method,
         category="salary" if employee else payload.category,
         note=_normalize_text(payload.note),
+        branch_id=payload.branch_id,
     )
     db.add(transaction)
     db.commit()
@@ -624,21 +625,29 @@ def delete_transaction(db: Session, transaction: models.Transaction) -> None:
     db.commit()
 
 
-def summary(db: Session) -> dict:
+def summary(db: Session, group_id: int | None = None, branch_id: int | None = None) -> dict:
     today = date.today()
     month_start = today.replace(day=1)
     next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
-    cash_in_afn = _amount(db.query(func.sum(models.Transaction.cash_in_afn)).scalar())
-    cash_out_afn = _amount(db.query(func.sum(models.Transaction.cash_out_afn)).scalar())
-    usd_in = _amount(db.query(func.sum(models.Transaction.usd_in)).scalar())
-    usd_out = _amount(db.query(func.sum(models.Transaction.usd_out)).scalar())
-    today_transactions = db.query(models.Transaction).filter(models.Transaction.date == today).count()
-    monthly_transactions = db.query(models.Transaction).filter(
+    
+    base_q = db.query(models.Transaction)
+    if branch_id:
+        base_q = base_q.filter(models.Transaction.branch_id == branch_id)
+    elif group_id:
+        branch_ids = [b.id for b in db.query(models.Branch).filter(models.Branch.group_id == group_id).all()]
+        base_q = base_q.filter(models.Transaction.branch_id.in_(branch_ids))
+
+    cash_in_afn = _amount(base_q.with_entities(func.sum(models.Transaction.cash_in_afn)).scalar())
+    cash_out_afn = _amount(base_q.with_entities(func.sum(models.Transaction.cash_out_afn)).scalar())
+    usd_in = _amount(base_q.with_entities(func.sum(models.Transaction.usd_in)).scalar())
+    usd_out = _amount(base_q.with_entities(func.sum(models.Transaction.usd_out)).scalar())
+    today_transactions = base_q.filter(models.Transaction.date == today).count()
+    monthly_transactions = base_q.filter(
         models.Transaction.date >= month_start,
         models.Transaction.date < next_month,
     ).count()
-    today_rows = db.query(models.Transaction).filter(models.Transaction.date == today).all()
-    month_rows = db.query(models.Transaction).filter(
+    today_rows = base_q.filter(models.Transaction.date == today).all()
+    month_rows = base_q.filter(
         models.Transaction.date >= month_start,
         models.Transaction.date < next_month,
     ).all()
@@ -667,6 +676,8 @@ def filtered_transactions(
     account: str | None = None,
     category: str | None = None,
     payment_method: str | None = None,
+    group_id: int | None = None,
+    branch_id: int | None = None,
 ) -> list[models.Transaction]:
     query = db.query(models.Transaction)
     if start_date:
@@ -681,6 +692,11 @@ def filtered_transactions(
         query = query.filter(models.Transaction.category == category)
     if payment_method:
         query = query.filter(models.Transaction.payment_method == payment_method)
+    if branch_id:
+        query = query.filter(models.Transaction.branch_id == branch_id)
+    elif group_id:
+        branch_ids = [b.id for b in db.query(models.Branch).filter(models.Branch.group_id == group_id).all()]
+        query = query.filter(models.Transaction.branch_id.in_(branch_ids))
     if search:
         pattern = f"%{search.lower()}%"
         query = query.filter(

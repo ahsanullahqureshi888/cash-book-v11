@@ -10,11 +10,15 @@ from fastapi import Request
 from fastapi import status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from jose import jwt, JWTError
 
 from .database import Base, engine, SessionLocal, ensure_payroll_schema, ensure_sqlite_schema, ensure_user_schema
 from . import models
+from .auth_dependencies import SECRET_KEY, ALGORITHM
 from .config import APP_NAME, FRONTEND_ORIGINS, FRONTEND_ORIGIN_REGEX
 from .routes import accounts, auth, backup, employees, neon_auth, reports, settings, transactions
 
@@ -35,6 +39,61 @@ Base.metadata.create_all(bind=engine)
 ensure_sqlite_schema()
 ensure_user_schema()
 ensure_payroll_schema()
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
+    log_data = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "request_id": request_id,
+        "method": request.method,
+        "path": request.url.path,
+        "error_type": "RequestValidationError",
+        "detail": exc.errors()
+    }
+    logger.warning(f"Validation Error: {json.dumps(log_data)}")
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": exc.errors(), "request_id": request_id}
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
+    log_data = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "request_id": request_id,
+        "method": request.method,
+        "path": request.url.path,
+        "error_type": "HTTPException",
+        "status_code": exc.status_code,
+        "detail": exc.detail
+    }
+    logger.error(f"HTTP Error: {json.dumps(log_data)}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail, "request_id": request_id}
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
+    log_data = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "request_id": request_id,
+        "method": request.method,
+        "path": request.url.path,
+        "error_type": exc.__class__.__name__,
+        "message": str(exc)
+    }
+    logger.exception(f"Unhandled Exception: {json.dumps(log_data)}")
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error", "request_id": request_id}
+    )
 
 
 @app.middleware("http")
@@ -110,20 +169,24 @@ def health(request: Request = None, x_session_token: str | None = Header(default
         db.execute(text("select 1"))
         payload["database"] = "connected"
         payload["auth"] = "ready"
-        if x_session_token:
-            session = db.query(models.UserSession).filter(
-                models.UserSession.token == x_session_token,
-                models.UserSession.is_active == True,
-            ).first()
-            if session:
-                user = db.query(models.User).filter(models.User.id == session.user_id).first()
-                if user:
-                    payload["currentUser"] = {
-                        "id": user.id,
-                        "full_name": user.full_name,
-                        "username": user.username,
-                        "role": user.role,
-                    }
+        auth_header = request.headers.get("Authorization")
+        token = auth_header.split(" ")[1] if auth_header and auth_header.startswith("Bearer ") else x_session_token
+        if token:
+            try:
+                jwt_payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                username = jwt_payload.get("sub")
+                if username:
+                    user = db.query(models.User).filter(models.User.username == username).first()
+                    if user:
+                        payload["currentUser"] = {
+                            "id": user.id,
+                            "username": user.username,
+                            "role": user.role,
+                            "assigned_group_id": user.assigned_group_id,
+                            "assigned_branch_id": user.assigned_branch_id
+                        }
+            except JWTError:
+                pass
     except Exception as exc:
         logger.exception("Health check failed")
         payload.update(

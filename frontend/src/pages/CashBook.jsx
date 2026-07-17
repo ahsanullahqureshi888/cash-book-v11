@@ -2,6 +2,7 @@ import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import TransactionForm from '../components/TransactionForm';
 import TransactionTable from '../components/TransactionTable';
 import DateField from '../components/DateField';
+import ExportButton from '../components/ExportButton';
 
 export default function CashBook(props) {
   const { activeTransactionType, setActiveTransactionType } = props;
@@ -43,7 +44,12 @@ export default function CashBook(props) {
         </div>
         <div className="section-actions">
           <button className="ghost-btn" onClick={props.onPrint}>Print Cash Book</button>
-          <button className="ghost-btn" onClick={props.onExport}>Export CSV</button>
+          <ExportButton
+            path="/api/transactions/export"
+            filename="cash-book-export.csv"
+            label="Export CSV"
+            className="ghost-btn"
+          />
           <button className="ghost-btn" onClick={props.onExportJson}>Export JSON</button>
         </div>
       </div>
@@ -125,7 +131,7 @@ export default function CashBook(props) {
           <button className="ghost-btn" type="button" onClick={props.onClearFilters}>Clear</button>
         </div>
       </div>
-      <TransactionTable rows={props.rows} rowOffset={props.rowOffset} page={props.page} pageCount={props.pageCount} totalRows={props.totalRows} dateDisplayFormat={props.dateDisplayFormat} onPageChange={props.onPageChange} onEdit={props.onEditTransaction} onDelete={props.onDeleteTransaction} onReceipt={props.onReceipt} onToggleFullscreen={props.onToggleFullscreen} fullscreen={props.fullscreen} tableRef={props.tableRef} />
+      <TransactionTable rows={props.rows} rowOffset={props.rowOffset} page={props.page} pageCount={props.pageCount} totalRows={props.totalRows} dateDisplayFormat={props.dateDisplayFormat} onPageChange={props.onPageChange} onEdit={props.onEditTransaction} onDelete={props.onDeleteTransaction} onReceipt={props.onReceipt} onToggleFullscreen={props.onToggleFullscreen} fullscreen={props.fullscreen} tableRef={props.tableRef} isLoading={props.isLoading} />
       <div className="table-summary">
         <span>Total Cash In: {props.totals.cashIn}</span>
         <span>Total Cash Out: {props.totals.cashOut}</span>

@@ -185,6 +185,7 @@ def ensure_payroll_schema():
                 ("employee_id", "INTEGER"),
                 ("salary_month", "DATE"),
                 ("payroll_kind", "VARCHAR(20)"),
+                ("branch_id", "INTEGER"),
             ]:
                 if name not in transaction_columns:
                     conn.execute(text(f"alter table transactions add column {name} {sql_type}"))
