@@ -1,22 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { Search, Users, ReceiptText, X } from 'lucide-react';
+import { Search, Users, ReceiptText } from 'lucide-react';
 import { currency } from '../utils/format';
+import BaseModal from './BaseModal';
+import { useTranslation } from 'react-i18next';
 
-export default function SearchModal({ isOpen, onClose, accounts, transactions, setView, setSelectedAccount, setCashSearch }) {
+export default function SearchModal({ isOpen, onClose, accounts = [], transactions = [], setView, setSelectedAccount, setCashSearch }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
-      inputRef.current?.focus();
-      document.body.style.overflow = 'hidden';
+      setTimeout(() => inputRef.current?.focus(), 50);
     } else {
-      document.body.style.overflow = '';
+      setQuery('');
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
   }, [isOpen]);
 
   // Filter accounts
@@ -52,8 +51,6 @@ export default function SearchModal({ isOpen, onClose, accounts, transactions, s
       if (totalResults[activeIndex]) {
         selectItem(totalResults[activeIndex]);
       }
-    } else if (e.key === 'Escape') {
-      onClose();
     }
   };
 
@@ -68,56 +65,65 @@ export default function SearchModal({ isOpen, onClose, accounts, transactions, s
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="search-modal-overlay" onClick={onClose}>
-      <div className="search-modal-container" onClick={e => e.stopPropagation()}>
-        <div className="search-modal-header">
-          <Search size={20} className="search-icon" />
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('Search Workspace') || 'Search Workspace'}
+      maxWidth="600px"
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid var(--border)', borderRadius: '12px', padding: '10px 14px', background: 'var(--surface-hover)' }}>
+          <Search size={20} style={{ color: 'var(--text-soft)' }} />
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search for ledgers, cashbook records..."
+            placeholder={t('Search for ledgers, cashbook records...') || 'Search for ledgers, cashbook records...'}
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
+            style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, color: 'var(--text)', fontSize: '0.95rem' }}
           />
-          <button onClick={onClose} style={{ background: 'transparent', cursor: 'pointer', color: 'var(--text-soft)' }}>
-            <X size={18} />
-          </button>
         </div>
         
-        <div className="search-modal-results">
+        <div className="search-modal-results" style={{ maxHeight: '350px', overflowY: 'auto' }}>
           {query.trim() === '' ? (
             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-soft)', fontSize: '0.88rem' }}>
-              Type to start searching accounts and transactions...
+              {t('Type to start searching accounts and transactions...') || 'Type to start searching accounts and transactions...'}
             </div>
           ) : totalResults.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-soft)', fontSize: '0.88rem' }}>
-              No results found for "{query}"
+              {t('No results found for') || 'No results found for'} "{query}"
             </div>
           ) : (
-            <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {filteredAccounts.length > 0 && (
                 <>
-                  <div className="search-modal-section-title">Accounts / Ledgers</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-soft)', padding: '6px 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {t('Accounts / Ledgers') || 'Accounts / Ledgers'}
+                  </div>
                   {filteredAccounts.map((acc, i) => {
                     const globalIdx = i;
                     return (
                       <button
+                        type="button"
                         key={`acc-${acc.id}`}
                         className={`search-modal-item ${globalIdx === activeIndex ? 'active' : ''}`}
                         onClick={() => selectItem({ type: 'account', item: acc })}
                         onMouseEnter={() => setActiveIndex(globalIdx)}
+                        style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '10px 12px', borderRadius: '10px', background: globalIdx === activeIndex ? 'var(--surface-hover)' : 'transparent',
+                          border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--text)'
+                        }}
                       >
                         <div>
-                          <div className="search-modal-item-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, fontSize: '0.9rem' }}>
                             <Users size={14} style={{ color: 'var(--accent)' }} /> {acc.name}
                           </div>
-                          <div className="search-modal-item-subtitle">{acc.account_type}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-soft)', marginLeft: '22px' }}>{acc.account_type}</div>
                         </div>
-                        <div className="search-modal-item-meta">Ledger ↵</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-soft)' }}>Ledger ↵</div>
                       </button>
                     );
                   })}
@@ -126,7 +132,9 @@ export default function SearchModal({ isOpen, onClose, accounts, transactions, s
 
               {filteredTransactions.length > 0 && (
                 <>
-                  <div className="search-modal-section-title" style={{ marginTop: '8px' }}>Transactions</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-soft)', padding: '6px 8px', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '12px' }}>
+                    {t('Transactions') || 'Transactions'}
+                  </div>
                   {filteredTransactions.map((tx, i) => {
                     const globalIdx = filteredAccounts.length + i;
                     const isCashIn = tx.transaction_type === 'cash_in';
@@ -135,48 +143,48 @@ export default function SearchModal({ isOpen, onClose, accounts, transactions, s
                       : `-${currency(tx.cash_out_afn || tx.usd_out * tx.exchange_rate)}`;
                     return (
                       <button
+                        type="button"
                         key={`tx-${tx.id}`}
                         className={`search-modal-item ${globalIdx === activeIndex ? 'active' : ''}`}
                         onClick={() => selectItem({ type: 'transaction', item: tx })}
                         onMouseEnter={() => setActiveIndex(globalIdx)}
+                        style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '10px 12px', borderRadius: '10px', background: globalIdx === activeIndex ? 'var(--surface-hover)' : 'transparent',
+                          border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--text)'
+                        }}
                       >
                         <div>
-                          <div className="search-modal-item-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, fontSize: '0.9rem' }}>
                             <ReceiptText size={14} style={{ color: isCashIn ? 'var(--success)' : 'var(--danger)' }} />
                             <span>{tx.account_name}</span>
                           </div>
-                          <div className="search-modal-item-subtitle">{tx.detail}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-soft)', marginLeft: '22px' }}>{tx.detail}</div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <span className={isCashIn ? 'balance-positive' : 'balance-negative'} style={{ fontWeight: '500', fontSize: '0.88rem' }}>
                             {amountStr}
                           </span>
-                          <div className="search-modal-item-meta">Cashbook ↵</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-soft)' }}>Cashbook ↵</div>
                         </div>
                       </button>
                     );
                   })}
                 </>
               )}
-            </>
+            </div>
           )}
         </div>
 
-        <div className="search-modal-footer">
-          <span>Search ledger accounts and transactions instantly</span>
-          <div className="search-modal-footer-shortcuts">
-            <span className="search-modal-footer-shortcut">
-              <kbd>↑↓</kbd> Navigate
-            </span>
-            <span className="search-modal-footer-shortcut">
-              <kbd>↵</kbd> Select
-            </span>
-            <span className="search-modal-footer-shortcut">
-              <kbd>esc</kbd> Close
-            </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '12px', fontSize: '0.75rem', color: 'var(--text-soft)' }}>
+          <span>{t('Search ledger accounts and transactions instantly') || 'Search ledger accounts and transactions instantly'}</span>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <span><kbd style={{ padding: '2px 4px', background: 'var(--surface-hover)', border: '1px solid var(--border)', borderRadius: '4px' }}>↑↓</kbd> {t('Navigate') || 'Navigate'}</span>
+            <span><kbd style={{ padding: '2px 4px', background: 'var(--surface-hover)', border: '1px solid var(--border)', borderRadius: '4px' }}>↵</kbd> {t('Select') || 'Select'}</span>
+            <span><kbd style={{ padding: '2px 4px', background: 'var(--surface-hover)', border: '1px solid var(--border)', borderRadius: '4px' }}>esc</kbd> {t('Close') || 'Close'}</span>
           </div>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 }

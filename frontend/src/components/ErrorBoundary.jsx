@@ -12,14 +12,37 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error("ErrorBoundary caught an unhandled rendering crash:", error, errorInfo);
+    if (this.props.onError) {
+      try {
+        this.props.onError(error, errorInfo);
+      } catch (e) {
+        // ignore callback error
+      }
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.state.hasError && this.props.resetKey !== prevProps.resetKey) {
+      this.setState({ hasError: false, error: null });
+    }
   }
 
   handleRefresh = () => {
     window.location.reload();
   };
 
+  handleReset = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      const isDev = import.meta.env?.DEV || import.meta.env?.MODE === 'development';
+
       return (
         <div style={{
           minHeight: '100vh',
@@ -35,17 +58,16 @@ export default class ErrorBoundary extends React.Component {
           <div style={{
             maxWidth: '480px',
             width: '100%',
-            background: 'var(--glass-bg, rgba(9, 9, 11, 0.8))',
-            border: '1px solid var(--glass-border, rgba(39, 39, 42, 0.5))',
+            background: 'var(--surface, rgba(9, 9, 11, 0.8))',
+            border: '1px solid var(--border, rgba(39, 39, 42, 0.5))',
             borderRadius: '16px',
             padding: '40px 32px',
             textAlign: 'center',
-            boxShadow: 'var(--shadow, 0 8px 32px rgba(0,0,0,0.4))',
+            boxShadow: 'var(--shadow-lg, 0 8px 32px rgba(0,0,0,0.4))',
             backdropFilter: 'blur(16px)',
             webkitBackdropFilter: 'blur(16px)',
             animation: 'fade-in 0.4s ease-out'
           }}>
-            {/* Warning Icon SVG */}
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -71,7 +93,7 @@ export default class ErrorBoundary extends React.Component {
               color: 'var(--text, #fafafa)',
               lineHeight: '1.2'
             }}>
-              Data Sync Error
+              Something went wrong
             </h1>
             
             <p style={{
@@ -80,7 +102,7 @@ export default class ErrorBoundary extends React.Component {
               color: 'var(--text-soft, #a1a1aa)',
               marginBottom: '32px'
             }}>
-              A rendering exception occurred, possibly due to corrupted database records or format inconsistency. Please refresh the page to resync.
+              This section could not be displayed. Try again or refresh the application.
             </p>
 
             <div style={{
@@ -89,7 +111,9 @@ export default class ErrorBoundary extends React.Component {
               gap: '12px'
             }}>
               <button
+                type="button"
                 onClick={this.handleRefresh}
+                className="error-btn-primary"
                 style={{
                   background: 'var(--accent, #4f46e5)',
                   color: '#ffffff',
@@ -102,14 +126,14 @@ export default class ErrorBoundary extends React.Component {
                   transition: 'all 0.2s ease',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
-                onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1)'}
               >
-                Please Refresh
+                Refresh Page
               </button>
               
               <button
-                onClick={() => this.setState({ hasError: false, error: null })}
+                type="button"
+                onClick={this.handleReset}
+                className="error-btn-secondary"
                 style={{
                   background: 'transparent',
                   color: 'var(--text-soft, #a1a1aa)',
@@ -121,14 +145,12 @@ export default class ErrorBoundary extends React.Component {
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'var(--surface-strong, #27272a)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 Try Again
               </button>
             </div>
 
-            {this.state.error && (
+            {isDev && this.state.error && (
               <details style={{
                 marginTop: '32px',
                 textAlign: 'left',
@@ -163,6 +185,12 @@ export default class ErrorBoundary extends React.Component {
             @keyframes fade-in {
               from { opacity: 0; transform: scale(0.98); }
               to { opacity: 1; transform: scale(1); }
+            }
+            .error-btn-primary:hover {
+              filter: brightness(1.1);
+            }
+            .error-btn-secondary:hover {
+              background: var(--surface-hover, rgba(39, 39, 42, 0.4)) !important;
             }
           `}</style>
         </div>

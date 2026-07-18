@@ -13,7 +13,8 @@ import {
   Settings,
   ShieldCheck,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  Loader2
 } from 'lucide-react';
 import PrintDocument from './PrintDocument';
 
@@ -109,16 +110,16 @@ function PrintWorkspace({ report, zoom, status, error, documentRef, onRetry }) {
   );
 }
 
-function ActionDock({ onPrint, onThemeToggle, onDownloadData, onSettings, onLogout, onClose, onDownloadPng, zoom, setZoom, printDisabled }) {
+function ActionDock({ onPrint, onThemeToggle, onDownloadData, onSettings, onLogout, onClose, onDownloadPng, zoom, setZoom, printDisabled, pngLoading }) {
   const { t } = useTranslation();
   const actions = [
-    { label: t('print.dockPrint'), icon: Printer, tone: 'blue', onClick: onPrint, disabled: printDisabled },
-    { label: t('print.dockExportPdf'), icon: FileDown, tone: 'green', onClick: onPrint, disabled: printDisabled },
-    { label: t('print.dockExportPng'), icon: Download, tone: 'purple', onClick: onDownloadPng, disabled: printDisabled },
-    { label: t('print.dockDownload'), icon: DatabaseBackup, tone: 'cyan', onClick: onDownloadData },
-    { label: t('print.dockTheme'), icon: Moon, tone: 'glass', onClick: onThemeToggle },
-    { label: t('print.dockSettings'), icon: Settings, tone: 'glass', onClick: onSettings },
-    { label: t('print.dockLogout'), icon: LogOut, tone: 'red', onClick: onLogout || onClose }
+    { label: t('print.dockPrint'), icon: Printer, tone: 'blue', onClick: onPrint, disabled: printDisabled || pngLoading },
+    { label: t('print.dockExportPdf'), icon: FileDown, tone: 'green', onClick: onPrint, disabled: printDisabled || pngLoading },
+    { label: pngLoading ? (t('print.exporting') || 'Exporting...') : t('print.dockExportPng'), icon: pngLoading ? Loader2 : Download, tone: 'purple', onClick: onDownloadPng, disabled: printDisabled || pngLoading },
+    { label: t('print.dockDownload'), icon: DatabaseBackup, tone: 'cyan', onClick: onDownloadData, disabled: pngLoading },
+    { label: t('print.dockTheme'), icon: Moon, tone: 'glass', onClick: onThemeToggle, disabled: pngLoading },
+    { label: t('print.dockSettings'), icon: Settings, tone: 'glass', onClick: onSettings, disabled: pngLoading },
+    { label: t('print.dockLogout'), icon: LogOut, tone: 'red', onClick: onLogout || onClose, disabled: pngLoading }
   ];
 
   return (
@@ -130,10 +131,19 @@ function ActionDock({ onPrint, onThemeToggle, onDownloadData, onSettings, onLogo
       </div>
       {actions.map(({ label, icon: Icon, tone, onClick, disabled }) => (
         <button key={label} className={`dock-button dock-button-${tone}`} onClick={() => onClick?.()} disabled={disabled}>
-          <Icon size={18} />
+          <Icon size={18} className={Icon === Loader2 ? 'animate-spin' : ''} />
           <span>{label}</span>
         </button>
       ))}
+      <style>{`
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </GlassSurface>
   );
 }
@@ -153,54 +163,38 @@ export default function GlassPrintPreview({
   documentRef
 }) {
   const [zoom, setZoom] = useState(0.86);
+  const [pngLoading, setPngLoading] = useState(false);
+  const [pngError, setPngError] = useState('');
 
   if (!open) return null;
 
   const downloadPng = async () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1600;
-    canvas.height = 1100;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(15, 23, 42, 0.18)';
-    ctx.shadowBlur = 48;
-    ctx.shadowOffsetY = 24;
-    ctx.fillRect(180, 120, 1240, 860);
-    ctx.shadowColor = 'transparent';
-    ctx.fillStyle = '#0f172a';
-    ctx.font = '700 54px Inter, Arial, sans-serif';
-    ctx.textAlign = 'center';
-    if (!report) return;
-    ctx.fillText(report.company.companyName || 'BAWAR STAR PLASTIC INDUSTRY', 800, 690);
-    ctx.fillStyle = '#64748b';
-    ctx.font = '500 28px Inter, Arial, sans-serif';
-    ctx.fillText('Premium Manufacturing & Plastic Packaging Solutions', 800, 742);
-
-    if (report.company.companyLogo) {
-      await new Promise((resolve) => {
-        const image = new Image();
-        image.onload = () => {
-          const ratio = Math.min(380 / image.width, 200 / image.height);
-          const width = image.width * ratio;
-          const height = image.height * ratio;
-          ctx.drawImage(image, 800 - width / 2, 290, width, height);
-          resolve();
-        };
-        image.onerror = resolve;
-        image.src = report.company.companyLogo;
+    if (!documentRef?.current) return;
+    setPngLoading(true);
+    setPngError('');
+    try {
+      const { toPng } = await import('html-to-image');
+      const dataUrl = await toPng(documentRef.current, {
+        backgroundColor: 'var(--surface, #ffffff)',
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left'
+        },
+        cacheBust: true
       });
-    } else {
-      ctx.fillStyle = '#2563eb';
-      ctx.font = '800 150px Inter, Arial, sans-serif';
-      ctx.fillText('BS', 800, 470);
+      
+      const link = document.createElement('a');
+      const companyNameClean = (report?.company?.companyName || 'cashbook').toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      link.download = `${companyNameClean}_report_${dateStr}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('PNG download error:', err);
+      setPngError(err.message || 'Failed to generate PNG image.');
+    } finally {
+      setPngLoading(false);
     }
-
-    const link = document.createElement('a');
-    link.download = 'bawar-star-print-preview.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
   };
 
   return (
@@ -210,6 +204,12 @@ export default function GlassPrintPreview({
         <div className="preview-reflection" aria-hidden="true" />
         <DashboardHeader report={report || { preparedBy: 'Preparing report' }} onClose={onClose} />
         {report ? <BusinessOverview report={report} /> : null}
+        {pngError && (
+          <div className="print-preview-state print-preview-error no-print" role="alert" style={{ padding: '12px 24px', margin: '12px 24px 0', borderRadius: '12px' }}>
+            <strong>PNG Export Failed</strong>
+            <p>{pngError}</p>
+          </div>
+        )}
         <section className="print-preview-studio">
           <PrintWorkspace
             report={report}
@@ -231,6 +231,7 @@ export default function GlassPrintPreview({
           zoom={zoom}
           setZoom={setZoom}
           printDisabled={status !== 'ready'}
+          pngLoading={pngLoading}
         />
       </main>
     </div>

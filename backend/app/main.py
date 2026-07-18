@@ -1,27 +1,43 @@
+# cspell:ignore Vite Vercel jose uvicorn pylint sqlalchemy jose JWTError
+"""Main entry point for the SKY Cash Book FastAPI application."""
+
 from __future__ import annotations
 
+from datetime import datetime, timezone
+import json
 import logging
 import uuid
-import json
-from datetime import datetime, timezone
 
-from fastapi import FastAPI
-from fastapi import Header
-from fastapi import Request
-from fastapi import status
+from fastapi import FastAPI, Header, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
 from jose import jwt, JWTError
+from sqlalchemy import text
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from .database import Base, engine, SessionLocal, ensure_payroll_schema, ensure_sqlite_schema, ensure_user_schema
 from . import models
-from .auth_dependencies import SECRET_KEY, ALGORITHM
+from .auth_dependencies import ALGORITHM, SECRET_KEY
 from .config import APP_NAME, FRONTEND_ORIGINS, FRONTEND_ORIGIN_REGEX
-from .routes import accounts, auth, backup, employees, neon_auth, reports, settings, transactions
+from .database import (
+    Base,
+    SessionLocal,
+    engine,
+    ensure_payroll_schema,
+    ensure_sqlite_schema,
+    ensure_user_schema,
+)
+from .routes import (
+    accounts,
+    auth,
+    backup,
+    employees,
+    neon_auth,
+    reports,
+    settings,
+    transactions,
+)
 
 app = FastAPI(title=APP_NAME)
 logger = logging.getLogger("cashbook")
@@ -43,7 +59,10 @@ ensure_payroll_schema()
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+):
+    """Handle validation errors and log details."""
     request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
     log_data = {
         "timestamp": datetime.utcnow().isoformat(),
@@ -51,17 +70,20 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         "method": request.method,
         "path": request.url.path,
         "error_type": "RequestValidationError",
-        "detail": exc.errors()
+        "detail": exc.errors(),
     }
-    logger.warning(f"Validation Error: {json.dumps(log_data)}")
+    logger.warning("Validation Error: %s", json.dumps(log_data))
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": exc.errors(), "request_id": request_id}
+        content={"detail": exc.errors(), "request_id": request_id},
     )
 
 
 @app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+async def http_exception_handler(
+    request: Request, exc: StarletteHTTPException
+):
+    """Handle HTTP exceptions and log details."""
     request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
     log_data = {
         "timestamp": datetime.utcnow().isoformat(),
@@ -70,17 +92,18 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         "path": request.url.path,
         "error_type": "HTTPException",
         "status_code": exc.status_code,
-        "detail": exc.detail
+        "detail": exc.detail,
     }
-    logger.error(f"HTTP Error: {json.dumps(log_data)}")
+    logger.error("HTTP Error: %s", json.dumps(log_data))
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": exc.detail, "request_id": request_id}
+        content={"detail": exc.detail, "request_id": request_id},
     )
 
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Handle general unhandled exceptions and log tracebacks."""
     request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
     log_data = {
         "timestamp": datetime.utcnow().isoformat(),
@@ -88,28 +111,36 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         "method": request.method,
         "path": request.url.path,
         "error_type": exc.__class__.__name__,
-        "message": str(exc)
+        "message": str(exc),
     }
-    logger.exception(f"Unhandled Exception: {json.dumps(log_data)}")
+    logger.exception("Unhandled Exception: %s", json.dumps(log_data))
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "Internal server error", "request_id": request_id}
+        content={"detail": "Internal server error", "request_id": request_id},
     )
 
 
 @app.middleware("http")
 async def request_logging(request: Request, call_next):
+    """Log request errors and assign tracking IDs to responses."""
     request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
     try:
         response = await call_next(request)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         logger.exception(
             "Unhandled request error",
-            extra={"request_id": request_id, "method": request.method, "path": request.url.path},
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+            },
         )
         return JSONResponse(
             status_code=500,
-            content={"detail": "Internal server error", "request_id": request_id},
+            content={
+                "detail": "Internal server error",
+                "request_id": request_id,
+            },
         )
     response.headers["X-Request-ID"] = request_id
     return response
@@ -126,14 +157,22 @@ def root():
     from pathlib import Path
     from fastapi.responses import FileResponse
 
-    dist_index = Path(__file__).resolve().parents[2] / "frontend" / "dist" / "index.html"
+    dist_index = (
+        Path(__file__).resolve().parents[2]
+        / "frontend"
+        / "dist"
+        / "index.html"
+    )
     if dist_index.is_file():
         return FileResponse(dist_index)
     return JSONResponse(
         {
             "service": APP_NAME,
             "status": "online",
-            "message": "API backend. The web UI is served by the frontend dev server (Vite) or the static production build.",
+            "message": (
+                "API backend. The web UI is served by the frontend dev "
+                "server (Vite) or the static production build."
+            ),
             "health": "/api/health",
         }
     )
@@ -141,6 +180,7 @@ def root():
 
 @app.on_event("startup")
 def seed_settings():
+    """Seed default settings on application startup."""
     db = SessionLocal()
     try:
         if not db.query(models.Setting).first():
@@ -153,7 +193,11 @@ def seed_settings():
 @app.get("/health")
 @app.get("/api/health")
 @app.get("/api/status")
-def health(request: Request = None, x_session_token: str | None = Header(default=None)):
+def health(
+    request: Request = None,
+    x_session_token: str | None = Header(default=None),
+):
+    """Retrieve service health, check DB, and show current user session."""
     payload = {
         "backend": "online",
         "database": "unknown",
@@ -171,24 +215,33 @@ def health(request: Request = None, x_session_token: str | None = Header(default
         payload["database"] = "connected"
         payload["auth"] = "ready"
         auth_header = request.headers.get("Authorization")
-        token = auth_header.split(" ")[1] if auth_header and auth_header.startswith("Bearer ") else x_session_token
+        is_bearer = auth_header and auth_header.startswith("Bearer ")
+        token = (
+            auth_header.split(" ")[1] if is_bearer else x_session_token
+        )
         if token:
             try:
-                jwt_payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                jwt_payload = jwt.decode(
+                    token, SECRET_KEY, algorithms=[ALGORITHM]
+                )
                 username = jwt_payload.get("sub")
                 if username:
-                    user = db.query(models.User).filter(models.User.username == username).first()
+                    user = (
+                        db.query(models.User)
+                        .filter(models.User.username == username)
+                        .first()
+                    )
                     if user:
                         payload["currentUser"] = {
                             "id": user.id,
                             "username": user.username,
                             "role": user.role,
                             "assigned_group_id": user.assigned_group_id,
-                            "assigned_branch_id": user.assigned_branch_id
+                            "assigned_branch_id": user.assigned_branch_id,
                         }
             except JWTError:
                 pass
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         logger.exception("Health check failed")
         payload.update(
             {
@@ -198,7 +251,9 @@ def health(request: Request = None, x_session_token: str | None = Header(default
                 "error": f"Database not connected: {exc}",
             }
         )
-        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=payload)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=payload
+        )
     finally:
         db.close()
     return payload
@@ -206,6 +261,7 @@ def health(request: Request = None, x_session_token: str | None = Header(default
 
 @app.get("/health/database")
 def health_database():
+    """Verify raw database connection health."""
     with engine.connect() as conn:
         conn.execute(text("select 1"))
     return {"status": "healthy", "database": "connected"}
@@ -213,6 +269,7 @@ def health_database():
 
 @app.get("/health/auth")
 def health_auth():
+    """Check user database auth system health and count."""
     db = SessionLocal()
     try:
         users = db.query(models.User).count()

@@ -7,7 +7,15 @@ export const DATE_DISPLAY_FORMATS = {
 };
 
 export default function DateDisplay({ value, format = DATE_DISPLAY_FORMATS.DUAL, compact = false }) {
-  if (!value) return compact ? null : <span className="date-empty">-</span>;
+  const isValidDate = (val) => {
+    if (!val) return false;
+    const parsed = new Date(val);
+    return !isNaN(parsed.getTime());
+  };
+
+  if (!value || !isValidDate(value)) {
+    return compact ? null : <span className="date-empty">-</span>;
+  }
 
   const persian = jalaliDateLabel(value);
   const gregorian = dateLabel(value);

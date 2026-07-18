@@ -251,9 +251,83 @@ body { overflow: hidden !important; background: var(--bg); }
   }
 }
 
+/* Dark Mode Liquid Glass Specular Highlights */
+html:not(.light) .glass-card, 
+html:not(.light) .sidebar-card, 
+html:not(.light) .panel,
+html:not(.light) .stat-card {
+  border-top: 1px solid rgba(255, 255, 255, 0.4) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%) !important;
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.25) !important;
+}
+
 /* Expanded & Collapsed Sidebar */
 .app-shell.sidebar-expanded .app-main { width: calc(100% - 260px); }
 .app-shell.sidebar-collapsed .app-main { width: calc(100% - 84px); }
-.sidebar { width: 260px !important; transition: width 0.3s ease; }
+.sidebar { width: 260px !important; transition: width 0.3s ease, border-radius 0.3s ease; }
 .app-shell.sidebar-collapsed .sidebar { width: 84px !important; }
 
+/* Airy Blue Floating Dashboard (Light Mode) */
+@media screen and (min-width: 1024px) {
+  body.light .app-shell {
+    padding: 20px 24px !important;
+    background: transparent !important;
+  }
+  
+  body.light .sidebar {
+    height: calc(100vh - 40px) !important;
+    border-radius: 20px 0 0 20px !important;
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  body.light .app-main {
+    height: calc(100vh - 40px) !important;
+    border-radius: 0 20px 20px 0 !important;
+    background: #f4f7fa !important;
+    box-shadow: 10px 10px 40px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  body.light .top-header {
+    background: #f4f7fa !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 20px 0 0 !important;
+  }
+}
+
+/* Light Mode Overrides for Cards (Airy Theme) */
+body.light .glass-card, 
+body.light .stat-card,
+body.light .sidebar-card,
+body.light .panel {
+  background: #ffffff !important;
+  border: 1px solid rgba(226, 232, 240, 0.4) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 16px !important;
+}
+
+body.light .glass-card:hover, 
+body.light .stat-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light .nav-btn {
+  color: #64748b !important;
+}
+body.light .nav-btn:hover {
+  background: #f8fafc !important;
+  color: #1e293b !important;
+}
+body.light .nav-btn.active {
+  background: #eff6ff !important;
+  color: var(--accent) !important;
+  font-weight: 600 !important;
+}

@@ -1,9 +1,8 @@
 import { formatApiErrorDetail } from './errorFormatting.js';
 
-// We default to relative paths to utilize Vite's dev proxy and Vercel's same-origin routes.
-// We ignore hardcoded localhost URLs to prevent LAN access issues.
-const envUrl = import.meta.env?.VITE_API_URL || '';
-export const API_BASE = envUrl.includes('localhost') ? '' : envUrl;
+// We default to relative paths to utilize Vite's dev proxy and Nginx's same-origin routing.
+const apiBaseUrl = String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+export const API_BASE = apiBaseUrl;
 let authToken = localStorage.getItem('cashbook-session-token') || '';
 
 export function setAuthToken(token) {

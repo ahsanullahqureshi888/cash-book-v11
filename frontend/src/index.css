@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import "tailwindcss";
 
 :root {
   color-scheme: dark;
@@ -13,9 +14,10 @@
   --glass-inner-light: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
   --glass-blur: blur(28px) saturate(190%);
   
-  --bg: radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.15), transparent 40%),
-        radial-gradient(circle at 90% 90%, rgba(14, 165, 233, 0.15), transparent 40%),
-        #0a0a0c;
+  --bg: radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.4) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.4) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.4) 0px, transparent 50%),
+        #0f172a;
         
   --surface: rgba(24, 24, 27, 0.65);
   --surface-strong: rgba(255, 255, 255, 0.12);
@@ -53,27 +55,25 @@ body.light {
   --glass-inner-light: inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
   --glass-blur: blur(28px) saturate(190%);
 
-  --bg: radial-gradient(circle at 10% 10%, rgba(224, 231, 255, 0.8), transparent 50%),
-        radial-gradient(circle at 90% 90%, rgba(224, 242, 254, 0.8), transparent 50%),
-        #f8fafc;
+  --bg: linear-gradient(135deg, #6bbdf6 0%, #bde2fc 40%, #eef6fc 100%);
         
-  --surface: rgba(255, 255, 255, 0.65);
-  --surface-strong: rgba(255, 255, 255, 0.95);
-  --surface-hover: rgba(15, 23, 42, 0.03);
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-strong: rgba(255, 255, 255, 1);
+  --surface-hover: rgba(244, 249, 253, 1);
   
   --text: #0f172a;
   --text-soft: #475569;
   
-  --accent: #0ea5e9;
-  --accent-2: #4f46e5;
+  --accent: #2563eb;
+  --accent-2: #3b82f6;
   --success: #10b981;
-  --danger: #f43f5e;
+  --danger: #ef4444;
   --warning: #f59e0b;
   
-  --border: rgba(15, 23, 42, 0.08);
-  --border-muted: rgba(15, 23, 42, 0.04);
-  --border-soft: rgba(15, 23, 42, 0.02);
-  --accent-focus: rgba(14, 165, 233, 0.38);
+  --border: rgba(255, 255, 255, 1);
+  --border-muted: rgba(226, 232, 240, 0.6);
+  --border-soft: rgba(241, 245, 249, 0.5);
+  --accent-focus: rgba(37, 99, 235, 0.38);
   
   --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.03);
   --shadow: 0 8px 32px rgba(15, 23, 42, 0.06);

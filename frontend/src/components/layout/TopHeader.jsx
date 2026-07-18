@@ -14,7 +14,7 @@ export default function TopHeader({ title, onThemeToggle, onPrint, currentUser, 
   const timeLabel = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   return (
-    <header className="top-header print-only-hide">
+    <header className="top-header print-only-hide" style={{ borderBottom: '1px solid rgba(212, 175, 55, 0.15)', background: 'transparent' }}>
       <div className="top-header-left" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <button className="mobile-menu-btn" onClick={() => setMobileOpen(true)} aria-label="Open menu" style={{ display: 'none' }}>
           <Menu size={20} />

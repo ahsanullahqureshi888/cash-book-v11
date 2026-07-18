@@ -100,11 +100,11 @@ def main():
     
     try:
         result = restore_backup_from_file(str(backup_file), replace_all=replace_all)
-        print("\n✓ Backup restored successfully!")
+        print("\n[SUCCESS] Backup restored successfully!")
         print(f"Results: {result}")
         return 0
     except Exception as e:
-        print(f"\n✗ Backup restoration failed: {e}", file=sys.stderr)
+        print(f"\n[ERROR] Backup restoration failed: {e}", file=sys.stderr)
         return 1
 
 

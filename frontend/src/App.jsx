@@ -1,14 +1,16 @@
 import { lazy, startTransition, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import AppShell from './components/layout/AppShell';
 import ReceiptModal from './components/ReceiptModal';
 import ConfirmDialog from './components/ConfirmDialog';
-import ToastNotification from './components/ToastNotification';
+import { useToast } from './components/ToastProvider';
 import SearchModal from './components/SearchModal';
-import Dashboard from './pages/Dashboard';
 import CashBook from './pages/CashBook';
 import LoginScreen from './pages/LoginScreen';
 import SecuritySetup from './pages/SecuritySetup';
+import LiquidMobileDashboard from './components/mobile/LiquidMobileDashboard';
+import SoftDashboard from './components/desktop/SoftDashboard';
 import { api, setAuthToken } from './services/api';
 import { isLegacyUpdateDateError, withoutTransactionDate } from './services/transactionCompatibility';
 import { currency, csvCell, dateLabel, jalaliDateLabel, todayInputValue } from './utils/format';
@@ -95,7 +97,29 @@ const emptyCashForm = (type) => ({
 });
 
 export default function App() {
-  const [activeView, setActiveView] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { showToast } = useToast();
+
+  const activeView = location.pathname === '/' ? 'dashboard' : location.pathname.substring(1);
+  const setActiveView = (view) => {
+    if (view === 'dashboard') navigate('/');
+    else navigate(`/${view}`);
+  };
+
+  const getPageTitle = () => {
+    const path = location.pathname;
+    if (path === '/cashbook') return 'Cash Book';
+    if (path === '/salary') return 'Employees & Salary';
+    if (path === '/ledger') return 'Ledger';
+    if (path === '/accounts') return 'Accounts';
+    if (path === '/reports') return 'Reports';
+    if (path === '/settings') return 'Settings';
+    if (path === '/backup') return 'Backup';
+    if (path === '/converter') return 'Converter';
+    return 'Dashboard';
+  };
+
   const [theme, setTheme] = useState(() => localStorage.getItem('cashbook-theme') || 'dark');
   const [searchOpen, setSearchOpen] = useState(false);
   const [companyName, setCompanyName] = useState('Cashbook Of All companies');
@@ -166,7 +190,6 @@ export default function App() {
   const [printStatus, setPrintStatus] = useState('idle');
   const [printError, setPrintError] = useState('');
   const [confirm, setConfirm] = useState(null);
-  const [toast, setToast] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
   const [lastBackupAt, setLastBackupAt] = useState(() => localStorage.getItem('cashbook-last-backup-at') || '');
   const [isLoading, setIsLoading] = useState(true);
@@ -316,11 +339,7 @@ export default function App() {
     }
   }
 
-  function showToast(message, type = 'success') {
-    setToast({ message, type });
-    window.clearTimeout(showToast.timer);
-    showToast.timer = window.setTimeout(() => setToast(null), 2500);
-  }
+
 
   async function initializeAuth() {
     setAuthLoading(true);
@@ -359,8 +378,6 @@ export default function App() {
   }
 
   async function onLogin(payload) {
-    // Neon Auth path: LoginScreen already called api.neonAuthLogin() and
-    // setAuthToken(). We receive the completed response, skip the API call.
     const response = payload._neonAuthResponse
       ? payload._neonAuthResponse
       : await api.login(payload);
@@ -403,7 +420,6 @@ export default function App() {
     try {
       await api.logout();
     } catch {
-      // Keep local logout reliable if the API is temporarily unavailable.
     }
     setAuthToken('');
     localStorage.removeItem('cashbook-current-user');
@@ -1163,42 +1179,46 @@ export default function App() {
     setTableFullscreen(node.classList.contains('fullscreen-fallback'));
   }
 
+  if (authLoading) {
+    return <div className="login-loading">{t('Loading workspace...')}</div>;
+  }
+
   if (setupRequired && !currentUser) {
     return (
       <>
         <SecuritySetup mode="setup" onSetup={onSetupOwner} companyName={companyName} companyLogo={companyLogo} />
         {authLoading && <div className="login-loading">{t('Preparing secure setup...')}</div>}
         {pageError && <div className="login-loading error">{pageError}</div>}
-        <ToastNotification toast={toast} />
       </>
     );
   }
 
   if (currentUser && passwordChangeRequired) {
     return (
-      <>
-        <SecuritySetup mode="change" currentUser={currentUser} onChangePassword={onChangePassword} onLogout={onLogout} companyName={companyName} companyLogo={companyLogo} />
-        <ToastNotification toast={toast} />
-      </>
+      <SecuritySetup mode="change" currentUser={currentUser} onChangePassword={onChangePassword} onLogout={onLogout} companyName={companyName} companyLogo={companyLogo} />
     );
   }
 
   if (!currentUser) {
     return (
-      <>
-        <LoginScreen
-          users={loginUsers}
-          rememberedUsername={localStorage.getItem('cashbook-remembered-user') || ''}
-          onLogin={onLogin}
-          connectionError={pageError}
-          isPreparing={authLoading}
-          onRetryConnection={initializeAuth}
-          companyName={companyName}
-          companyLogo={companyLogo}
-        />
-        {authLoading && <div className="login-loading">{t('Preparing secure login...')}</div>}
-        <ToastNotification toast={toast} />
-      </>
+      <Routes>
+        <Route path="/mobile-liquid" element={<LiquidMobileDashboard />} />
+        <Route path="*" element={
+          <>
+            <LoginScreen
+              users={loginUsers}
+              rememberedUsername={localStorage.getItem('cashbook-remembered-user') || ''}
+              onLogin={onLogin}
+              connectionError={pageError}
+              isPreparing={authLoading}
+              onRetryConnection={initializeAuth}
+              companyName={companyName}
+              companyLogo={companyLogo}
+            />
+            {authLoading && <div className="login-loading">{t('Preparing secure login...')}</div>}
+          </>
+        } />
+      </Routes>
     );
   }
 
@@ -1211,11 +1231,9 @@ export default function App() {
       
       <div className="relative z-10 w-full h-full">
         <AppShell
-          activeView={activeView}
-          setView={setActiveView}
           companyName={companyName}
           companyLogo={companyLogo}
-          title={activeView === 'cashbook' ? 'Cash Book' : activeView === 'salary' ? 'Employees & Salary' : activeView.charAt(0).toUpperCase() + activeView.slice(1)}
+          title={getPageTitle()}
           theme={theme}
           onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           onPrint={onPrint}
@@ -1225,302 +1243,278 @@ export default function App() {
           onLogout={onLogout}
           onSearchClick={() => setSearchOpen(true)}
         >
-        <Suspense fallback={<div className="loading-strip">{t('Loading workspace...')}</div>}>
-          <>
-          {isLoading && <div className="loading-strip">{t('Loading latest cash book data...')}</div>}
-          {pageError && <div className="error-banner">{pageError}</div>}
-          {activeView === 'dashboard' && (
-            <Dashboard
-              summary={summary}
-              latestTransactions={latestTransactions}
-              transactions={transactions}
-              onNavigate={setActiveView}
-              onBackup={onBackup}
-              onRestore={onImportClick}
-              onPrint={onPrint}
-              companyName={companyName}
-              companyLogo={companyLogo}
-              activeTransactionType={activeTransactionType}
-              setActiveTransactionType={setActiveTransactionType}
-              isLoading={isLoading}
-            />
-          )}
-          {activeView === 'cashbook' && (
-            <CashBook
-              summary={summary}
-              transactions={transactions}
-              search={cashSearch}
-              setSearch={setCashSearch}
-              startDate={cashStartDate}
-              setStartDate={setCashMonthFromDate}
-              endDate={cashEndDate}
-              setEndDate={setCashEndDate}
-              typeFilter={cashTypeFilter}
-              setTypeFilter={setCashTypeFilter}
-              categoryFilter={cashCategoryFilter}
-              setCategoryFilter={setCashCategoryFilter}
-              paymentFilter={cashPaymentFilter}
-              setPaymentFilter={setCashPaymentFilter}
-              accountFilter={cashAccountFilter}
-              setAccountFilter={setCashAccountFilter}
-              language={language}
-              onClearFilters={() => {
-                setCashSearch('');
-                setCashStartDate(activeCashMonthRange.startDate);
-                setCashEndDate(activeCashMonthRange.endDate);
-                setCashTypeFilter('all');
-                setCashCategoryFilter('all');
-                setCashPaymentFilter('all');
-                setCashAccountFilter('');
-              }}
-              rows={visibleCashRows}
-              rowOffset={cashPageStart}
-              page={cashPage}
-              pageCount={cashPageCount}
-              totalRows={cashRows.length}
-              onPageChange={setCashPage}
-              totals={{
-                cashIn: currency(cashTotals.cashIn),
-                cashOut: currency(cashTotals.cashOut),
-                usdIn: currency(cashTotals.usdIn, 'USD'),
-                usdOut: currency(cashTotals.usdOut, 'USD')
-              }}
-              cashInForm={cashInForm}
-              setCashInForm={setCashInForm}
-              cashOutForm={cashOutForm}
-              accounts={accounts}
-              employees={employees}
-              selectedEmployee={selectedCashOutEmployee}
-              selectedEmployeeSalary={selectedEmployeeSalary}
-              onCashInAccountChange={(value) => onTransactionAccountChange('cash_in', value)}
-              onCashOutAccountChange={(value) => onTransactionAccountChange('cash_out', value)}
-              onCashInAccountSelect={(item) => onTransactionAccountSelect('cash_in', item)}
-              onCashOutAccountSelect={(item) => onTransactionAccountSelect('cash_out', item)}
-              onQuickAddEmployee={onCreateEmployee}
-              setCashOutForm={setCashOutForm}
-              cashInMessage={cashInMessage}
-              cashOutMessage={cashOutMessage}
-              savingType={transactionSavingType}
-              onCashInSubmit={onCashInSubmit}
-              onCashOutSubmit={onCashOutSubmit}
-              onClearCashIn={() => setCashInForm(emptyCashForm('cash_in'))}
-              onClearCashOut={() => setCashOutForm(emptyCashForm('cash_out'))}
-              onEditTransaction={onEditTransaction}
-              onDeleteTransaction={(id) => setConfirm({
-                title: 'Delete transaction',
-                message: 'This transaction will be permanently deleted.',
-                onConfirm: async () => {
-                  try {
-                    await api.deleteTransaction(id);
-                    setTransactions((current) => current.filter((transaction) => transaction.id !== id));
-                    setSummary(await api.getSummary());
-                    setConfirm(null);
-                    showToast('Transaction deleted.', 'success');
-                  } catch (error) {
-                    showToast(error.message, 'error');
-                  }
-                }
-              })}
-              onReceipt={setReceipt}
-              onToggleFullscreen={toggleTableFullscreen}
-              fullscreen={tableFullscreen}
-              tableRef={tableRef}
-              dateDisplayFormat={dateDisplayFormat}
-              onPrint={onPrint}
-              onExport={onExportCashBook}
-              onExportJson={onExportCashBookJson}
-              activeTransactionType={activeTransactionType}
-              setActiveTransactionType={setActiveTransactionType}
-              isLoading={isLoading}
-            />
-          )}
-          {activeView === 'ledger' && (
-            <AccountLedger
-              accounts={accounts.filter((account) => !ledgerSearch || account.name.toLowerCase().includes(ledgerSearch.toLowerCase())).map((account) => ({
-                ...account,
-                balance: ledger && selectedAccount?.id === account.id ? ledger.final_balance_afn : account.opening_balance_afn
-              }))}
-              accountName={accountName}
-              setAccountName={setAccountName}
-              openingBalance={openingBalance}
-              setOpeningBalance={setOpeningBalance}
-              search={ledgerSearch}
-              setSearch={setLedgerSearch}
-              onCreateAccount={onCreateAccount}
-              selectedAccountName={selectedAccount?.name}
-              onSelectAccount={onSelectAccount}
-              ledgerTitle={selectedAccount ? `${selectedAccount.name} Ledger` : 'Selected Ledger'}
-              ledgerSummary={ledgerSummary}
-              rows={ledgerRows}
-              dateDisplayFormat={dateDisplayFormat}
-              onReceipt={(tx) => setReceipt(tx)}
-              onPrint={onPrint}
-              onExport={onExportLedger}
-            />
-          )}
-          {activeView === 'accounts' && (
-            <Accounts
-              accounts={accounts}
-              form={accountForm}
-              setForm={setAccountForm}
-              onSave={onSaveAccount}
-              onEdit={setAccountForm}
-              onDelete={onDeleteAccount}
-              search={accountSearch}
-              setSearch={setAccountSearch}
-            />
-          )}
-          {activeView === 'salary' && (
-            <EmployeesSalary
-              employees={employees}
-              transactions={transactions}
-              onCreateEmployee={onCreateEmployee}
-              onUpdateEmployee={onUpdateEmployee}
-              onOpenCashBook={() => setActiveView('cashbook')}
-              onSalaryPaymentSaved={onSalaryPaymentSaved}
-              companyName={companyName}
-              companyLogo={companyLogo}
-              currentUser={currentUser}
-              onEmployeeSalaryChanged={onEmployeeSalaryChanged}
-              onEmployeeAvatarChanged={onEmployeeAvatarChanged}
-              onEmployeeDeleted={onEmployeeDeleted}
-            />
-          )}
-          {activeView === 'reports' && (
-            <Reports
-              mode={reportMode}
-              setMode={(mode) => {
-                setReportMode(mode);
-                setReportData(null);
-              }}
-              startDate={reportStartDate}
-              setStartDate={setReportStartDate}
-              endDate={reportEndDate}
-              setEndDate={setReportEndDate}
-              dateDisplayFormat={dateDisplayFormat}
-              onRun={runReport}
-              data={reportData}
-              onPrint={onPrint}
-              onExport={() => {
-                const blob = new Blob([JSON.stringify(reportData || {}, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `${reportMode}-report.json`;
-                link.click();
-                URL.revokeObjectURL(url);
-              }}
-            />
-          )}
-          {activeView === 'converter' && (
-            <CurrencyConverter
-              direction={converterDirection}
-              setDirection={setConverterDirection}
-              amount={converterAmount}
-              setAmount={setConverterAmount}
-              rate={converterRate}
-              setRate={setConverterRate}
-              result={converterResult}
-              onSaveRate={async () => {
-                setExchangeRate(converterRate);
-                await onSaveSettings();
-                showToast('Default exchange rate saved.', 'success');
-              }}
-            />
-          )}
-          {activeView === 'settings' && (
-            <Settings
-              companyName={companyName}
-              setCompanyName={setCompanyName}
-              companyPhone={companyPhone}
-              setCompanyPhone={setCompanyPhone}
-              companyEmail={companyEmail}
-              setCompanyEmail={setCompanyEmail}
-              companyWebsite={companyWebsite}
-              setCompanyWebsite={setCompanyWebsite}
-              companyTaxNumber={companyTaxNumber}
-              setCompanyTaxNumber={setCompanyTaxNumber}
-              companyLogo={companyLogo}
-              setCompanyLogo={setCompanyLogo}
-              companyAddress={companyAddress}
-              setCompanyAddress={setCompanyAddress}
-              companyLicense={companyLicense}
-              setCompanyLicense={setCompanyLicense}
-              currencyCode={currencyCode}
-              setCurrencyCode={setCurrencyCode}
-              exchangeRate={exchangeRate}
-              setExchangeRate={setExchangeRate}
-              theme={theme}
-              setTheme={setTheme}
-              language={language}
-              setLanguage={setLanguage}
-              dateDisplayFormat={dateDisplayFormat}
-              setDateDisplayFormat={setDateDisplayFormat}
-              printFooterText={printFooterText}
-              setPrintFooterText={setPrintFooterText}
-              autoLogoutMinutes={autoLogoutMinutes}
-              setAutoLogoutMinutes={setAutoLogoutMinutes}
-              printHeader={printHeader}
-              setPrintHeader={setPrintHeader}
-              onSave={onSaveSettings}
-              onPrintPreview={onPrint}
-              onBackup={onBackup}
-              onImportClick={onImportClick}
-              onImportFile={onImportFile}
-              onClear={onClearAll}
-              fileRef={fileRef}
-              status={settingsStatus}
-              setSettingsStatus={setSettingsStatus}
-              lastBackup={lastBackupAt || 'Never'}
-              currentUser={currentUser}
-              users={managedUsers}
-              onReloadUsers={reloadManagedUsers}
-              onCreateUser={async (payload) => {
-                await api.createUser(payload);
-                await reloadManagedUsers();
-                showToast('User added successfully', 'success');
-              }}
-              onUpdateUser={async (id, payload) => {
-                await api.updateUser(id, payload);
-                await reloadManagedUsers();
-                showToast('User updated successfully', 'success');
-              }}
-              onResetUserPassword={async (id, payload) => {
-                const result = await api.resetUserPassword(id, payload);
-                showToast('Password reset.', 'success');
-                return result;
-              }}
-              onDeleteUser={(user) => setConfirm({
-                title: 'Delete user account',
-                message: 'Are you sure you want to delete this account?',
-                onConfirm: async () => {
-                  await api.deleteUser(user.id);
-                  setConfirm(null);
-                  await reloadManagedUsers();
-                  showToast('User deleted.', 'success');
-                }
-              })}
-              diagnostics={diagnostics}
-              onRefreshDiagnostics={refreshDiagnostics}
-            />
-          )}
-          {activeView === 'backup' && (
-            <BackupRestore
-              onBackup={onBackup}
-              onImportClick={onImportClick}
-              onImportFile={onImportFile}
-              onCsvImportClick={onCsvImportClick}
-              onCsvImportFile={onCsvImportFile}
-              onDownloadCsvTemplate={onDownloadCsvTemplate}
-              onClear={onClearAll}
-              fileRef={fileRef}
-              csvFileRef={csvFileRef}
-              status={settingsStatus}
-              lastBackup={lastBackupAt || 'Never'}
-            />
-          )}
-          </>
-        </Suspense>
+          <Suspense fallback={<div className="loading-strip">{t('Loading workspace...')}</div>}>
+            <>
+              {isLoading && <div className="loading-strip">{t('Loading latest cash book data...')}</div>}
+              {pageError && <div className="error-banner">{pageError}</div>}
+              <Routes>
+                <Route path="/" element={<SoftDashboard />} />
+                <Route path="/cashbook" element={
+                  <CashBook
+                    summary={summary}
+                    transactions={transactions}
+                    search={cashSearch}
+                    setSearch={setCashSearch}
+                    startDate={cashStartDate}
+                    setStartDate={setCashMonthFromDate}
+                    endDate={cashEndDate}
+                    setEndDate={setCashEndDate}
+                    typeFilter={cashTypeFilter}
+                    setTypeFilter={setCashTypeFilter}
+                    categoryFilter={cashCategoryFilter}
+                    setCategoryFilter={setCashCategoryFilter}
+                    paymentFilter={cashPaymentFilter}
+                    setPaymentFilter={setCashPaymentFilter}
+                    accountFilter={cashAccountFilter}
+                    setAccountFilter={setCashAccountFilter}
+                    language={language}
+                    onClearFilters={() => {
+                      setCashSearch('');
+                      setCashStartDate(activeCashMonthRange.startDate);
+                      setCashEndDate(activeCashMonthRange.endDate);
+                      setCashTypeFilter('all');
+                      setCashCategoryFilter('all');
+                      setCashPaymentFilter('all');
+                      setCashAccountFilter('');
+                    }}
+                    rows={visibleCashRows}
+                    rowOffset={cashPageStart}
+                    page={cashPage}
+                    pageCount={cashPageCount}
+                    totalRows={cashRows.length}
+                    onPageChange={setCashPage}
+                    totals={{
+                      cashIn: currency(cashTotals.cashIn),
+                      cashOut: currency(cashTotals.cashOut),
+                      usdIn: currency(cashTotals.usdIn, 'USD'),
+                      usdOut: currency(cashTotals.usdOut, 'USD')
+                    }}
+                    cashInForm={cashInForm}
+                    setCashInForm={setCashInForm}
+                    cashOutForm={cashOutForm}
+                    accounts={accounts}
+                    employees={employees}
+                    selectedEmployee={selectedCashOutEmployee}
+                    selectedEmployeeSalary={selectedEmployeeSalary}
+                    onCashInAccountChange={(value) => onTransactionAccountChange('cash_in', value)}
+                    onCashOutAccountChange={(value) => onTransactionAccountChange('cash_out', value)}
+                    onCashInAccountSelect={(item) => onTransactionAccountSelect('cash_in', item)}
+                    onCashOutAccountSelect={(item) => onTransactionAccountSelect('cash_out', item)}
+                    onQuickAddEmployee={onCreateEmployee}
+                    setCashOutForm={setCashOutForm}
+                    cashInMessage={cashInMessage}
+                    cashOutMessage={cashOutMessage}
+                    savingType={transactionSavingType}
+                    onCashInSubmit={onCashInSubmit}
+                    onCashOutSubmit={onCashOutSubmit}
+                    onClearCashIn={() => setCashInForm(emptyCashForm('cash_in'))}
+                    onClearCashOut={() => setCashOutForm(emptyCashForm('cash_out'))}
+                    onEditTransaction={onEditTransaction}
+                    onDeleteTransaction={(id) => setConfirm({
+                      title: 'Delete transaction',
+                      message: 'This transaction will be permanently deleted.',
+                      onConfirm: async () => {
+                        try {
+                          await api.deleteTransaction(id);
+                          setTransactions((current) => current.filter((transaction) => transaction.id !== id));
+                          setSummary(await api.getSummary());
+                          setConfirm(null);
+                          showToast('Transaction deleted.', 'success');
+                        } catch (error) {
+                          showToast(error.message, 'error');
+                        }
+                      }
+                    })}
+                    onReceipt={setReceipt}
+                    onToggleFullscreen={toggleTableFullscreen}
+                    fullscreen={tableFullscreen}
+                    tableRef={tableRef}
+                    dateDisplayFormat={dateDisplayFormat}
+                    onPrint={onPrint}
+                    onExport={onExportCashBook}
+                    onExportJson={onExportCashBookJson}
+                    activeTransactionType={activeTransactionType}
+                    setActiveTransactionType={setActiveTransactionType}
+                    isLoading={isLoading}
+                  />
+                } />
+                <Route path="/ledger" element={
+                  <AccountLedger
+                    accounts={accounts.filter((account) => !ledgerSearch || account.name.toLowerCase().includes(ledgerSearch.toLowerCase())).map((account) => ({
+                      ...account,
+                      balance: ledger && selectedAccount?.id === account.id ? ledger.final_balance_afn : account.opening_balance_afn
+                    }))}
+                    accountName={accountName}
+                    setAccountName={setAccountName}
+                    openingBalance={openingBalance}
+                    setOpeningBalance={setOpeningBalance}
+                    search={ledgerSearch}
+                    setSearch={setLedgerSearch}
+                    onCreateAccount={onCreateAccount}
+                    selectedAccountName={selectedAccount?.name}
+                    onSelectAccount={onSelectAccount}
+                    ledgerTitle={selectedAccount ? `${selectedAccount.name} Ledger` : 'Selected Ledger'}
+                    ledgerSummary={ledgerSummary}
+                    rows={ledgerRows}
+                    dateDisplayFormat={dateDisplayFormat}
+                    onReceipt={(tx) => setReceipt(tx)}
+                    onPrint={onPrint}
+                    onExport={onExportLedger}
+                  />
+                } />
+                <Route path="/accounts" element={
+                  <Accounts
+                    accounts={accounts}
+                    form={accountForm}
+                    setForm={setAccountForm}
+                    onSave={onSaveAccount}
+                    onEdit={setAccountForm}
+                    onDelete={onDeleteAccount}
+                    search={accountSearch}
+                    setSearch={setAccountSearch}
+                  />
+                } />
+                <Route path="/salary" element={
+                  <EmployeesSalary
+                    employees={employees}
+                    transactions={transactions}
+                    onCreateEmployee={onCreateEmployee}
+                    onUpdateEmployee={onUpdateEmployee}
+                    onOpenCashBook={() => navigate('/cashbook')}
+                    onSalaryPaymentSaved={onSalaryPaymentSaved}
+                    companyName={companyName}
+                    companyLogo={companyLogo}
+                    currentUser={currentUser}
+                    onEmployeeSalaryChanged={onEmployeeSalaryChanged}
+                    onEmployeeAvatarChanged={onEmployeeAvatarChanged}
+                    onEmployeeDeleted={onEmployeeDeleted}
+                  />
+                } />
+                <Route path="/reports" element={
+                  <Reports
+                    transactions={transactions}
+                    accounts={accounts}
+                    companyName={companyName}
+                    companyLogo={companyLogo}
+                    companyAddress={companyAddress}
+                    companyPhone={companyPhone}
+                    companyEmail={companyEmail}
+                    currentUser={currentUser}
+                    dateDisplayFormat={dateDisplayFormat}
+                    currencyCode={currencyCode}
+                  />
+                } />
+                <Route path="/settings" element={
+                  <Settings
+                    companyName={companyName}
+                    setCompanyName={setCompanyName}
+                    companyPhone={companyPhone}
+                    setCompanyPhone={setCompanyPhone}
+                    companyEmail={companyEmail}
+                    setCompanyEmail={setCompanyEmail}
+                    companyWebsite={companyWebsite}
+                    setCompanyWebsite={setCompanyWebsite}
+                    companyTaxNumber={companyTaxNumber}
+                    setCompanyTaxNumber={setCompanyTaxNumber}
+                    companyLogo={companyLogo}
+                    setCompanyLogo={setCompanyLogo}
+                    companyAddress={companyAddress}
+                    setCompanyAddress={setCompanyAddress}
+                    companyLicense={companyLicense}
+                    setCompanyLicense={setCompanyLicense}
+                    currencyCode={currencyCode}
+                    setCurrencyCode={setCurrencyCode}
+                    exchangeRate={exchangeRate}
+                    setExchangeRate={setExchangeRate}
+                    theme={theme}
+                    setTheme={setTheme}
+                    language={language}
+                    setLanguage={setLanguage}
+                    dateDisplayFormat={dateDisplayFormat}
+                    setDateDisplayFormat={setDateDisplayFormat}
+                    printFooterText={printFooterText}
+                    setPrintFooterText={setPrintFooterText}
+                    autoLogoutMinutes={autoLogoutMinutes}
+                    setAutoLogoutMinutes={setAutoLogoutMinutes}
+                    printHeader={printHeader}
+                    setPrintHeader={setPrintHeader}
+                    onSave={onSaveSettings}
+                    onPrintPreview={onPrint}
+                    onBackup={onBackup}
+                    onImportClick={onImportClick}
+                    onImportFile={onImportFile}
+                    onClear={onClearAll}
+                    fileRef={fileRef}
+                    status={settingsStatus}
+                    setSettingsStatus={setSettingsStatus}
+                    lastBackup={lastBackupAt || 'Never'}
+                    currentUser={currentUser}
+                    users={managedUsers}
+                    onReloadUsers={reloadManagedUsers}
+                    onCreateUser={async (payload) => {
+                      await api.createUser(payload);
+                      await reloadManagedUsers();
+                      showToast('User added successfully', 'success');
+                    }}
+                    onUpdateUser={async (id, payload) => {
+                      await api.updateUser(id, payload);
+                      await reloadManagedUsers();
+                      showToast('User updated successfully', 'success');
+                    }}
+                    onResetUserPassword={async (id, payload) => {
+                      const result = await api.resetUserPassword(id, payload);
+                      showToast('Password reset.', 'success');
+                      return result;
+                    }}
+                    onDeleteUser={(user) => setConfirm({
+                      title: 'Delete user account',
+                      message: 'Are you sure you want to delete this account?',
+                      onConfirm: async () => {
+                        await api.deleteUser(user.id);
+                        setConfirm(null);
+                        await reloadManagedUsers();
+                        showToast('User deleted.', 'success');
+                      }
+                    })}
+                    diagnostics={diagnostics}
+                    onRefreshDiagnostics={refreshDiagnostics}
+                  />
+                } />
+                <Route path="/converter" element={
+                  <CurrencyConverter
+                    direction={converterDirection}
+                    setDirection={setConverterDirection}
+                    amount={converterAmount}
+                    setAmount={setConverterAmount}
+                    rate={converterRate}
+                    setRate={setConverterRate}
+                    result={converterResult}
+                    onSaveRate={async () => {
+                      setExchangeRate(converterRate);
+                      await onSaveSettings();
+                      showToast('Default exchange rate saved.', 'success');
+                    }}
+                  />
+                } />
+                <Route path="/backup" element={
+                  <BackupRestore
+                    onBackup={onBackup}
+                    onImportClick={onImportClick}
+                    onImportFile={onImportFile}
+                    onCsvImportClick={onCsvImportClick}
+                    onCsvImportFile={onCsvImportFile}
+                    onDownloadCsvTemplate={onDownloadCsvTemplate}
+                    onClear={onClearAll}
+                    fileRef={fileRef}
+                    csvFileRef={csvFileRef}
+                    status={settingsStatus}
+                    lastBackup={lastBackupAt || 'Never'}
+                  />
+                } />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </>
+          </Suspense>
         </AppShell>
       <ReceiptModal transaction={receipt} companyName={companyName} dateDisplayFormat={dateDisplayFormat} onClose={() => setReceipt(null)} onPrint={printReceipt} />
       {printPreviewOpen && <Suspense fallback={<div className="loading-strip">{t('Loading print studio...')}</div>}><GlassPrintPreview
@@ -1554,7 +1548,6 @@ export default function App() {
         setCashSearch={setCashSearch}
       />
       <ConfirmDialog open={!!confirm} title={confirm?.title} message={confirm?.message} onCancel={() => setConfirm(null)} onConfirm={confirm?.onConfirm} />
-      <ToastNotification toast={toast} />
       <Analytics />
       </div>
     </div>

@@ -17,6 +17,15 @@ export function useFileDownload() {
       const response = await fetch(`${API_BASE}${path}`, { headers });
       
       if (!response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          try {
+            const json = await response.json();
+            throw new Error(json.detail || `Download failed: ${response.statusText}`);
+          } catch {
+            // fallback if JSON parsing fails
+          }
+        }
         throw new Error(`Download failed: ${response.statusText}`);
       }
       

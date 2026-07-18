@@ -1,0 +1,130 @@
+/* 1. Global Screen Environment */
+.soft-dashboard-theme {
+  /* Soft background for the whole monitor screen */
+  --screen-bg: linear-gradient(135deg, #93c5fd 0%, #bfdbfe 100%);
+  
+  /* App Window Colors */
+  --app-surface: #f4f7fb; /* The slightly blue-grey background inside the app */
+  --card-bg: #ffffff;
+  
+  /* Typography */
+  --text-main: #1e293b;
+  --text-muted: #94a3b8;
+  
+  /* Perfected Proportions */
+  --sidebar-width: 260px;
+  --right-panel-width: 320px;
+  --radius-app: 32px;
+  --radius-card: 20px;
+}
+
+.soft-dashboard-wrapper {
+  background: var(--screen-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text-main);
+  /* The entire screen becomes a centered flex container */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2vw; /* Creates the floating effect around the edges */
+  box-sizing: border-box;
+}
+
+/* 2. The Floating App Window */
+.soft-app-window {
+  background: var(--app-surface);
+  width: 100%;
+  max-width: 1600px;
+  height: 92vh; /* Fixed height so the inside scrolls, not the page */
+  border-radius: var(--radius-app);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15); /* Soft, wide drop shadow */
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr var(--right-panel-width);
+  overflow: hidden; /* Keeps inner scrolling contained */
+}
+
+/* 3. Column Layouts */
+.sidebar-col {
+  background: var(--app-surface);
+  padding: 32px 24px;
+  border-right: 1px solid rgba(0,0,0,0.03);
+  overflow-y: auto;
+}
+
+.main-col {
+  padding: 32px;
+  overflow-y: auto;
+}
+
+.right-col {
+  padding: 32px 24px;
+  background: var(--app-surface);
+  overflow-y: auto;
+}
+
+/* 4. Top Header Areas */
+.header-search {
+  background: var(--card-bg);
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  width: 100%;
+  max-width: 600px;
+  font-size: 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+  margin-bottom: 32px;
+  outline: none;
+}
+
+/* 5. Soft Card Styling (Matches Reference Image) */
+.soft-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-card);
+  padding: 24px;
+  /* Very subtle shadow, no hard borders */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  margin-bottom: 24px;
+}
+
+/* Top Row Metric Grid */
+.metric-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+/* Typography Sizing */
+.text-h1 { font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0 0 8px 0; }
+.text-h2 { font-size: 14px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.text-value { font-size: 32px; font-weight: 700; margin: 8px 0; }
+.text-sub { font-size: 12px; color: var(--text-muted); }
+
+/* Table overrides for the soft look */
+.soft-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.soft-table th { color: var(--text-muted); text-align: left; padding-bottom: 16px; font-weight: 500; border-bottom: 1px solid #f1f5f9; }
+.soft-table td { padding: 16px 0; border-bottom: 1px solid #f1f5f9; }
+
+/* 6. Navigation Link Styling */
+.sidebar-link {
+  display: block;
+  padding: 12px 16px;
+  color: var(--text-muted);
+  font-weight: 500;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.sidebar-link:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.sidebar-link.active {
+  background: #ffffff;
+  color: var(--text-main);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}

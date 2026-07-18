@@ -32,27 +32,47 @@ function DataTable({
         <table className="accounting-table w-full text-left border-collapse">
           <thead>
             <tr>
-              {columns.map((col, idx) => (
-                <th
-                  key={col.key || idx}
-                  className={`${col.className || ''} ${col.sortable ? 'cursor-pointer select-none hover:bg-white/5 dark:hover:bg-white/5 transition-colors' : ''}`}
-                  onClick={() => {
-                    if (col.sortable && onSort) {
-                      onSort(col.key);
-                    }
-                  }}
-                  style={col.style}
-                >
-                  <div className={`flex items-center gap-1 ${col.align === 'right' ? 'justify-end' : ''}`}>
-                    {col.label}
-                    {col.sortable && sortConfig?.key === col.key && (
-                      <span className="text-indigo-500">
-                        {sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-                      </span>
+              {columns.map((col, idx) => {
+                const isCurrentSort = sortConfig?.key === col.key;
+                return (
+                  <th
+                    key={col.key || idx}
+                    className={`${col.className || ''} ${col.sortable ? 'p-0' : 'py-3 px-4'}`}
+                    style={col.style}
+                    aria-sort={col.sortable && isCurrentSort ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : undefined}
+                  >
+                    {col.sortable ? (
+                      <button
+                        type="button"
+                        onClick={() => onSort?.(col.key)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'inherit',
+                          font: 'inherit',
+                          padding: '12px 16px',
+                          width: '100%',
+                          textAlign: col.align === 'right' ? 'right' : 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: col.align === 'right' ? 'flex-end' : 'flex-start',
+                          gap: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {col.label}
+                        <span style={{ display: 'inline-flex', opacity: isCurrentSort ? 1 : 0.3 }} aria-hidden="true">
+                          {isCurrentSort && sortConfig.direction === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
+                        </span>
+                      </button>
+                    ) : (
+                      <div className={col.align === 'right' ? 'text-right' : ''}>
+                        {col.label}
+                      </div>
                     )}
-                  </div>
-                </th>
-              ))}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -60,7 +80,7 @@ function DataTable({
               Array.from({ length: loadingRowCount }).map((_, rIdx) => (
                 <tr key={`skeleton-${rIdx}`} className="skeleton-row border-b border-white/5 dark:border-zinc-800/30">
                   {columns.map((col, cIdx) => (
-                    <td key={`skel-${rIdx}-${cIdx}`} className={col.className}>
+                    <td key={`skel-${rIdx}-${cIdx}`} className={col.className} style={{ padding: '12px 16px' }}>
                       <div className="skeleton-box animate-pulse rounded bg-zinc-200 dark:bg-zinc-800 h-4 w-full opacity-50" style={{ maxWidth: col.skeletonWidth || '100%' }}></div>
                     </td>
                   ))}
@@ -81,19 +101,23 @@ function DataTable({
                 </td>
               </tr>
             ) : (
-              data.map((row, rowIndex) => (
-                <tr
-                  key={Reflect.get(row, keyField) || rowIndex}
-                  className={`border-b border-zinc-200/50 dark:border-zinc-800/50 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors ${typeof rowClassName === 'function' ? rowClassName(row) : rowClassName || ''}`}
-                  dir={row.dir || 'auto'}
-                >
-                  {columns.map((col, colIndex) => (
-                    <td key={col.key || colIndex} className={`${col.className || ''} py-4 px-4 text-sm ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} style={col.style}>
-                      {col.render ? col.render(row, rowIndex, rowOffset) : Reflect.get(row, col.key)}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              data.map((row, rowIndex) => {
+                const keyVal = Reflect.get(row, keyField);
+                const stableKey = (keyVal !== undefined && keyVal !== null) ? keyVal : `row-${rowIndex}`;
+                return (
+                  <tr
+                    key={stableKey}
+                    className={`border-b border-zinc-200/50 dark:border-zinc-800/50 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors ${typeof rowClassName === 'function' ? rowClassName(row) : rowClassName || ''}`}
+                    dir={row.dir || 'auto'}
+                  >
+                    {columns.map((col, colIndex) => (
+                      <td key={col.key || colIndex} className={`${col.className || ''} py-4 px-4 text-sm ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} style={col.style}>
+                        {col.render ? col.render(row, rowIndex, rowOffset) : Reflect.get(row, col.key)}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

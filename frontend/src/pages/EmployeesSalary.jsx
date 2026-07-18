@@ -5,7 +5,6 @@ import { api } from '../services/api';
 import { currency, csvCell, dateLabel } from '../utils/format';
 import { employeeSalarySnapshot } from '../utils/payroll';
 import BaseModal from '../components/BaseModal';
-import SideDrawer from '../components/SideDrawer';
 
 function escapeHtml(str) {
   if (typeof str !== 'string') return String(str ?? '');
@@ -370,11 +369,11 @@ export default function EmployeesSalary({
             deletingEmployeeId={deletingEmployeeId} 
             uploadingAvatarId={uploadingAvatarId} 
           />
-          <SideDrawer 
+          <BaseModal 
             isOpen={editingEmployeeId !== null || activeTab === 'Employees_Add'} 
             onClose={() => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees'); }}
             title={editingEmployeeId ? t('payroll.edit') : t('payroll.addEmployee')}
-            width="450px"
+            maxWidth="480px"
           >
             <form id="employeeForm" className="entry-form" onSubmit={submitEmployee} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <input name="fullName" value={employeeForm.full_name} onChange={(event) => setEmployeeForm({ ...employeeForm, full_name: event.target.value })} placeholder="Full Name" required />
@@ -394,7 +393,7 @@ export default function EmployeesSalary({
                 <button className="ghost-btn" type="button" onClick={() => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees'); }} style={{ flex: 1 }}>{t('payroll.cancel')}</button>
               </div>
             </form>
-          </SideDrawer>
+          </BaseModal>
         </>
       )}
       {activeTab === 'Salary Payments' && (
