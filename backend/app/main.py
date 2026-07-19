@@ -214,7 +214,7 @@ def health(
         db.execute(text("select 1"))
         payload["database"] = "connected"
         payload["auth"] = "ready"
-        auth_header = request.headers.get("Authorization")
+        auth_header = request.headers.get("Authorization") if request else None
         is_bearer = auth_header and auth_header.startswith("Bearer ")
         token = (
             auth_header.split(" ")[1] if is_bearer else x_session_token

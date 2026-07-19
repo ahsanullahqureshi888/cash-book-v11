@@ -49,54 +49,65 @@ export default function QuickAddEmployeeModal({ initialName, onClose, onSave }) 
       isOpen={true}
       onClose={onClose}
       title={t('Add New Employee') || 'Add New Employee'}
-      maxWidth="600px"
+      maxWidth="680px"
       preventClose={saving}
       loading={saving}
+      footer={
+        <>
+          <button type="button" className="ghost-btn modal-btn-cancel" onClick={onClose} disabled={saving}>{t('Cancel')}</button>
+          <button type="submit" form="quickAddEmployeeForm" className="primary-btn modal-btn-save" disabled={saving}>
+            {saving ? t('Saving...') : t('Save & Select Employee') || 'Save & Select Employee'}
+          </button>
+        </>
+      }
     >
-      <form onSubmit={submit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <QuickAddField label="Employee Name" style={{ gridColumn: 'span 2' }}>
-          <input autoFocus value={form.full_name} onChange={(event) => update('full_name', event.target.value)} placeholder="Enter employee name" required />
-        </QuickAddField>
-        <QuickAddField label="Father Name">
-          <input value={form.father_name} onChange={(event) => update('father_name', event.target.value)} placeholder="Enter father name" />
-        </QuickAddField>
-        <QuickAddField label="Phone Number">
-          <input value={form.phone} onChange={(event) => update('phone', event.target.value)} placeholder="Enter phone number" />
-        </QuickAddField>
-        <QuickAddField label="Position / Job Title">
-          <input value={form.position} onChange={(event) => update('position', event.target.value)} placeholder="e.g. Operator" required />
-        </QuickAddField>
-        <QuickAddField label="Department">
-          <input value={form.department} onChange={(event) => update('department', event.target.value)} placeholder="e.g. Production" />
-        </QuickAddField>
-        <QuickAddField label="Joining Date">
-          <input type="date" value={form.joining_date} onChange={(event) => update('joining_date', event.target.value)} required />
-        </QuickAddField>
-        <QuickAddField label="Monthly Salary">
-          <span className="quick-add-salary-control" style={{ display: 'flex', gap: '8px' }}>
-            <input type="number" min="0" step="0.01" value={form.monthly_salary} onChange={(event) => update('monthly_salary', event.target.value)} placeholder="0.00" required style={{ flex: 1 }} />
-            <select value={form.currency} onChange={(event) => update('currency', event.target.value)} style={{ width: '80px' }}>
-              <option value="AFN">AFN</option>
-              <option value="USD">USD</option>
-            </select>
-          </span>
-        </QuickAddField>
-        <QuickAddField label="Notes / Remarks" style={{ gridColumn: 'span 2' }}>
-          <textarea value={form.notes} onChange={(event) => update('notes', event.target.value)} placeholder="Add optional employee context..." rows={3} />
-        </QuickAddField>
+      <form id="quickAddEmployeeForm" className="modal-form" onSubmit={submit}>
+        <div className="employee-form-grid">
+          <label className="form-field form-field--full">
+            <span className="form-label">Employee Name *</span>
+            <input className="form-control" autoFocus value={form.full_name} onChange={(event) => update('full_name', event.target.value)} placeholder="Enter employee name" required />
+          </label>
+          <label className="form-field">
+            <span className="form-label">Father Name</span>
+            <input className="form-control" value={form.father_name} onChange={(event) => update('father_name', event.target.value)} placeholder="Enter father name" />
+          </label>
+          <label className="form-field">
+            <span className="form-label">Phone Number</span>
+            <input className="form-control" value={form.phone} onChange={(event) => update('phone', event.target.value)} placeholder="Enter phone number" />
+          </label>
+          <label className="form-field">
+            <span className="form-label">Position / Job Title *</span>
+            <input className="form-control" value={form.position} onChange={(event) => update('position', event.target.value)} placeholder="e.g. Operator" required />
+          </label>
+          <label className="form-field">
+            <span className="form-label">Department</span>
+            <input className="form-control" value={form.department} onChange={(event) => update('department', event.target.value)} placeholder="e.g. Production" />
+          </label>
+          <label className="form-field">
+            <span className="form-label">Joining Date *</span>
+            <input className="form-control" type="date" value={form.joining_date} onChange={(event) => update('joining_date', event.target.value)} required />
+          </label>
+          <label className="form-field">
+            <span className="form-label">Monthly Salary *</span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input className="form-control" type="number" min="0" step="0.01" value={form.monthly_salary} onChange={(event) => update('monthly_salary', event.target.value)} placeholder="0.00" required style={{ flex: 1 }} />
+              <select className="form-select" value={form.currency} onChange={(event) => update('currency', event.target.value)} style={{ width: '90px' }}>
+                <option value="AFN">AFN</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+          </label>
+          <label className="form-field form-field--full">
+            <span className="form-label">Notes / Remarks</span>
+            <textarea className="form-textarea" value={form.notes} onChange={(event) => update('notes', event.target.value)} placeholder="Add optional employee context..." rows={2} />
+          </label>
+        </div>
 
         {error && (
-          <div style={{ gridColumn: 'span 2', color: 'var(--danger)', padding: '10px 14px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '12px', fontSize: '0.85rem' }}>
+          <div className="error-banner">
             {error}
           </div>
         )}
-
-        <div className="quick-add-actions" style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '12px' }}>
-          <button type="button" className="ghost-btn" onClick={onClose} disabled={saving}>{t('Cancel')}</button>
-          <button type="submit" className="primary-btn" disabled={saving}>
-            {saving ? t('Saving...') : t('Save & Select Employee') || 'Save & Select Employee'}
-          </button>
-        </div>
       </form>
     </BaseModal>
   );

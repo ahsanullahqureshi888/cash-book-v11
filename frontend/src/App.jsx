@@ -10,7 +10,7 @@ import CashBook from './pages/CashBook';
 import LoginScreen from './pages/LoginScreen';
 import SecuritySetup from './pages/SecuritySetup';
 import LiquidMobileDashboard from './components/mobile/LiquidMobileDashboard';
-import SoftDashboard from './components/desktop/SoftDashboard';
+import Dashboard from './pages/Dashboard';
 import { api, setAuthToken } from './services/api';
 import { isLegacyUpdateDateError, withoutTransactionDate } from './services/transactionCompatibility';
 import { currency, csvCell, dateLabel, jalaliDateLabel, todayInputValue } from './utils/format';
@@ -1248,7 +1248,22 @@ export default function App() {
               {isLoading && <div className="loading-strip">{t('Loading latest cash book data...')}</div>}
               {pageError && <div className="error-banner">{pageError}</div>}
               <Routes>
-                <Route path="/" element={<SoftDashboard />} />
+                <Route path="/" element={
+                  <Dashboard
+                    summary={summary}
+                    latestTransactions={latestTransactions}
+                    transactions={transactions}
+                    onNavigate={setActiveView}
+                    onBackup={onBackup}
+                    onRestore={onImportClick}
+                    onPrint={onPrint}
+                    activeTransactionType={activeTransactionType}
+                    setActiveTransactionType={setActiveTransactionType}
+                    isLoading={isLoading}
+                    currentUser={currentUser}
+                    companyName={companyName}
+                  />
+                } />
                 <Route path="/cashbook" element={
                   <CashBook
                     summary={summary}

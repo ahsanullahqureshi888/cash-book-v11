@@ -1,7 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
+
+const SIDEBAR_STORAGE_KEY = 'cashbook-sidebar-collapsed';
+
+function getDefaultSidebarState() {
+  try {
+    // Clear obsolete legacy keys if present
+    localStorage.removeItem('cashbook_sidebar_collapsed');
+    localStorage.removeItem('cashbook_sidebar_user_toggled');
+
+    const width = window.innerWidth;
+    if (width >= 1280) {
+      return false; // Expanded by default on large desktop viewports
+    }
+    if (width >= 768) {
+      const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      return stored === 'true';
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 export default function AppShell({ 
   children, 
@@ -20,27 +42,28 @@ export default function AppShell({
   onSearchClick 
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(getDefaultSidebarState);
+
+  const handleSetIsCollapsed = (collapsed) => {
+    setIsCollapsed(collapsed);
+    try {
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(collapsed));
+    } catch (e) {
+      console.warn('Unable to persist sidebar state:', e);
+    }
+  };
 
   return (
-    <div 
-      className={`app-shell ${isCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}
-      style={{
-        display: 'flex', 
-        minHeight: '100vh',
-        width: '100vw',
-        overflow: 'hidden',
-        background: 'transparent' // transparent to let global gradient shine through
-      }}
-    >
+    <div className={`app-shell ${isCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
       <Sidebar 
         activeView={activeView} 
         setView={setView} 
         mobileOpen={mobileOpen} 
         setMobileOpen={setMobileOpen}
         isCollapsed={isCollapsed}
-        setIsCollapsed={setIsCollapsed}
+        setIsCollapsed={handleSetIsCollapsed}
         companyName={companyName}
+        companyLogo={companyLogo}
         currentUser={currentUser}
         onPrint={onPrint}
         onBackup={onBackup}
@@ -48,66 +71,26 @@ export default function AppShell({
         onLogout={onLogout}
       />
       
-      {/* Main Content Area */}
-      <div 
-        className="app-main"
-        style={{ 
-          flex: 1, 
-          padding: '24px', 
-          display: 'flex', 
-          flexDirection: 'column',
-          height: '100vh',
-          boxSizing: 'border-box',
-          overflowY: 'hidden', // Let children inner container scroll
-          position: 'relative'
-        }}
-      >
+      <div className="app-workspace">
+        <TopHeader 
+          title={title}
+          onThemeToggle={onThemeToggle}
+          onPrint={onPrint}
+          currentUser={currentUser}
+          onLogout={onLogout}
+          companyName={companyName}
+          companyLogo={companyLogo}
+          theme={theme}
+          onSearchClick={onSearchClick}
+          setMobileOpen={setMobileOpen}
+          isCollapsed={isCollapsed}
+        />
         
-        {/* The Glassmorphic Main Wrapper */}
-        <main 
-          className="app-content"
-          style={{
-            flex: 1,
-            background: 'rgba(255, 252, 245, 0.55)',
-            border: '1px solid rgba(212, 175, 55, 0.22)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            borderRadius: '32px',
-            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.03), 0 4px 12px rgba(212, 175, 55, 0.05)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Top Header Integration */}
-          <TopHeader 
-            title={title}
-            onThemeToggle={onThemeToggle}
-            onPrint={onPrint}
-            currentUser={currentUser}
-            onLogout={onLogout}
-            companyName={companyName}
-            companyLogo={companyLogo}
-            theme={theme}
-            onSearchClick={onSearchClick}
-            setMobileOpen={setMobileOpen}
-            isCollapsed={isCollapsed}
-          />
-
-          {/* Active Content Container */}
-          <div 
-            className="page-container"
-            style={{ 
-              padding: '32px', 
-              overflowY: 'auto', 
-              flex: 1 
-            }}
-          >
-            {children || <Outlet />}
-          </div>
-
+        <main className="app-main-scroll">
+          {children || <Outlet />}
         </main>
       </div>
     </div>
   );
 }
+

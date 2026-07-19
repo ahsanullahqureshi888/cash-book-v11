@@ -1,7 +1,7 @@
 import { formatApiErrorDetail } from './errorFormatting.js';
 
 // We default to relative paths to utilize Vite's dev proxy and Nginx's same-origin routing.
-const apiBaseUrl = String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const apiBaseUrl = (import.meta.env?.PROD ? '' : (import.meta.env?.VITE_API_URL || 'http://localhost:8000')).replace(/\/+$/, '');
 export const API_BASE = apiBaseUrl;
 let authToken = localStorage.getItem('cashbook-session-token') || '';
 

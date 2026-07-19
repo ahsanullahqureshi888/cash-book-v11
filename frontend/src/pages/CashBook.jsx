@@ -274,7 +274,7 @@ export default function CashBook(props) {
         
         {/* Table Footer Totals */}
         {!props.isLoading && props.rows.length > 0 && (
-          <div className="bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-200 dark:border-zinc-800 p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+          <div className="totals-footer border-t border-zinc-200 dark:border-zinc-800 text-sm">
             <div className="flex flex-col">
               <span className="text-zinc-500 text-xs font-semibold uppercase">Total Cash In</span>
               <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{props.totals.cashIn}</strong>

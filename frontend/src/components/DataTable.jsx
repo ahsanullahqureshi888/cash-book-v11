@@ -18,7 +18,8 @@ function DataTable({
   sortConfig,
   className = '',
   rowClassName,
-  headerContent = null
+  headerContent = null,
+  renderMobileCard = null
 }) {
 
   return (
@@ -28,7 +29,35 @@ function DataTable({
           {headerContent}
         </div>
       )}
-      <div className="table-wrapper overflow-x-auto">
+      
+      {/* Mobile Cards Container */}
+      {renderMobileCard && (
+        <div className="mobile-cards-wrapper block md:hidden">
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, rIdx) => (
+              <div key={`mob-skel-${rIdx}`} className="mobile-transaction-card glass-card p-4 rounded-xl mb-3 animate-pulse bg-zinc-100/50 dark:bg-zinc-800/20" style={{ border: '1px solid var(--border)' }}>
+                <div className="h-4 bg-zinc-200 dark:bg-zinc-850 rounded w-1/3 mb-2"></div>
+                <div className="h-4 bg-zinc-200 dark:bg-zinc-855 rounded w-full mb-2"></div>
+                <div className="h-4 bg-zinc-200 dark:bg-zinc-860 rounded w-2/3"></div>
+              </div>
+            ))
+          ) : data.length === 0 ? (
+            <div className="empty-state flex flex-col items-center justify-center py-16 px-4 text-center">
+              <div className="empty-state-illustration mb-4 text-indigo-400/80 dark:text-indigo-500/80 bg-indigo-50/50 dark:bg-indigo-900/10 p-5 rounded-full shadow-inner inline-flex border border-indigo-100 dark:border-indigo-800/30">
+                <SearchX size={36} />
+              </div>
+              <h4 className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">{emptyTitle}</h4>
+              <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-sm mt-2 mx-auto leading-relaxed">
+                {emptyDescription}
+              </p>
+            </div>
+          ) : (
+            data.map((row, rowIndex) => renderMobileCard(row, rowIndex, rowOffset))
+          )}
+        </div>
+      )}
+
+      <div className={`table-wrapper overflow-x-auto ${renderMobileCard ? 'hidden md:block' : ''}`}>
         <table className="accounting-table w-full text-left border-collapse">
           <thead>
             <tr>
@@ -104,6 +133,58 @@ function DataTable({
               data.map((row, rowIndex) => {
                 const keyVal = Reflect.get(row, keyField);
                 const stableKey = (keyVal !== undefined && keyVal !== null) ? keyVal : `row-${rowIndex}`;
+                
+                if (row.isOpeningBalance) {
+                  const isLedgerTable = columns.length === 12;
+                  const isTxTable = columns.length === 14;
+                  
+                  if (isTxTable) {
+                    return (
+                      <tr
+                        key={stableKey}
+                        className="opening-balance-row bg-indigo-50/40 dark:bg-indigo-950/20 border-b border-zinc-200/50 dark:border-zinc-800/50 font-medium"
+                        style={{ height: '36px' }}
+                      >
+                        <td colSpan={6} className="py-1 px-4 text-xs font-semibold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
+                          Previous month closing
+                        </td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1 px-4 text-sm text-right font-mono font-bold text-zinc-900 dark:text-white">
+                          {columns[8]?.render ? columns[8].render(row, rowIndex, rowOffset) : '-'}
+                        </td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1 px-4 text-sm text-zinc-400">-</td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 italic">Opening</td>
+                      </tr>
+                    );
+                  } else if (isLedgerTable) {
+                    return (
+                      <tr
+                        key={stableKey}
+                        className="opening-balance-row bg-indigo-50/40 dark:bg-indigo-950/20 border-b border-zinc-200/50 dark:border-zinc-800/50 font-medium"
+                        style={{ height: '36px' }}
+                      >
+                        <td colSpan={4} className="py-1 px-4 text-xs font-semibold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
+                          Previous month closing
+                        </td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1 px-4 text-sm text-right font-mono font-bold text-zinc-900 dark:text-white">
+                          {columns[6]?.render ? columns[6].render(row, rowIndex, rowOffset) : '-'}
+                        </td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1 px-4 text-sm text-zinc-400">-</td>
+                        <td className="py-1 px-4 text-sm text-right text-zinc-400 italic">Opening</td>
+                      </tr>
+                    );
+                  }
+                }
+
                 return (
                   <tr
                     key={stableKey}

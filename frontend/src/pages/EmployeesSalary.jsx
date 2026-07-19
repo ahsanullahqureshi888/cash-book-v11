@@ -292,21 +292,21 @@ export default function EmployeesSalary({
   }
 
   return (
-    <section className="salary-workspace">
+    <section className="salary-page">
       {toast && <div className="success-banner">{toast}</div>}
-      <header className="section-header glass-card salary-workspace-header">
+      <header className="salary-page-header">
         <div>
           <p className="eyebrow">{t('payroll.eyebrow')}</p>
           <h3>{t('payroll.title')}</h3>
           <p>{t('payroll.description')}</p>
         </div>
-        <div className="section-actions">
+        <div className="salary-page-actions">
           <button className="ghost-btn" type="button" onClick={() => setActiveTab('Employees')}>{t('payroll.addEmployee')}</button>
           <button className="primary-btn" type="button" onClick={() => setActiveTab('Reports')}>{t('payroll.salaryReport')}</button>
         </div>
       </header>
 
-      <nav className="salary-tabs glass-card" aria-label="Employees and salary sections">
+      <nav className="salary-tabs" aria-label="Employees and salary sections">
         {tabs.map((tab) => {
           let label = tab;
           if (tab === 'Overview') label = t('payroll.overview');
@@ -314,7 +314,7 @@ export default function EmployeesSalary({
           else if (tab === 'Salary Payments') label = t('payroll.salaryPayments');
           else if (tab === 'Reports') label = t('payroll.salaryReport');
           return (
-            <button key={tab} type="button" className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
+            <button key={tab} type="button" className={`salary-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
               {label}
             </button>
           );
@@ -323,7 +323,7 @@ export default function EmployeesSalary({
 
       {activeTab === 'Overview' && (
         <>
-          <div className="salary-stat-grid">
+          <div className="salary-metric-grid">
             <SalaryStat icon={UsersRound} label={t('payroll.employees')} value={employees.length} tone="blue" />
             <SalaryStat icon={Building2} label={t('payroll.allDepartments')} value={departments.length} tone="violet" />
             <SalaryStat icon={Banknote} label={t('payroll.totalPaid')} value={currency(monthlySalaryPaid)} tone="green" />
@@ -373,24 +373,165 @@ export default function EmployeesSalary({
             isOpen={editingEmployeeId !== null || activeTab === 'Employees_Add'} 
             onClose={() => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees'); }}
             title={editingEmployeeId ? t('payroll.edit') : t('payroll.addEmployee')}
-            maxWidth="480px"
+            maxWidth="820px"
+            panelClass="employee-create-modal"
+            footer={
+              <>
+                <button 
+                  type="button" 
+                  className="ghost-btn modal-btn-cancel" 
+                  onClick={() => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees'); }} 
+                  disabled={saving}
+                >
+                  {t('payroll.cancel')}
+                </button>
+                <button 
+                  type="submit" 
+                  form="employeeForm" 
+                  className="primary-btn modal-btn-save" 
+                  disabled={saving}
+                >
+                  {saving ? 'Saving...' : (editingEmployeeId ? 'Update Employee' : 'Save Employee')}
+                </button>
+              </>
+            }
           >
-            <form id="employeeForm" className="entry-form" onSubmit={submitEmployee} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <input name="fullName" value={employeeForm.full_name} onChange={(event) => setEmployeeForm({ ...employeeForm, full_name: event.target.value })} placeholder="Full Name" required />
-              <input name="fatherName" value={employeeForm.father_name} onChange={(event) => setEmployeeForm({ ...employeeForm, father_name: event.target.value })} placeholder="Father Name" />
-              <input name="phoneNumber" value={employeeForm.phone} onChange={(event) => setEmployeeForm({ ...employeeForm, phone: event.target.value })} placeholder="Phone Number" />
-              <input name="position" value={employeeForm.position} onChange={(event) => setEmployeeForm({ ...employeeForm, position: event.target.value })} placeholder="Position / Job Title" required />
-              <input name="department" value={employeeForm.department} onChange={(event) => setEmployeeForm({ ...employeeForm, department: event.target.value })} placeholder="Department" />
-              <label className="salary-month-field" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-soft)' }}>{t('payroll.joiningDate')}</span>
-                <input name="joiningDate" type="date" value={employeeForm.joining_date} onChange={(event) => setEmployeeForm({ ...employeeForm, joining_date: event.target.value })} required />
-              </label>
-              <input name="monthlySalary" type="number" min="0" step="0.01" value={employeeForm.monthly_salary} onChange={(event) => setEmployeeForm({ ...employeeForm, monthly_salary: event.target.value })} placeholder="Monthly Salary" required />
-              <select name="currency" value={employeeForm.currency} onChange={(event) => setEmployeeForm({ ...employeeForm, currency: event.target.value })}><option value="AFN">{t('payroll.afn')}</option><option value="USD">{t('payroll.usd')}</option></select>
-              <textarea name="notes" value={employeeForm.notes} onChange={(event) => setEmployeeForm({ ...employeeForm, notes: event.target.value })} placeholder="Notes" rows={3} />
-              <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '16px' }}>
-                <button className="primary-btn" type="submit" disabled={saving} style={{ flex: 1 }}>{saving ? 'Saving...' : (editingEmployeeId ? 'Update Employee' : 'Save Employee')}</button>
-                <button className="ghost-btn" type="button" onClick={() => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees'); }} style={{ flex: 1 }}>{t('payroll.cancel')}</button>
+            <form id="employeeForm" className="modal-form" onSubmit={submitEmployee}>
+              <p className="modal-section-title">Personal Information</p>
+              <div className="employee-form-grid">
+                <label className="form-field">
+                  <span className="form-label">Full Name *</span>
+                  <input 
+                    className="form-control" 
+                    name="fullName" 
+                    value={employeeForm.full_name} 
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, full_name: e.target.value })} 
+                    placeholder="Full Name" 
+                    required 
+                    autoComplete="name"
+                  />
+                </label>
+                <label className="form-field">
+                  <span className="form-label">Father Name</span>
+                  <input 
+                    className="form-control" 
+                    name="fatherName" 
+                    value={employeeForm.father_name} 
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, father_name: e.target.value })} 
+                    placeholder="Father Name" 
+                  />
+                </label>
+                <label className="form-field">
+                  <span className="form-label">Phone Number</span>
+                  <input 
+                    className="form-control" 
+                    name="phoneNumber" 
+                    value={employeeForm.phone} 
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })} 
+                    placeholder="Phone Number" 
+                    autoComplete="tel"
+                  />
+                </label>
+                <label className="form-field">
+                  <span className="form-label">Employee ID</span>
+                  <input 
+                    className="form-control" 
+                    name="employeeCode" 
+                    value={employeeForm.employee_code || ''} 
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, employee_code: e.target.value })} 
+                    placeholder="e.g. EMP-001" 
+                  />
+                </label>
+              </div>
+
+              <p className="modal-section-title">Employment Details</p>
+              <div className="employee-form-grid">
+                <label className="form-field">
+                  <span className="form-label">Position / Job Title *</span>
+                  <input 
+                    className="form-control" 
+                    name="position" 
+                    value={employeeForm.position} 
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, position: e.target.value })} 
+                    placeholder="Position / Job Title" 
+                    required 
+                  />
+                </label>
+                <label className="form-field">
+                  <span className="form-label">Department</span>
+                  <input 
+                    className="form-control" 
+                    name="department" 
+                    value={employeeForm.department} 
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })} 
+                    placeholder="Department" 
+                  />
+                </label>
+                <label className="form-field">
+                  <span className="form-label">{t('payroll.joiningDate')} *</span>
+                  <input 
+                    className="form-control" 
+                    name="joiningDate" 
+                    type="date" 
+                    value={employeeForm.joining_date} 
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, joining_date: e.target.value })} 
+                    required 
+                  />
+                </label>
+                <label className="form-field">
+                  <span className="form-label">Employment Status</span>
+                  <select 
+                    className="form-select" 
+                    name="status" 
+                    value={employeeForm.status} 
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, status: e.target.value })}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="on_leave">On Leave</option>
+                  </select>
+                </label>
+              </div>
+
+              <p className="modal-section-title">Salary Information</p>
+              <div className="employee-form-grid">
+                <label className="form-field">
+                  <span className="form-label">Monthly Salary *</span>
+                  <input 
+                    className="form-control" 
+                    name="monthlySalary" 
+                    type="number" 
+                    min="0" 
+                    step="0.01" 
+                    value={employeeForm.monthly_salary} 
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, monthly_salary: e.target.value })} 
+                    placeholder="0.00" 
+                    required 
+                  />
+                </label>
+                <label className="form-field">
+                  <span className="form-label">Currency *</span>
+                  <select 
+                    className="form-select" 
+                    name="currency" 
+                    value={employeeForm.currency} 
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, currency: e.target.value })}
+                  >
+                    <option value="AFN">{t('payroll.afn')}</option>
+                    <option value="USD">{t('payroll.usd')}</option>
+                  </select>
+                </label>
+                <label className="form-field form-field--full">
+                  <span className="form-label">Notes & Remarks</span>
+                  <textarea 
+                    className="form-textarea" 
+                    name="notes" 
+                    value={employeeForm.notes} 
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, notes: e.target.value })} 
+                    placeholder="Optional employee notes..." 
+                    rows={3} 
+                  />
+                </label>
               </div>
             </form>
           </BaseModal>
@@ -570,8 +711,34 @@ function SalaryPaymentModal({ row, month, year, onClose, onSave }) {
   const closingCarryForward = Number((currentCarryForward - amount).toFixed(2));
 
   return (
-    <BaseModal isOpen={true} onClose={onClose} title={t('payroll.paySalary')} maxWidth="600px">
-      <form className="salary-pay-modal" onSubmit={submit}>
+    <BaseModal 
+      isOpen={true} 
+      onClose={onClose} 
+      title={t('payroll.paySalary')} 
+      maxWidth="680px"
+      panelClass="salary-payment-modal"
+      footer={
+        <>
+          <button 
+            type="button" 
+            className="ghost-btn modal-btn-cancel" 
+            onClick={onClose} 
+            disabled={saving}
+          >
+            {t('payroll.cancel')}
+          </button>
+          <button 
+            type="submit" 
+            form="salaryPaymentForm" 
+            className="primary-btn modal-btn-save" 
+            disabled={saving || payableLimit <= 0}
+          >
+            {saving ? 'Saving...' : 'Save Salary Payment'}
+          </button>
+        </>
+      }
+    >
+      <form id="salaryPaymentForm" className="modal-form" onSubmit={submit}>
         <div className="salary-pay-grid">
           <ReadOnlyMetric label="Employee name" value={row.employee_name} />
           <ReadOnlyMetric label="Base monthly salary" value={currency(row.monthly_salary)} />
@@ -581,15 +748,116 @@ function SalaryPaymentModal({ row, month, year, onClose, onSave }) {
           <ReadOnlyMetric label="Current carry forward" value={currency(currentCarryForward)} tone={currentCarryForward < 0 ? 'amber' : 'green'} />
           <ReadOnlyMetric label="After this payment" value={currency(closingCarryForward)} tone={closingCarryForward < 0 ? 'amber' : 'green'} />
         </div>
-        <label>{t('payroll.amountToPay')}<input type="number" min="0" max={payableLimit} step="0.01" value={form.amount} onChange={(event) => updateAmount(event.target.value)} placeholder="0.00" autoFocus /></label>
-        <label>{t('payroll.paymentDate')}<input type="date" value={form.payment_date} onChange={(event) => setForm({ ...form, payment_date: event.target.value })} required /></label>
-        <label>{t('payroll.paymentMethod')}<select value={form.payment_method} onChange={(event) => setForm({ ...form, payment_method: event.target.value })}><option value="cash">{t('payroll.cash')}</option><option value="bank">{t('payroll.bank')}</option><option value="hawala">{t('payroll.hawala')}</option><option value="other">{t('payroll.other')}</option></select></label>
-        <label>{t('payroll.notes')}<textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder={`Salary payment for ${getMonthName(month)} ${year}`} /></label>
-        {amount > 0 && closingCarryForward > 0 && <div className="salary-overpayment-warning"><Clock3 size={18} /><span>{currency(closingCarryForward)} will remain as arrears for next month.</span></div>}
+
+        <div className="salary-edit-grid">
+          <label className="form-field">
+            <span className="form-label">{t('payroll.amountToPay')} *</span>
+            <input 
+              className="form-control"
+              type="number" 
+              min="0" 
+              max={payableLimit} 
+              step="0.01" 
+              value={form.amount} 
+              onChange={(event) => updateAmount(event.target.value)} 
+              placeholder="0.00" 
+              autoFocus 
+            />
+          </label>
+
+          <label className="form-field">
+            <span className="form-label">{t('payroll.paymentDate')} *</span>
+            <input 
+              className="form-control"
+              type="date" 
+              value={form.payment_date} 
+              onChange={(event) => setForm({ ...form, payment_date: event.target.value })} 
+              required 
+            />
+          </label>
+
+          <label className="form-field">
+            <span className="form-label">{t('payroll.paymentMethod')} *</span>
+            <select 
+              className="form-select"
+              value={form.payment_method} 
+              onChange={(event) => setForm({ ...event, payment_method: event.target.value })}
+            >
+              <option value="cash">{t('payroll.cash')}</option>
+              <option value="bank">{t('payroll.bank')}</option>
+              <option value="hawala">{t('payroll.hawala')}</option>
+              <option value="other">{t('payroll.other')}</option>
+            </select>
+          </label>
+
+          <label className="form-field form-field--full">
+            <span className="form-label">{t('payroll.notes')}</span>
+            <textarea 
+              className="form-textarea"
+              value={form.notes} 
+              onChange={(event) => setForm({ ...form, notes: event.target.value })} 
+              placeholder={`Salary payment for ${getMonthName(month)} ${year}`} 
+              rows={2}
+            />
+          </label>
+        </div>
+
+        {amount > 0 && closingCarryForward > 0 && (
+          <div className="salary-overpayment-warning">
+            <Clock3 size={18} />
+            <span>{currency(closingCarryForward)} will remain as arrears for next month.</span>
+          </div>
+        )}
+
         {error && <div className="error-banner">{error}</div>}
-        <button className="primary-btn" type="submit" disabled={saving || payableLimit <= 0}>{saving ? 'Saving...' : 'Save Salary Payment'}</button>
       </form>
     </BaseModal>
+  );
+}
+
+function SalaryDiffPreview({ oldSalary, oldCurrency, newSalary, newCurrency }) {
+  const oldVal = Number(oldSalary || 0);
+  const newVal = Number(newSalary || 0);
+  const diff = newVal - oldVal;
+
+  if (oldCurrency !== newCurrency) {
+    return (
+      <div className="salary-diff-preview">
+        <div className="salary-diff-item">
+          <span>Previous Salary</span>
+          <strong>{currency(oldVal, oldCurrency)}</strong>
+        </div>
+        <div className="salary-diff-item">
+          <span>New Salary</span>
+          <strong>{currency(newVal, newCurrency)}</strong>
+        </div>
+        <div className="salary-diff-item">
+          <span>Currency</span>
+          <strong>{oldCurrency} → {newCurrency}</strong>
+        </div>
+      </div>
+    );
+  }
+
+  const isIncrease = diff > 0;
+  const isDecrease = diff < 0;
+  const diffFormatted = `${isIncrease ? '+' : ''}${currency(diff, newCurrency)}`;
+
+  return (
+    <div className="salary-diff-preview">
+      <div className="salary-diff-item">
+        <span>Previous Salary</span>
+        <strong>{currency(oldVal, oldCurrency)}</strong>
+      </div>
+      <div className="salary-diff-item">
+        <span>New Salary</span>
+        <strong>{currency(newVal, newCurrency)}</strong>
+      </div>
+      <div className={`salary-diff-item ${isIncrease ? 'diff-positive' : isDecrease ? 'diff-negative' : 'diff-neutral'}`}>
+        <span>Difference</span>
+        <strong>{diffFormatted}</strong>
+      </div>
+    </div>
   );
 }
 
@@ -630,25 +898,150 @@ function EditEmployeeSalaryModal({ row, currentUser, onClose, onSave }) {
   }
 
   return (
-    <BaseModal isOpen={true} onClose={onClose} title={t('payroll.editSalary')} maxWidth="600px">
-      <form className="salary-pay-modal salary-edit-modal" onSubmit={submit}>
-        <div className="salary-pay-grid">
-          <ReadOnlyMetric label="Employee Name" value={row.employee_name} />
-          <ReadOnlyMetric label="Employee ID" value={row.employee_code} />
-          <ReadOnlyMetric label="Current Salary" value={currency(row.monthly_salary, row.currency)} />
-          <ReadOnlyMetric label="Current Currency" value={row.currency || 'AFN'} />
+    <BaseModal 
+      isOpen={true} 
+      onClose={onClose} 
+      title={t('payroll.editSalary')} 
+      maxWidth="700px"
+      panelClass="salary-edit-modal"
+      footer={
+        <>
+          <button 
+            type="button" 
+            className="ghost-btn modal-btn-cancel" 
+            onClick={onClose} 
+            disabled={saving}
+          >
+            {t('payroll.cancel')}
+          </button>
+          <button 
+            type="submit" 
+            form="editSalaryForm" 
+            className="primary-btn modal-btn-save" 
+            disabled={saving}
+          >
+            {saving ? 'Saving Salary Change...' : 'Save Salary Change'}
+          </button>
+        </>
+      }
+    >
+      <form id="editSalaryForm" className="modal-form" onSubmit={submit}>
+        {/* Compact Single Summary Card */}
+        <div className="salary-current-summary">
+          <div>
+            <h4 className="salary-summary-name">{row.employee_name}</h4>
+            <span className="salary-summary-id">{row.employee_code || `EMP-${row.employee_id}`}</span>
+          </div>
+          <div className="salary-summary-amount">
+            <span className="salary-summary-label">Current Salary</span>
+            <strong className="salary-summary-val">{currency(row.monthly_salary, row.currency)}</strong>
+          </div>
         </div>
-        <label>{t('payroll.newSalary')}<input type="number" min="0" step="0.01" value={form.new_salary} onChange={(event) => setForm({ ...form, new_salary: event.target.value })} required /></label>
-        <label>{t('payroll.newCurrency')}<select value={form.new_currency} onChange={(event) => setForm({ ...form, new_currency: event.target.value })}><option value="AFN">{t('payroll.afn')}</option><option value="USD">{t('payroll.usd')}</option></select></label>
-        <label>{t('payroll.effectiveDate')}<input type="date" value={form.effective_date} onChange={(event) => setForm({ ...form, effective_date: event.target.value })} required /></label>
-        <label>{t('payroll.reasonForChange')}<input value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} placeholder="Promotion, annual review, role change..." required /></label>
-        <label>{t('payroll.changedBy')}<input value={`${currentUser?.full_name || 'Administrator'} (${currentUser?.role || 'Administrator'})`} readOnly /></label>
-        <label>{t('payroll.notes')}<textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Optional notes" /></label>
+
+        <div className="salary-edit-grid">
+          <label className="form-field">
+            <span className="form-label">{t('payroll.newSalary')} *</span>
+            <input 
+              className="form-control"
+              type="number" 
+              min="0" 
+              step="0.01" 
+              value={form.new_salary} 
+              onChange={(e) => setForm({ ...form, new_salary: e.target.value })} 
+              placeholder="0.00" 
+              required 
+              autoFocus 
+            />
+          </label>
+
+          <label className="form-field">
+            <span className="form-label">{t('payroll.newCurrency')} *</span>
+            <select 
+              className="form-select"
+              value={form.new_currency} 
+              onChange={(e) => setForm({ ...form, new_currency: e.target.value })}
+            >
+              <option value="AFN">{t('payroll.afn')}</option>
+              <option value="USD">{t('payroll.usd')}</option>
+            </select>
+          </label>
+
+          <label className="form-field">
+            <span className="form-label">{t('payroll.effectiveDate')} *</span>
+            <input 
+              className="form-control"
+              type="date" 
+              value={form.effective_date} 
+              onChange={(e) => setForm({ ...form, effective_date: e.target.value })} 
+              required 
+            />
+          </label>
+
+          <label className="form-field">
+            <span className="form-label">{t('payroll.reasonForChange')} *</span>
+            <input 
+              className="form-control"
+              value={form.reason} 
+              onChange={(e) => setForm({ ...form, reason: e.target.value })} 
+              placeholder="e.g. Promotion, annual review..." 
+              required 
+            />
+          </label>
+
+          <label className="form-field form-field--full">
+            <span className="form-label">{t('payroll.changedBy')}</span>
+            <input 
+              className="form-control"
+              value={`${currentUser?.full_name || 'Administrator'} (${currentUser?.role || 'Administrator'})`} 
+              readOnly 
+              disabled 
+            />
+          </label>
+
+          <label className="form-field form-field--full">
+            <span className="form-label">{t('payroll.notes')}</span>
+            <textarea 
+              className="form-textarea"
+              value={form.notes} 
+              onChange={(e) => setForm({ ...form, notes: e.target.value })} 
+              placeholder="Optional salary change notes" 
+              rows={2}
+            />
+          </label>
+        </div>
+
+        {/* Salary Comparison Preview */}
+        {form.new_salary !== '' && Number(form.new_salary) >= 0 && (
+          <SalaryDiffPreview 
+            oldSalary={row.monthly_salary} 
+            oldCurrency={row.currency} 
+            newSalary={form.new_salary} 
+            newCurrency={form.new_currency} 
+          />
+        )}
+
         {error && <div className="error-banner">{error}</div>}
-        <button className="primary-btn" type="submit" disabled={saving}>{saving ? 'Saving Salary Change...' : 'Save Salary Change'}</button>
-        <div className="salary-history-list">
-          <div className="salary-panel-heading"><div><p className="eyebrow">{t('payroll.employeeProfile')}</p><h3>{t('payroll.salaryHistory')}</h3></div></div>
-          {history.length ? history.map((change) => <div className="salary-history-item" key={change.id}><strong>{currency(change.old_salary, change.old_currency)} → {currency(change.new_salary, change.new_currency)}</strong><span>{t('payroll.effectiveFrom')}{dateLabel(change.effective_date)}</span><span>{t('payroll.reason')}{change.reason}</span><span>{t('payroll.changedByPrefix')}{change.changed_by}</span></div>) : <p className="salary-muted">{t('payroll.noPreviousChanges')}</p>}
+
+        <div className="salary-history-section">
+          <h4 className="salary-history-title">{t('payroll.salaryHistory')}</h4>
+          {history.length ? (
+            <div className="salary-history-list">
+              {history.map((change) => (
+                <div className="salary-history-item" key={change.id}>
+                  <div>
+                    <strong>{currency(change.old_salary, change.old_currency)} → {currency(change.new_salary, change.new_currency)}</strong>
+                    <span>Reason: {change.reason}</span>
+                  </div>
+                  <div>
+                    <span>Effective: {dateLabel(change.effective_date)}</span>
+                    <span>By: {change.changed_by}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="salary-muted">{t('payroll.noPreviousChanges')}</p>
+          )}
         </div>
       </form>
     </BaseModal>
@@ -732,7 +1125,7 @@ function SalaryStat({ icon: Icon, label, value, tone }) {
   const isNegative = label.toLowerCase().includes('remaining') || label.toLowerCase().includes('carry');
 
   return (
-    <article className={`glass-card salary-stat salary-stat-${tone} relative overflow-hidden group hover:scale-[1.02] transition-transform duration-200`}>
+    <article className={`salary-metric-card salary-metric-card-${tone} relative overflow-hidden group hover:scale-[1.02] transition-transform duration-200`}>
       <div className="salary-stat-top-row flex justify-between items-start w-full">
         <span className="salary-stat-icon-wrapper flex items-center justify-center p-2.5 rounded-xl bg-white/20 dark:bg-zinc-800/80 shadow-sm"><Icon size={20} /></span>
         <span className={`salary-stat-delta-pill text-[10px] font-bold px-2 py-0.5 rounded-full ${isNegative ? 'bg-amber-500/20 text-amber-500' : 'bg-emerald-500/20 text-emerald-500'}`}>
@@ -741,7 +1134,7 @@ function SalaryStat({ icon: Icon, label, value, tone }) {
       </div>
       <div className="salary-stat-body mt-4">
         <p className="salary-stat-label text-xs text-slate-400 font-medium">{label}</p>
-        <strong className="salary-stat-value text-2xl font-bold tracking-tight block mt-1 font-mono">{value}</strong>
+        <strong className="salary-metric-value text-2xl font-bold tracking-tight block mt-1 font-mono">{value}</strong>
       </div>
       <div className="salary-stat-sparkline absolute bottom-2 right-2 w-16 h-6 opacity-60 pointer-events-none">
         <svg viewBox="0 0 60 20" className="sparkline-svg w-full h-full">

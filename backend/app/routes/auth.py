@@ -1,4 +1,6 @@
+# cspell:ignore hashpw gensalt checkpw
 from __future__ import annotations
+
 
 from datetime import datetime, timedelta
 from secrets import token_urlsafe
@@ -199,6 +201,7 @@ def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/change-password", response_model=schemas.UserPublic)
 def change_password(payload: schemas.ChangePasswordRequest, user: models.User = Depends(require_authenticated_request), db: Session = Depends(get_db)):
+    user = db.merge(user)
     if payload.new_password != payload.confirm_password:
         raise HTTPException(status_code=422, detail="Passwords do not match")
     if not verify_password(payload.current_password, user.password_hash):
@@ -301,7 +304,7 @@ def update_user(user_id: int, payload: schemas.UserUpdate, admin: models.User = 
     return public_user(user)
 
 
-@router.post("/users/{user_id}/reset-password", response_model=schemas.UserPublic)
+@router.post("/users/{user_id}/reset-password")
 def reset_password(user_id: int, payload: schemas.PasswordReset, admin: models.User = Depends(require_administrator_request), db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
