@@ -49,6 +49,18 @@ async function request(path, options = {}) {
   }
   
   if (!response.ok) {
+    if (response.status === 401) {
+      setAuthToken('');
+      try {
+        localStorage.removeItem('cashbook-session-token');
+        localStorage.removeItem('cashbook-current-user');
+      } catch {
+        // Ignore storage errors
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+      }
+    }
     const text = await response.text();
     let message = `Server error (${response.status}): `;
     try {
@@ -107,6 +119,19 @@ export const api = {
   createSalaryPayment: (payload) => request('/api/employees/salary-payments', { method: 'POST', body: JSON.stringify(payload) }),
   updateSalaryPayment: (id, payload) => request(`/api/employees/salary-payments/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteSalaryPayment: (id) => request(`/api/employees/salary-payments/${id}`, { method: 'DELETE' }),
+  getEmployeeSalaryLedger: (id, params = {}) => {
+    const query = new URLSearchParams();
+    if (params.from_date) query.append('from_date', params.from_date);
+    if (params.to_date) query.append('to_date', params.to_date);
+    if (params.currency) query.append('currency', params.currency);
+    if (params.branch_id) query.append('branch_id', params.branch_id);
+    if (params.page) query.append('page', params.page);
+    if (params.page_size) query.append('page_size', params.page_size);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/api/employees/${id}/salary-ledger${queryString}`);
+  },
+  getEmployeeSalaryAdjustments: (id) => request(`/api/employees/${id}/adjustments`),
+  createEmployeeSalaryAdjustment: (id, payload) => request(`/api/employees/${id}/adjustments`, { method: 'POST', body: JSON.stringify(payload) }),
   getEmployeeSalaryHistory: (id) => request(`/api/employees/${id}/salary-history`),
   changeEmployeeSalary: (id, payload) => request(`/api/employees/${id}/salary-history`, { method: 'POST', body: JSON.stringify(payload) }),
   getSalaryChangeReport: () => request('/api/employees/salary-changes'),

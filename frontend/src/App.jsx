@@ -27,6 +27,7 @@ const BackupRestore = lazy(() => import('./pages/BackupRestore'));
 const CurrencyConverter = lazy(() => import('./pages/CurrencyConverter'));
 const Settings = lazy(() => import('./pages/Settings'));
 const EmployeesSalary = lazy(() => import('./pages/EmployeesSalary'));
+const EmployeeLedgerPage = lazy(() => import('./pages/EmployeeLedgerPage'));
 const GlassPrintPreview = lazy(() => import('./components/GlassPrintPreview'));
 
 const appTranslations = {
@@ -341,6 +342,21 @@ export default function App() {
 
 
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setAuthToken('');
+      try {
+        localStorage.removeItem('cashbook-session-token');
+        localStorage.removeItem('cashbook-current-user');
+      } catch {}
+      setCurrentUser(null);
+      setPasswordChangeRequired(false);
+      setIsLoading(false);
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, []);
+
   async function initializeAuth() {
     setAuthLoading(true);
     setPageError('');
@@ -368,7 +384,11 @@ export default function App() {
       setAuthToken('');
       localStorage.removeItem('cashbook-session-token');
       localStorage.removeItem('cashbook-current-user');
-      setPageError(error.message);
+      if (error.message && (error.message.includes('401') || error.message.includes('Could not validate credentials'))) {
+        setPageError('Session expired. Please enter your credentials to log in.');
+      } else {
+        setPageError(error.message);
+      }
       setCurrentUser(null);
       setPasswordChangeRequired(false);
       setIsLoading(false);
@@ -1405,6 +1425,14 @@ export default function App() {
                     onEmployeeDeleted={onEmployeeDeleted}
                   />
                 } />
+                <Route path="/employees/:employeeId/ledger" element={
+                  <EmployeeLedgerPage
+                    currentUser={currentUser}
+                    companyName={companyName}
+                    companyLogo={companyLogo}
+                  />
+                } />
+                <Route path="/employees" element={<Navigate to="/salary" replace />} />
                 <Route path="/reports" element={
                   <Reports
                     transactions={transactions}

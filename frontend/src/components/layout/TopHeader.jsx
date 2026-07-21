@@ -36,27 +36,25 @@ export default function TopHeader({
         </button>
         <div className="header-titles">
           <p className="eyebrow">Professional Business Management</p>
-          <h1 className="page-title">{title}</h1>
-        </div>
-      </div>
-      
-      {/* Branch Selector Pill */}
-      <div className="topbar-branch">
-        <div className="branch-dropdown-pill">
-          <Building2 size={14} className="branch-icon" />
-          <select className="branch-select-input" aria-label="Branch select filter">
-            <option value="consolidated">All Branches (Consolidated)</option>
-            <option value="branch-a">Main Branch - Kabul</option>
-            <option value="branch-b">Branch B - Herat</option>
-            <option value="branch-c">Branch C - Mazar</option>
-          </select>
+          <div className="topbar-title-row">
+            <h1 className="page-title">{title}</h1>
+            <div className="branch-dropdown-pill">
+              <Building2 size={13} className="branch-icon" />
+              <select className="branch-select-input" aria-label="Branch select filter">
+                <option value="consolidated">All Branches (Consolidated)</option>
+                <option value="branch-a">Main Branch - Kabul</option>
+                <option value="branch-b">Branch B - Herat</option>
+                <option value="branch-c">Branch C - Mazar</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
       
       {/* Central Global Search Field */}
       <div className="topbar-search" onClick={onSearchClick} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onSearchClick()}>
         <div className="topbar-search-input-container">
-          <Search size={18} className="search-icon" />
+          <Search size={16} className="search-icon" />
           <input 
             type="text" 
             placeholder="Search accounts, transactions, reports..." 
@@ -70,10 +68,10 @@ export default function TopHeader({
       {/* Right Action Buttons & Clock */}
       <div className="topbar-actions">
         <div className="time-chip" aria-label="Current date and time">
-          <Clock3 size={15} aria-hidden="true" />
+          <Clock3 size={15} className="time-chip-icon" aria-hidden="true" />
           <span className="time-chip-text">
-            <strong>{dateLabel}</strong>
-            <small>{timeLabel}</small>
+            <strong className="time-chip-date">{dateLabel}</strong>
+            <small className="time-chip-time">{timeLabel}</small>
           </span>
         </div>
 

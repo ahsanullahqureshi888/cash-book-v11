@@ -7,17 +7,16 @@ const SIDEBAR_STORAGE_KEY = 'cashbook-sidebar-collapsed';
 
 function getDefaultSidebarState() {
   try {
-    // Clear obsolete legacy keys if present
     localStorage.removeItem('cashbook_sidebar_collapsed');
     localStorage.removeItem('cashbook_sidebar_user_toggled');
 
+    const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
     const width = window.innerWidth;
     if (width >= 1280) {
-      return false; // Expanded by default on large desktop viewports
+      return stored === 'true';
     }
     if (width >= 768) {
-      const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
-      return stored === 'true';
+      return true;
     }
     return false;
   } catch {

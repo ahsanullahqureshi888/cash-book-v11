@@ -57,12 +57,49 @@ def _employee_salary_start_month(employee: models.Employee, target_month: date) 
     return _month_start(employee.joining_date)
 
 
+def _earned_salary_for_month(db: Session, employee: models.Employee, target_month: date) -> float:
+    month_start = _month_start(target_month)
+    month_end = _month_end(target_month)
+
+    if not employee.joining_date:
+        active = effective_salary(db, employee, month_end)
+        return _money(active["salary"])
+
+    joining_date = employee.joining_date
+    if month_end < joining_date:
+        return 0.0
+
+    end_date = employee.employment_end_date
+    if end_date and month_start > end_date:
+        return 0.0
+
+    active = effective_salary(db, employee, month_end)
+    salary = active["salary"]
+    days_in_month = monthrange(target_month.year, target_month.month)[1]
+
+    start_day = 1
+    if month_start == _month_start(joining_date):
+        start_day = joining_date.day
+
+    final_day = days_in_month
+    if end_date and month_start == _month_start(end_date):
+        final_day = min(end_date.day, days_in_month)
+
+    if start_day > 1 or final_day < days_in_month:
+        active_days = max(0, final_day - start_day + 1)
+        return _money((salary / days_in_month) * active_days)
+
+    return _money(salary)
+
+
 def _earned_salary_through(db: Session, employee: models.Employee, through_month: date) -> float:
+    if not employee.joining_date:
+        return 0.0
     total = 0.0
-    current = _employee_salary_start_month(employee, through_month)
-    while current <= through_month:
-        active = effective_salary(db, employee, _month_end(current))
-        total += active["salary"]
+    current = _month_start(employee.joining_date)
+    target = _month_start(through_month)
+    while current <= target:
+        total += _earned_salary_for_month(db, employee, current)
         current = _next_month(current)
     return _money(total)
 
@@ -103,6 +140,7 @@ def create_employee(db: Session, payload: schemas.EmployeeCreate) -> models.Empl
         position=_text(payload.position),
         department=_text(payload.department),
         joining_date=payload.joining_date,
+        employment_end_date=payload.employment_end_date,
         monthly_salary=_money(payload.monthly_salary),
         currency=payload.currency,
         avatar_url=_text(payload.avatar_url),
@@ -129,8 +167,10 @@ def update_employee(db: Session, employee: models.Employee, payload: schemas.Emp
     for field in text_fields:
         if field in data and data[field] is not None:
             setattr(employee, field, _text(data[field]))
-    if "joining_date" in data and data["joining_date"] is not None:
+    if "joining_date" in data:
         employee.joining_date = data["joining_date"]
+    if "employment_end_date" in data:
+        employee.employment_end_date = data["employment_end_date"]
     if "monthly_salary" in data and data["monthly_salary"] is not None:
         employee.monthly_salary = _money(data["monthly_salary"])
     if "currency" in data and data["currency"] is not None:
@@ -280,6 +320,8 @@ def _salary_rows_for_month(db: Session, month: int, year: int) -> tuple[list[dic
             "employee_name": employee.full_name,
             "department": employee.department or "",
             "position": employee.position or "",
+            "joining_date": employee.joining_date.isoformat() if employee.joining_date else None,
+            "employment_end_date": employee.employment_end_date.isoformat() if employee.employment_end_date else None,
             "monthly_salary": monthly_salary,
             "previous_carry_forward_balance": previous_carry,
             "total_payable_salary": total_payable,
@@ -386,34 +428,38 @@ def create_salary_payment(db: Session, payload: schemas.SalaryPaymentCreate) -> 
     active = effective_salary(db, employee, target_date)
     settings = crud.get_settings(db)
     carry_context = _payment_carry_context(db, employee, payload.month, payload.year, amount)
-    transaction = crud.create_transaction(
-        db,
-        _cashbook_payload(
-            employee,
-            payload,
-            payload.month,
-            payload.year,
-            active["currency"],
-            _money(settings.default_exchange_rate),
-        ),
-    )
-    payment = models.SalaryPayment(
-        employee_id=employee.id,
-        month=payload.month,
-        year=payload.year,
-        amount=amount,
-        payment_date=payload.payment_date,
-        payment_method=payload.payment_method,
-        notes=_text(payload.notes),
-        previous_carry_forward_balance=carry_context["previous_carry_forward_balance"],
-        total_payable_salary=carry_context["total_payable_salary"],
-        carry_forward_balance=carry_context["carry_forward_balance"],
-        cashbook_entry_id=transaction.id,
-    )
-    db.add(payment)
-    db.commit()
-    db.refresh(payment)
-    return payment
+    try:
+        transaction = crud.create_transaction(
+            db,
+            _cashbook_payload(
+                employee,
+                payload,
+                payload.month,
+                payload.year,
+                active["currency"],
+                _money(settings.default_exchange_rate),
+            ),
+        )
+        payment = models.SalaryPayment(
+            employee_id=employee.id,
+            month=payload.month,
+            year=payload.year,
+            amount=amount,
+            payment_date=payload.payment_date,
+            payment_method=payload.payment_method,
+            notes=_text(payload.notes),
+            previous_carry_forward_balance=carry_context["previous_carry_forward_balance"],
+            total_payable_salary=carry_context["total_payable_salary"],
+            carry_forward_balance=carry_context["carry_forward_balance"],
+            cashbook_entry_id=transaction.id,
+        )
+        db.add(payment)
+        db.commit()
+        db.refresh(payment)
+        return payment
+    except Exception:
+        db.rollback()
+        raise
 
 
 def get_salary_payment(db: Session, payment_id: int) -> models.SalaryPayment | None:
@@ -555,3 +601,284 @@ def salary_change_report(db: Session) -> list[dict]:
         "reason": change.reason,
         "notes": change.notes,
     } for change, employee in rows]
+
+
+def create_salary_adjustment(
+    db: Session,
+    employee_id: int,
+    payload: schemas.EmployeeSalaryAdjustmentCreate,
+    created_by: str = "Administrator",
+) -> models.EmployeeSalaryAdjustment:
+    employee = get_employee(db, employee_id)
+    if not employee:
+        raise ValueError("Employee not found")
+
+    adj = models.EmployeeSalaryAdjustment(
+        employee_id=employee.id,
+        date=payload.date,
+        period=payload.period,
+        amount=_money(payload.amount),
+        currency=payload.currency,
+        adjustment_type=payload.adjustment_type,
+        reason=_text(payload.reason),
+        notes=_text(payload.notes),
+        created_by=_text(created_by) or "Administrator",
+    )
+    db.add(adj)
+    db.commit()
+    db.refresh(adj)
+    return adj
+
+
+def list_salary_adjustments(db: Session, employee_id: int) -> list[models.EmployeeSalaryAdjustment]:
+    return db.query(models.EmployeeSalaryAdjustment).filter(
+        models.EmployeeSalaryAdjustment.employee_id == employee_id
+    ).order_by(models.EmployeeSalaryAdjustment.date.desc(), models.EmployeeSalaryAdjustment.id.desc()).all()
+
+
+def calculate_employee_salary_ledger(
+    db: Session,
+    employee_id: int,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    currency: str | None = None,
+    branch_id: int | None = None,
+    page: int = 1,
+    page_size: int = 100,
+) -> dict:
+    employee = get_employee(db, employee_id)
+    if not employee:
+        raise ValueError("Employee not found")
+
+    today = date.today()
+    requested_currency = (currency or employee.currency or "AFN").upper()
+    active_now = effective_salary(db, employee, today)
+
+    joining_date = employee.joining_date
+    end_date = employee.employment_end_date
+
+    carry_forward_enabled = joining_date is not None
+    notice = None if carry_forward_enabled else "Joining date not set — historical carry forward is disabled."
+
+    entries = []
+
+    # 1. Salary Accruals
+    if carry_forward_enabled:
+        start_month = _month_start(joining_date)
+        end_month = _month_start(to_date or today)
+        if end_date and _month_start(end_date) < end_month:
+            end_month = _month_start(end_date)
+
+        curr_month = start_month
+        while curr_month <= end_month:
+            month_end = _month_end(curr_month)
+            active = effective_salary(db, employee, month_end)
+            curr_code = active["currency"]
+
+            if not currency or curr_code.upper() == requested_currency:
+                accrual_amount = _earned_salary_for_month(db, employee, curr_month)
+                if accrual_amount > 0:
+                    if curr_month == _month_start(joining_date) and joining_date.day > 1:
+                        desc = f"Salary accrued from joining date ({joining_date.strftime('%b %d, %Y')})"
+                    elif end_date and curr_month == _month_start(end_date):
+                        desc = f"Salary accrued until end date ({end_date.strftime('%b %d, %Y')})"
+                    else:
+                        desc = f"Salary accrued for {_month_label(curr_month.month, curr_month.year)}"
+
+                    entries.append({
+                        "id": f"accrual-{curr_month.strftime('%Y-%m')}",
+                        "date": month_end,
+                        "period": curr_month.strftime("%Y-%m"),
+                        "entry_type": "salary_accrual",
+                        "description": desc,
+                        "salary_accrued": accrual_amount,
+                        "payment": 0.0,
+                        "bonus": 0.0,
+                        "deduction": 0.0,
+                        "adjustment": 0.0,
+                        "debit": accrual_amount,
+                        "credit": 0.0,
+                        "currency": curr_code,
+                        "transaction_id": None,
+                        "reference": f"ACC-{curr_month.strftime('%Y%m')}",
+                        "_type_order": 1,
+                    })
+            curr_month = _next_month(curr_month)
+    else:
+        # No joining date: calculate accrual only for current month
+        curr_month = _month_start(today)
+        month_end = _month_end(curr_month)
+        active = effective_salary(db, employee, month_end)
+        curr_code = active["currency"]
+        if not currency or curr_code.upper() == requested_currency:
+            accrual_amount = _earned_salary_for_month(db, employee, curr_month)
+            entries.append({
+                "id": f"accrual-{curr_month.strftime('%Y-%m')}",
+                "date": month_end,
+                "period": curr_month.strftime("%Y-%m"),
+                "entry_type": "salary_accrual",
+                "description": f"Current month salary ({_month_label(curr_month.month, curr_month.year)})",
+                "salary_accrued": accrual_amount,
+                "payment": 0.0,
+                "bonus": 0.0,
+                "deduction": 0.0,
+                "adjustment": 0.0,
+                "debit": accrual_amount,
+                "credit": 0.0,
+                "currency": curr_code,
+                "transaction_id": None,
+                "reference": f"ACC-{curr_month.strftime('%Y%m')}",
+                "_type_order": 1,
+            })
+
+    # 2. Salary Payments
+    payments = db.query(models.SalaryPayment).filter(
+        models.SalaryPayment.employee_id == employee.id,
+    ).order_by(models.SalaryPayment.payment_date.asc(), models.SalaryPayment.id.asc()).all()
+
+    for p in payments:
+        target_date = date(p.year, p.month, monthrange(p.year, p.month)[1])
+        active = effective_salary(db, employee, target_date)
+        p_currency = active["currency"]
+        if not currency or p_currency.upper() == requested_currency:
+            notes_text = p.notes or f"Salary payment for {_month_label(p.month, p.year)}"
+            entries.append({
+                "id": f"payment-{p.id}",
+                "date": p.payment_date,
+                "period": f"{p.year:04d}-{p.month:02d}",
+                "entry_type": "salary_payment",
+                "description": notes_text,
+                "salary_accrued": 0.0,
+                "payment": _money(p.amount),
+                "bonus": 0.0,
+                "deduction": 0.0,
+                "adjustment": 0.0,
+                "debit": 0.0,
+                "credit": _money(p.amount),
+                "currency": p_currency,
+                "transaction_id": p.cashbook_entry_id,
+                "reference": f"SP-{p.id:04d}",
+                "_type_order": 3,
+            })
+
+    # 3. Salary Adjustments
+    adjustments = db.query(models.EmployeeSalaryAdjustment).filter(
+        models.EmployeeSalaryAdjustment.employee_id == employee.id,
+    ).order_by(models.EmployeeSalaryAdjustment.date.asc(), models.EmployeeSalaryAdjustment.id.asc()).all()
+
+    for adj in adjustments:
+        if not currency or adj.currency.upper() == requested_currency:
+            amt = _money(adj.amount)
+            adj_type = adj.adjustment_type
+            debit = 0.0
+            credit = 0.0
+            bonus = 0.0
+            deduction = 0.0
+            adjustment = 0.0
+            if adj_type == "bonus":
+                debit = amt
+                bonus = amt
+                adjustment = amt
+            elif adj_type in ("deduction", "advance"):
+                credit = amt
+                deduction = amt
+                adjustment = -amt
+            elif adj_type in ("adjustment", "reversal"):
+                if amt >= 0:
+                    debit = amt
+                    adjustment = amt
+                else:
+                    credit = abs(amt)
+                    adjustment = amt
+
+            entries.append({
+                "id": f"adjustment-{adj.id}",
+                "date": adj.date,
+                "period": adj.period,
+                "entry_type": adj_type,
+                "description": f"{adj.reason}" + (f" ({adj.notes})" if adj.notes else ""),
+                "salary_accrued": 0.0,
+                "payment": 0.0,
+                "bonus": bonus,
+                "deduction": deduction,
+                "adjustment": adjustment,
+                "debit": debit,
+                "credit": credit,
+                "currency": adj.currency,
+                "transaction_id": None,
+                "reference": f"ADJ-{adj.id:04d}",
+                "_type_order": 2,
+            })
+
+    # Optional date filtering
+    if from_date:
+        entries = [e for e in entries if e["date"] >= from_date]
+    if to_date:
+        entries = [e for e in entries if e["date"] <= to_date]
+
+    # Sort entries chronologically
+    entries.sort(key=lambda e: (e["date"], e["_type_order"], e["id"]))
+
+    # Compute running balance
+    running_balance = 0.0
+    for e in entries:
+        running_balance += e["debit"] - e["credit"]
+        e["running_balance"] = _money(running_balance)
+        del e["_type_order"]
+
+    # Compute Summary
+    total_accrued = _money(sum(e["salary_accrued"] for e in entries))
+    total_paid = _money(sum(e["payment"] for e in entries))
+    total_bonus = _money(sum(e["bonus"] for e in entries))
+    total_deductions = _money(sum(e["deduction"] for e in entries))
+    total_adjustments = _money(sum(e["adjustment"] for e in entries if e["entry_type"] not in ("salary_accrual", "salary_payment", "bonus", "deduction")))
+    outstanding_balance = _money(running_balance)
+
+    curr_period_str = today.strftime("%Y-%m")
+    current_month_entries = [e for e in entries if e["period"] == curr_period_str]
+    current_month_accrued = _money(sum(e["salary_accrued"] for e in current_month_entries))
+    current_month_paid = _money(sum(e["payment"] for e in current_month_entries))
+    current_month_remaining = _money(current_month_accrued - current_month_paid)
+
+    summary = {
+        "total_accrued": total_accrued,
+        "total_paid": total_paid,
+        "total_bonus": total_bonus,
+        "total_deductions": total_deductions,
+        "total_adjustments": total_adjustments,
+        "outstanding_balance": outstanding_balance,
+        "current_month_accrued": current_month_accrued,
+        "current_month_paid": current_month_paid,
+        "current_month_remaining": current_month_remaining,
+    }
+
+    # Paginate
+    total_entries = len(entries)
+    start_idx = (page - 1) * page_size
+    paged_entries = entries[start_idx : start_idx + page_size]
+
+    return {
+        "employee": {
+            "id": employee.id,
+            "employee_code": employee.employee_code,
+            "full_name": employee.full_name,
+            "joining_date": employee.joining_date,
+            "employment_end_date": employee.employment_end_date,
+            "current_salary": active_now["salary"],
+            "currency": requested_currency,
+            "position": employee.position or "",
+            "department": employee.department or "",
+            "status": employee.status or "active",
+        },
+        "policy": {
+            "carry_forward_enabled": carry_forward_enabled,
+            "first_month_prorated": True,
+            "notice": notice,
+        },
+        "summary": summary,
+        "entries": paged_entries,
+        "page": page,
+        "page_size": page_size,
+        "total_entries": total_entries,
+    }
+

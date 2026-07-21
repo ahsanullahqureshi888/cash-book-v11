@@ -1,10 +1,22 @@
-import { Banknote, Building2, Camera, CircleDollarSign, Clock3, Download, FileSpreadsheet, Printer, Search, Trash2, UsersRound } from 'lucide-react';
+import { Banknote, BookOpenText, Building2, Camera, CircleDollarSign, Clock3, Download, Edit, FileSpreadsheet, MoreVertical, Printer, Search, Trash2, UsersRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { currency, csvCell, dateLabel } from '../utils/format';
 import { employeeSalarySnapshot } from '../utils/payroll';
 import BaseModal from '../components/BaseModal';
+import EmployeeLedgerModal from '../components/EmployeeLedgerModal';
+
+function unescapeText(str) {
+  if (typeof str !== 'string') return String(str ?? '');
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'");
+}
 
 function escapeHtml(str) {
   if (typeof str !== 'string') return String(str ?? '');
@@ -23,13 +35,14 @@ function getMonthName(monthNum) {
   const index = Number(monthNum) - 1;
   return monthNames.at(index) || '';
 }
+
 const emptyEmployee = {
   full_name: '',
   father_name: '',
   phone: '',
   position: '',
   department: '',
-  joining_date: new Date().toISOString().slice(0, 10),
+  joining_date: '',
   monthly_salary: '',
   currency: 'AFN',
   status: 'active',
@@ -65,6 +78,7 @@ export default function EmployeesSalary({
   companyLogo = ''
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Overview');
   const [employeeForm, setEmployeeForm] = useState(emptyEmployee);
   const [editingEmployeeId, setEditingEmployeeId] = useState(null);
@@ -79,6 +93,7 @@ export default function EmployeesSalary({
   const [salaryChanges, setSalaryChanges] = useState([]);
   const [deletingEmployeeId, setDeletingEmployeeId] = useState(null);
   const [uploadingAvatarId, setUploadingAvatarId] = useState(null);
+  const [selectedLedgerEmployee, setSelectedLedgerEmployee] = useState(null);
 
   const salaryTransactions = useMemo(
     () => transactions.filter((transaction) => transaction.category === 'salary' && transaction.transaction_type === 'cash_out'),
@@ -341,6 +356,7 @@ export default function EmployeesSalary({
               transactions={transactions} 
               reportRows={report?.rows} 
               onPay={(row) => { setActiveTab('Reports'); setPayingRow(row); }} 
+              onOpenLedger={(emp) => setSelectedLedgerEmployee(emp)}
               onEditEmployee={currentUser?.role === 'Administrator' ? handleEditEmployee : null} 
               onAddEmployee={currentUser?.role === 'Administrator' ? () => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees_Add'); } : null}
               onEditSalary={currentUser?.role === 'Administrator' ? setEditingSalaryRow : null} 
@@ -361,6 +377,7 @@ export default function EmployeesSalary({
             reportRows={report?.rows} 
             expanded 
             onPay={(row) => { setActiveTab('Reports'); setPayingRow(row); }} 
+            onOpenLedger={(emp) => setSelectedLedgerEmployee(emp)}
             onEditEmployee={currentUser?.role === 'Administrator' ? handleEditEmployee : null} 
             onAddEmployee={currentUser?.role === 'Administrator' ? () => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees_Add'); } : null}
             onEditSalary={currentUser?.role === 'Administrator' ? setEditingSalaryRow : null} 
@@ -468,15 +485,17 @@ export default function EmployeesSalary({
                   />
                 </label>
                 <label className="form-field">
-                  <span className="form-label">{t('payroll.joiningDate')} *</span>
+                  <span className="form-label">Joining Date (Optional)</span>
                   <input 
                     className="form-control" 
                     name="joiningDate" 
                     type="date" 
-                    value={employeeForm.joining_date} 
+                    value={employeeForm.joining_date || ''} 
                     onChange={(e) => setEmployeeForm({ ...employeeForm, joining_date: e.target.value })} 
-                    required 
                   />
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', display: 'block' }}>
+                    Salary carry forward begins from this date. Leave empty to disable historical carry forward.
+                  </span>
                 </label>
                 <label className="form-field">
                   <span className="form-label">Employment Status</span>
@@ -585,6 +604,28 @@ export default function EmployeesSalary({
           onSave={saveSalaryChange}
         />
       )}
+      {selectedLedgerEmployee && (
+        <EmployeeLedgerModal
+          employee={selectedLedgerEmployee}
+          currentUser={currentUser}
+          onClose={() => setSelectedLedgerEmployee(null)}
+          onOpenPaySalary={(emp) => {
+            const row = report?.rows?.find((r) => Number(r.employee_id) === Number(emp.id));
+            setSelectedLedgerEmployee(null);
+            setActiveTab('Reports');
+            setPayingRow(row || {
+              employee_id: emp.id,
+              employee_name: emp.full_name,
+              employee_code: emp.employee_code,
+              monthly_salary: emp.monthly_salary,
+              remaining_salary: emp.monthly_salary,
+            });
+          }}
+          onUpdateEmployee={(updated) => {
+            if (onUpdateEmployee) onUpdateEmployee(updated);
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -621,20 +662,63 @@ function EmployeesSalaryReport({ rows, summary, filters, setFilters, departments
       {error && <div className="error-banner">{error}</div>}
       <div className="salary-report-table-wrap">
         <table className="salary-report-table">
-          <thead><tr><th>S.No</th><th>{t('payroll.employeeId')}</th><th>{t('payroll.employeeName')}</th><th>{t('payroll.departmentPosition')}</th><th>{t('payroll.totalPayable')}</th><th>{t('payroll.paidSalary')}</th><th>{t('payroll.carryForward')}</th><th>{t('payroll.paymentStatus')}</th><th>{t('payroll.lastPaymentDate')}</th><th>{t('payroll.action')}</th></tr></thead>
+          <thead>
+            <tr>
+              <th className="col-sno">S.No</th>
+              <th className="col-emp-id">{t('payroll.employeeId')}</th>
+              <th className="col-emp-name">{t('payroll.employeeName')}</th>
+              <th className="col-dept-pos">{t('payroll.departmentPosition')}</th>
+              <th className="col-payable text-right">{t('payroll.totalPayable')}</th>
+              <th className="col-paid text-right">{t('payroll.paidSalary')}</th>
+              <th className="col-remaining text-right">{t('payroll.carryForward')}</th>
+              <th className="col-status text-center">{t('payroll.paymentStatus')}</th>
+              <th className="col-last-date text-center">{t('payroll.lastPaymentDate')}</th>
+              <th className="col-actions text-right">{t('payroll.action')}</th>
+            </tr>
+          </thead>
           <tbody>
             {rows.map((row, index) => (
               <tr key={row.employee_id}>
-                <td>{index + 1}</td>
-                <td>{row.employee_code}</td>
-                <td><strong>{row.employee_name}</strong></td>
-                <td>{row.department || '-'} / {row.position || '-'}</td>
-                <td>{currency(row.total_payable_salary ?? row.monthly_salary)}</td>
-                <td className="salary-paid">{currency(row.paid_salary)}</td>
-                <td className="salary-remaining">{currency(row.remaining_salary)}</td>
-                <td><span className={`salary-status-badge ${row.payment_status.toLowerCase().replaceAll(' ', '-')}`}>{row.payment_status}</span></td>
-                <td>{row.last_payment_date ? dateLabel(row.last_payment_date) : '-'}</td>
-                <td><div className="salary-row-actions"><button className="primary-btn salary-action-btn" type="button" onClick={() => onPay(row)}>{t('payroll.paySalary')}</button>{onEditEmployee && <button className="ghost-btn salary-action-btn" type="button" onClick={() => onEditEmployee(row)}>{t('payroll.edit')}</button>}{onEditSalary && <button className="ghost-btn salary-action-btn" type="button" onClick={() => onEditSalary(row)}>{t('payroll.editSalary')}</button>}{onDeleteEmployee && <button className="ghost-btn salary-action-btn salary-delete-btn" type="button" disabled={deletingEmployeeId === Number(row.employee_id)} onClick={() => onDeleteEmployee(row)}><Trash2 size={15} /> {deletingEmployeeId === Number(row.employee_id) ? 'Deleting...' : 'Delete'}</button>}</div></td>
+                <td className="col-sno">{index + 1}</td>
+                <td className="col-emp-id"><span className="mono-text">{row.employee_code}</span></td>
+                <td className="col-emp-name" title={unescapeText(row.employee_name)}><strong>{unescapeText(row.employee_name)}</strong></td>
+                <td className="col-dept-pos" title={`${unescapeText(row.department) || '-'} / ${unescapeText(row.position) || '-'}`}>
+                  {unescapeText(row.department) || '-'} / {unescapeText(row.position) || '-'}
+                </td>
+                <td className="col-payable mono-text text-right">{currency(row.total_payable_salary ?? row.monthly_salary)}</td>
+                <td className="col-paid salary-paid mono-text text-right">{currency(row.paid_salary)}</td>
+                <td className="col-remaining salary-remaining mono-text text-right">{currency(row.remaining_salary)}</td>
+                <td className="col-status text-center"><span className={`salary-status-badge ${row.payment_status.toLowerCase().replaceAll(' ', '-')}`}>{row.payment_status}</span></td>
+                <td className="col-last-date text-center">{row.last_payment_date ? dateLabel(row.last_payment_date) : '-'}</td>
+                <td className="col-actions text-right">
+                  <div className="salary-row-actions">
+                    <button className="primary-btn salary-pay-btn" type="button" onClick={() => onPay(row)} title={t('payroll.paySalary')}>
+                      <Banknote size={14} />
+                      <span>{t('payroll.paySalary')}</span>
+                    </button>
+                    {onEditEmployee && (
+                      <button className="action-icon-btn" type="button" onClick={() => onEditEmployee(row)} title={t('payroll.edit')}>
+                        <Edit size={15} />
+                      </button>
+                    )}
+                    {onEditSalary && (
+                      <button className="action-icon-btn" type="button" onClick={() => onEditSalary(row)} title={t('payroll.editSalary')}>
+                        <CircleDollarSign size={15} />
+                      </button>
+                    )}
+                    {onDeleteEmployee && (
+                      <button 
+                        className="action-icon-btn action-icon-btn--danger" 
+                        type="button" 
+                        disabled={deletingEmployeeId === Number(row.employee_id)} 
+                        onClick={() => onDeleteEmployee(row)}
+                        title={t('payroll.delete')}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
             {!rows.length && <tr><td colSpan="10"><EmptyState title="No salary report rows" body="Try changing the search, department, status, month, or year filter." action="Refresh" onAction={onRefresh} /></td></tr>}
@@ -1180,8 +1264,185 @@ function EmployeeAvatar({ employee, onChangeAvatar, uploading }) {
   );
 }
 
-function EmployeeList({ employees, transactions, reportRows = [], expanded = false, onPay, onEditSalary, onEditEmployee, onAddEmployee, onDeleteEmployee, onChangeAvatar, deletingEmployeeId, uploadingAvatarId }) {
+function EmployeeCardRow({
+  employee,
+  row,
+  onPay,
+  onOpenLedger,
+  onEditEmployee,
+  onEditSalary,
+  onDeleteEmployee,
+  onChangeAvatar,
+  deletingEmployeeId,
+  uploadingAvatarId,
+  navigate
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const hasJoiningDate = Boolean(employee.joining_date);
+
+  const getStatusBadge = () => {
+    const status = row.payment_status || 'Unpaid';
+    if (status === 'Paid') return <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Fully Paid</span>;
+    if (status === 'Partial Paid') return <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Partially Paid</span>;
+    if (status === 'Advance') return <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Overpaid / Advance</span>;
+    return <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Unpaid</span>;
+  };
+
+  const handleNavigateLedger = () => {
+    if (navigate) {
+      navigate(`/employees/${employee.id}/ledger`);
+    } else if (onOpenLedger) {
+      onOpenLedger(employee);
+    }
+  };
+
+  return (
+    <div className="salary-employee-row" key={employee.id}>
+      <EmployeeAvatar employee={employee} onChangeAvatar={onChangeAvatar} uploading={uploadingAvatarId === Number(employee.id)} />
+      
+      <div className="salary-employee-info">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <strong style={{ fontSize: '1.05rem', fontWeight: 700 }}>{employee.full_name}</strong>
+          {hasJoiningDate ? (
+            <span className="badge-carry-status badge-carry-enabled" title={`Carry forward since ${employee.joining_date}`}>
+              Carry Forward Enabled
+            </span>
+          ) : (
+            <span className="badge-carry-status badge-joining-required" title="Historical carry forward disabled">
+              Joining Date Required
+            </span>
+          )}
+          {getStatusBadge()}
+        </div>
+        <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+          {employee.position || 'Employee'} · {employee.employee_code || `EMP-${employee.id}`} {employee.department ? `· ${employee.department}` : ''}
+        </span>
+        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+          Monthly Salary: {(employee.monthly_salary || row.monthly_salary || 0).toLocaleString()} {row.currency}
+        </span>
+      </div>
+
+      <div className="salary-balance">
+        {hasJoiningDate ? (
+          <>
+            <span className="balance-title">Outstanding salary</span>
+            <strong className="balance-value">{row.remaining_salary.toLocaleString()} {row.currency}</strong>
+            <small className="balance-subtitle">Includes unpaid salary since {dateLabel(employee.joining_date)}</small>
+          </>
+        ) : (
+          <>
+            <span className="balance-title">Current month remaining</span>
+            <strong className="balance-value">{row.remaining_salary.toLocaleString()} {row.currency}</strong>
+            <small className="balance-subtitle amber-subtitle">Joining date required for historical carry forward</small>
+          </>
+        )}
+      </div>
+
+      <div className="salary-row-actions">
+        {/* Desktop Layout: [Pay Salary] [Ledger] [Edit] [⋯] */}
+        {onPay && (
+          <button className="primary-btn salary-pay-btn" type="button" onClick={() => onPay(row)}>
+            Pay Salary
+          </button>
+        )}
+        <button
+          className="ghost-btn salary-list-pay"
+          type="button"
+          onClick={handleNavigateLedger}
+          title="View Employee Salary Ledger"
+        >
+          <BookOpenText size={15} />
+          <span>Ledger</span>
+        </button>
+        {onEditEmployee && (
+          <button className="ghost-btn salary-list-pay" type="button" onClick={() => onEditEmployee(employee)}>
+            <Edit size={15} />
+            <span>Edit</span>
+          </button>
+        )}
+
+        <div className="relative-action-menu" style={{ position: 'relative' }}>
+          <button
+            type="button"
+            className="action-icon-btn"
+            onClick={() => setMenuOpen(!menuOpen)}
+            title="More menu"
+            style={{ padding: '6px 8px', borderRadius: '8px' }}
+          >
+            <MoreVertical size={16} />
+          </button>
+          {menuOpen && (
+            <div
+              className="action-dropdown-popup"
+              onMouseLeave={() => setMenuOpen(false)}
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: '100%',
+                marginTop: '4px',
+                backgroundColor: '#0f172a',
+                border: '1px solid #334155',
+                borderRadius: '12px',
+                padding: '6px',
+                zIndex: 50,
+                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)',
+                minWidth: '170px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px'
+              }}
+            >
+              {onEditSalary && (
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); onEditSalary(row); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', color: '#cbd5e1', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', width: '100%' }}
+                >
+                  <CircleDollarSign size={14} /> Edit Salary
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => { setMenuOpen(false); handleNavigateLedger(); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', color: '#cbd5e1', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', width: '100%' }}
+              >
+                <Clock3 size={14} /> Salary History
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMenuOpen(false); handleNavigateLedger(); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', color: '#cbd5e1', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', width: '100%' }}
+              >
+                <Printer size={14} /> Print Ledger
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMenuOpen(false); alert(`Employee ${employee.full_name} archived.`); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', width: '100%' }}
+              >
+                <FileSpreadsheet size={14} /> Archive
+              </button>
+              {onDeleteEmployee && (
+                <button
+                  type="button"
+                  disabled={deletingEmployeeId === Number(employee.id)}
+                  onClick={() => { setMenuOpen(false); onDeleteEmployee({ ...row, id: employee.id, full_name: employee.full_name, employee_code: employee.employee_code }); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', color: '#f43f5e', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', width: '100%' }}
+                >
+                  <Trash2 size={14} /> {deletingEmployeeId === Number(employee.id) ? 'Deleting...' : 'Delete'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmployeeList({ employees, transactions, reportRows = [], expanded = false, onPay, onOpenLedger, onEditSalary, onEditEmployee, onAddEmployee, onDeleteEmployee, onChangeAvatar, deletingEmployeeId, uploadingAvatarId }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const rowByEmployee = new Map((reportRows || []).map((row) => [Number(row.employee_id), row]));
   return (
     <article className={`glass-card salary-panel ${expanded ? 'salary-panel-wide' : ''}`}>
@@ -1189,44 +1450,46 @@ function EmployeeList({ employees, transactions, reportRows = [], expanded = fal
         <div><p className="eyebrow">{t('payroll.employeeDirectory')}</p><h3>{t('payroll.salaryBalances')}</h3></div>
         {onAddEmployee && <button className="primary-btn" type="button" onClick={onAddEmployee} style={{ padding: '8px 16px', fontSize: '0.9rem' }}>{t('payroll.addEmployee')}</button>}
       </div>
-      {employees.length ? <div className="salary-employee-list">{employees.map((employee) => {
-        const fallback = employeeSalarySnapshot(employee, transactions);
-        const row = rowByEmployee.get(Number(employee.id)) || {
-          employee_id: employee.id,
-          employee_name: employee.full_name,
-          employee_code: employee.employee_code,
-          department: employee.department,
-          position: employee.position,
-          monthly_salary: fallback.monthly_salary,
-          previous_carry_forward_balance: fallback.previous_carry_forward_balance,
-          total_payable_salary: fallback.total_payable_salary,
-          paid_salary: fallback.paid_amount,
-          remaining_salary: fallback.remaining_salary,
-          carry_forward_balance: fallback.carry_forward_balance,
-          payment_status: fallback.remaining_salary < 0 ? 'Advance' : fallback.remaining_salary === 0 ? 'Paid' : fallback.paid_amount > 0 ? 'Partial Paid' : 'Unpaid',
-          currency: fallback.currency
-        };
-        return (
-          <div className="salary-employee-row" key={employee.id}>
-            <EmployeeAvatar employee={employee} onChangeAvatar={onChangeAvatar} uploading={uploadingAvatarId === Number(employee.id)} />
-            <div>
-              <strong>{employee.full_name}</strong>
-              <span>{employee.position} · {employee.employee_code}</span>
-              <span>{t('payroll.payablePrefix')}{(row.total_payable_salary ?? row.monthly_salary).toLocaleString()} {row.currency} · Paid: {row.paid_salary.toLocaleString()} {row.currency}</span>
-            </div>
-            <div className="salary-balance">
-              <span>{t('payroll.carryForward')}</span>
-              <strong>{row.remaining_salary.toLocaleString()} {row.currency}</strong>
-            </div>
-            <div className="salary-row-actions">
-              {onPay && <button className="ghost-btn salary-list-pay" type="button" onClick={() => onPay(row)}>{t('payroll.paySalary')}</button>}
-              {onEditEmployee && <button className="ghost-btn salary-list-pay" type="button" onClick={() => onEditEmployee(employee)}>{t('payroll.edit')}</button>}
-              {onEditSalary && <button className="ghost-btn salary-list-pay" type="button" onClick={() => onEditSalary(row)}>{t('payroll.editSalary')}</button>}
-              {onDeleteEmployee && <button className="ghost-btn salary-list-pay salary-delete-btn" type="button" disabled={deletingEmployeeId === Number(employee.id)} onClick={() => onDeleteEmployee({ ...row, id: employee.id, full_name: employee.full_name, employee_code: employee.employee_code })}><Trash2 size={15} /> {deletingEmployeeId === Number(employee.id) ? 'Deleting...' : 'Delete'}</button>}
-            </div>
-          </div>
-        );
-      })}</div> : <EmptyState title="No employees found" body="Add an employee with a monthly salary to begin." action="Add Employee" onAction={onAddEmployee || (() => {})} />}
+      {employees.length ? (
+        <div className="salary-employee-list">
+          {employees.map((employee) => {
+            const fallback = employeeSalarySnapshot(employee, transactions);
+            const row = rowByEmployee.get(Number(employee.id)) || {
+              employee_id: employee.id,
+              employee_name: employee.full_name,
+              employee_code: employee.employee_code,
+              department: employee.department,
+              position: employee.position,
+              monthly_salary: fallback.monthly_salary,
+              previous_carry_forward_balance: fallback.previous_carry_forward_balance,
+              total_payable_salary: fallback.total_payable_salary,
+              paid_salary: fallback.paid_amount,
+              remaining_salary: fallback.remaining_salary,
+              carry_forward_balance: fallback.carry_forward_balance,
+              payment_status: fallback.remaining_salary < 0 ? 'Advance' : fallback.remaining_salary === 0 ? 'Paid' : fallback.paid_amount > 0 ? 'Partial Paid' : 'Unpaid',
+              currency: fallback.currency
+            };
+            return (
+              <EmployeeCardRow
+                key={employee.id}
+                employee={employee}
+                row={row}
+                onPay={onPay}
+                onOpenLedger={onOpenLedger}
+                onEditEmployee={onEditEmployee}
+                onEditSalary={onEditSalary}
+                onDeleteEmployee={onDeleteEmployee}
+                onChangeAvatar={onChangeAvatar}
+                deletingEmployeeId={deletingEmployeeId}
+                uploadingAvatarId={uploadingAvatarId}
+                navigate={navigate}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState title="No employees found" body="Add an employee with a monthly salary to begin." action="Add Employee" onAction={onAddEmployee || (() => {})} />
+      )}
     </article>
   );
 }

@@ -200,14 +200,16 @@ def _normalize_employee_backup(employee_data: dict) -> dict | None:
     full_name = _normalize_text(_first_value(employee_data, "full_name", "fullName", "employee_name", "employeeName", "name"))
     if not full_name:
         return None
-    joining_date = _date_value(_first_value(employee_data, "joining_date", "joiningDate", "date_joined", "created_at", "createdAt"))
+    joining_date = _date_value(_first_value(employee_data, "joining_date", "joiningDate", "date_joined"))
+    employment_end_date = _date_value(_first_value(employee_data, "employment_end_date", "employmentEndDate", "end_date", "endDate", "termination_date", "terminationDate"))
     return {
         "full_name": full_name,
         "father_name": _normalize_text(_first_value(employee_data, "father_name", "fatherName", "father")),
         "phone": _normalize_text(_first_value(employee_data, "phone", "mobile", "contact")),
         "position": _normalize_text(_first_value(employee_data, "position", "role", "job_title", "jobTitle", "designation")) or "Employee",
         "department": _normalize_text(_first_value(employee_data, "department", "section")),
-        "joining_date": joining_date or date.today(),
+        "joining_date": joining_date,
+        "employment_end_date": employment_end_date,
         "monthly_salary": _amount(_first_value(employee_data, "monthly_salary", "monthlySalary", "salary", "salary_afn")),
         "currency": "USD" if str(_first_value(employee_data, "currency", default="AFN")).upper() == "USD" else "AFN",
         "avatar_url": _normalize_text(_first_value(employee_data, "avatar_url", "avatarUrl", "avatar", "avatar_path", "avatarPath")),
@@ -801,6 +803,7 @@ def backup_payload(db: Session) -> dict:
         "transactions": list_transactions(db),
         "salary_payments": db.query(models.SalaryPayment).order_by(models.SalaryPayment.id.asc()).all(),
         "salary_history": db.query(models.SalaryHistory).order_by(models.SalaryHistory.id.asc()).all(),
+        "salary_adjustments": db.query(models.EmployeeSalaryAdjustment).order_by(models.EmployeeSalaryAdjustment.id.asc()).all(),
     }
 
 
@@ -832,8 +835,10 @@ def import_backup(db: Session, payload: dict, replace_all: bool = False) -> dict
     ]
     salary_history_rows = _rows_from(payload, "salary_history", "salaryHistory")
     salary_payment_rows = _rows_from(payload, "salary_payments", "salaryPayments")
+    salary_adjustment_rows = _rows_from(payload, "salary_adjustments", "salaryAdjustments")
 
     if replace_all:
+        db.query(models.EmployeeSalaryAdjustment).delete()
         db.query(models.SalaryPayment).delete()
         db.query(models.SalaryHistory).delete()
         db.query(models.Transaction).delete()
@@ -850,6 +855,7 @@ def import_backup(db: Session, payload: dict, replace_all: bool = False) -> dict
     imported_transactions = 0
     imported_salary_payments = 0
     imported_salary_history = 0
+    imported_salary_adjustments = 0
     for account_data in account_rows:
         account = get_account_by_name(db, account_data["name"])
         if account:
@@ -984,6 +990,42 @@ def import_backup(db: Session, payload: dict, replace_all: bool = False) -> dict
             cashbook_entry_id=transaction.id,
         ))
         imported_salary_payments += 1
+
+    for adj_data in salary_adjustment_rows:
+        if not isinstance(adj_data, dict):
+            continue
+        employee = _get_imported(employee_id_map, _first_value(adj_data, "employee_id", "employeeId"))
+        if not employee:
+            continue
+        adj_date = _date_value(_first_value(adj_data, "date", "adjustment_date", "adjustmentDate"))
+        if not adj_date:
+            continue
+        period_str = str(_first_value(adj_data, "period") or f"{adj_date.year:04d}-{adj_date.month:02d}")
+        amount_val = _amount(_first_value(adj_data, "amount"))
+        if not amount_val:
+            continue
+        duplicate = db.query(models.EmployeeSalaryAdjustment).filter(
+            models.EmployeeSalaryAdjustment.employee_id == employee.id,
+            models.EmployeeSalaryAdjustment.date == adj_date,
+            models.EmployeeSalaryAdjustment.amount == amount_val,
+            models.EmployeeSalaryAdjustment.adjustment_type == str(_first_value(adj_data, "adjustment_type", "adjustmentType", "type", default="adjustment")),
+        ).first()
+        if duplicate:
+            continue
+        db.add(models.EmployeeSalaryAdjustment(
+            employee_id=employee.id,
+            date=adj_date,
+            period=period_str,
+            amount=amount_val,
+            currency=str(_first_value(adj_data, "currency", default="AFN") or "AFN").upper(),
+            adjustment_type=str(_first_value(adj_data, "adjustment_type", "adjustmentType", "type", default="adjustment")),
+            reason=_normalize_text(_first_value(adj_data, "reason")) or "Imported adjustment",
+            notes=_normalize_text(_first_value(adj_data, "notes", "note")),
+            created_by=_normalize_text(_first_value(adj_data, "created_by", "createdBy")) or "Administrator",
+            created_at=_datetime_value(_first_value(adj_data, "created_at", "createdAt")) or datetime.utcnow(),
+        ))
+        imported_salary_adjustments += 1
+
     db.add(models.BackupLog(
         backup_name=f"cashbook-restore-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
         backup_type="restore",
@@ -996,6 +1038,7 @@ def import_backup(db: Session, payload: dict, replace_all: bool = False) -> dict
         "imported_transactions": imported_transactions,
         "imported_salary_payments": imported_salary_payments,
         "imported_salary_history": imported_salary_history,
+        "imported_salary_adjustments": imported_salary_adjustments,
     }
 
 
@@ -1003,9 +1046,15 @@ def clear_all(db: Session) -> dict:
     transaction_count = db.query(models.Transaction).count()
     employee_count = db.query(models.Employee).count()
     account_count = db.query(models.Account).count()
+    db.query(models.EmployeeSalaryAdjustment).delete()
     db.query(models.SalaryPayment).delete()
     db.query(models.SalaryHistory).delete()
     db.query(models.Transaction).delete()
+    db.query(models.Employee).delete()
+    db.query(models.Account).delete()
+    db.query(models.Setting).delete()
+    db.commit()
+
     db.query(models.Employee).delete()
     db.query(models.Account).delete()
     db.query(models.Setting).delete()

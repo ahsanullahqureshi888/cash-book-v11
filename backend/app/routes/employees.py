@@ -157,3 +157,56 @@ def read_salary_summary(
         return payroll.employee_salary_summary(db, employee_id, month)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/{employee_id}/salary-ledger", response_model=schemas.EmployeeLedgerResponse)
+def read_employee_salary_ledger(
+    employee_id: int,
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
+    currency: str | None = Query(default=None),
+    branch_id: int | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    try:
+        return payroll.calculate_employee_salary_ledger(
+            db,
+            employee_id=employee_id,
+            from_date=from_date,
+            to_date=to_date,
+            currency=currency,
+            branch_id=branch_id,
+            page=page,
+            page_size=page_size,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/{employee_id}/adjustments", response_model=list[schemas.EmployeeSalaryAdjustmentRead])
+def read_employee_salary_adjustments(employee_id: int, db: Session = Depends(get_db)):
+    employee = payroll.get_employee(db, employee_id)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return payroll.list_salary_adjustments(db, employee_id)
+
+
+@router.post("/{employee_id}/adjustments", response_model=schemas.EmployeeSalaryAdjustmentRead, status_code=201)
+def add_employee_salary_adjustment(
+    employee_id: int,
+    payload: schemas.EmployeeSalaryAdjustmentCreate,
+    db: Session = Depends(get_db),
+    administrator=Depends(require_administrator_request),
+):
+    try:
+        return payroll.create_salary_adjustment(
+            db,
+            employee_id,
+            payload,
+            administrator.full_name or administrator.username,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+

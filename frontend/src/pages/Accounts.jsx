@@ -1,158 +1,406 @@
-import { useMemo } from 'react';
-import { currency } from '../utils/format';
-import { Search, UserPlus, Users } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { 
+  Search, 
+  UserPlus, 
+  Users, 
+  ScrollText, 
+  Edit, 
+  Trash2, 
+  Plus, 
+  Download, 
+  X,
+  Filter,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
 import DataTable from '../components/DataTable';
+import { currency } from '../utils/format';
 
-export default function Accounts({ accounts, form, setForm, onSave, onEdit, onDelete, search, setSearch }) {
+export default function Accounts({ 
+  accounts = [], 
+  form, 
+  setForm, 
+  onSave, 
+  onEdit, 
+  onDelete, 
+  search = '', 
+  setSearch 
+}) {
+  const { t } = useTranslation();
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState('all');
+
   const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
-  const visible = accounts.filter((account) => !search || `${account.name} ${account.phone} ${account.account_type}`.toLowerCase().includes(search.toLowerCase()));
+
+  const resetForm = () => {
+    setForm({
+      name: '',
+      account_type: 'customer',
+      phone: '',
+      address: '',
+      opening_balance_afn: '',
+      opening_balance_usd: '',
+      note: ''
+    });
+  };
+
+  const filteredAccounts = useMemo(() => {
+    return accounts.filter((account) => {
+      const matchesSearch = !search || `${account.name} ${account.phone} ${account.account_type}`.toLowerCase().includes(search.toLowerCase());
+      const matchesType = selectedTypeFilter === 'all' || account.account_type?.toLowerCase() === selectedTypeFilter.toLowerCase();
+      return matchesSearch && matchesType;
+    });
+  }, [accounts, search, selectedTypeFilter]);
+
+  const getTypeBadgeClass = (type) => {
+    switch (type?.toLowerCase()) {
+      case 'customer':
+        return 'badge-blue';
+      case 'supplier':
+        return 'badge-purple';
+      case 'worker':
+        return 'badge-emerald';
+      case 'factory':
+        return 'badge-amber';
+      case 'expense':
+        return 'badge-rose';
+      default:
+        return 'badge-slate';
+    }
+  };
 
   const columns = useMemo(() => [
     { 
       key: 'name', 
-      label: 'Account Info', 
+      label: t('Account Info'), 
+      sortable: true,
       render: (row) => (
-        <div className="flex flex-col">
-          <strong className="text-zinc-900 dark:text-white font-semibold">{row.name}</strong>
-          {row.address && <span className="text-xs text-zinc-500 mt-0.5">{row.address}</span>}
+        <div className="account-info-cell">
+          <strong className="account-name">{row.name}</strong>
+          {row.address && <span className="account-subtext">{row.address}</span>}
         </div>
       ),
-      className: 'w-64'
+      className: 'col-account-info'
     },
     { 
       key: 'account_type', 
-      label: 'Type', 
+      label: t('Type'), 
+      sortable: true,
       render: (row) => (
-        <span className="inline-flex px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20">
+        <span className={`account-type-badge ${getTypeBadgeClass(row.account_type)}`}>
           {row.account_type}
         </span>
       ),
-      className: 'w-32'
+      className: 'col-account-type'
     },
-    { key: 'phone', label: 'Phone', render: (row) => <span className="text-zinc-600 dark:text-zinc-400 font-mono text-sm">{row.phone || '-'}</span>, className: 'w-32' },
-    { key: 'opening_balance_afn', label: 'Opening AFN', render: (row) => <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{currency(row.opening_balance_afn)}</span>, className: 'w-32 text-right' },
-    { key: 'opening_balance_usd', label: 'Opening USD', render: (row) => <span className="font-mono text-zinc-700 dark:text-zinc-300 font-semibold">{currency(row.opening_balance_usd, 'USD')}</span>, className: 'w-32 text-right' },
+    { 
+      key: 'phone', 
+      label: t('Phone'), 
+      render: (row) => <span className="mono-text">{row.phone || '-'}</span>, 
+      className: 'col-phone' 
+    },
+    { 
+      key: 'opening_balance_afn', 
+      label: t('Opening AFN'), 
+      sortable: true,
+      render: (row) => (
+        <span className="mono-text amount-positive">
+          {currency(row.opening_balance_afn || 0)}
+        </span>
+      ), 
+      className: 'col-amount text-right' 
+    },
+    { 
+      key: 'opening_balance_usd', 
+      label: t('Opening USD'), 
+      sortable: true,
+      render: (row) => (
+        <span className="mono-text amount-neutral">
+          {currency(row.opening_balance_usd || 0, 'USD')}
+        </span>
+      ), 
+      className: 'col-amount text-right' 
+    },
     { 
       key: 'actions', 
-      label: 'Actions', 
-      className: 'w-32 text-right',
+      label: t('Actions'), 
+      className: 'col-actions text-right',
       render: (row) => (
-        <div className="flex items-center justify-end gap-3">
-          <button type="button" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors" onClick={() => onEdit(row)}>Edit</button>
-          <button type="button" className="text-xs font-semibold text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 transition-colors" onClick={() => onDelete(row)}>Delete</button>
+        <div className="table-actions">
+          <NavLink 
+            to={`/ledger?account=${row.id}`} 
+            className="action-icon-btn" 
+            title={t('View Ledger')}
+            aria-label={t('View Ledger')}
+          >
+            <ScrollText size={16} />
+          </NavLink>
+          <button 
+            type="button" 
+            className="action-icon-btn" 
+            onClick={() => onEdit(row)}
+            title={t('Edit Account')}
+            aria-label={t('Edit Account')}
+          >
+            <Edit size={16} />
+          </button>
+          <button 
+            type="button" 
+            className="action-icon-btn action-icon-btn--danger" 
+            onClick={() => onDelete(row)}
+            title={t('Delete Account')}
+            aria-label={t('Delete Account')}
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       )
     }
-  ], [onEdit, onDelete]);
+  ], [onEdit, onDelete, t]);
 
   const headerContent = (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div className="flex items-center gap-2">
-        <div className="p-2 bg-indigo-100 dark:bg-indigo-500/20 rounded-xl">
-          <Users size={20} className="text-indigo-600 dark:text-indigo-400" />
+    <div className="account-directory-header">
+      <div className="directory-title-area">
+        <div className="title-icon-badge">
+          <Users size={18} />
         </div>
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Account Directory</h3>
+        <div>
+          <h3 className="directory-title">{t('Account Directory')}</h3>
+          <span className="directory-count">{filteredAccounts.length} {t('records')}</span>
+        </div>
       </div>
-      <div className="relative w-full sm:w-64">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-        <input 
-          type="search" 
-          value={search} 
-          onChange={(e) => setSearch(e.target.value)} 
-          placeholder="Search accounts..." 
-          className="w-full pl-9 pr-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm"
-        />
+
+      <div className="directory-controls">
+        <div className="search-field">
+          <Search size={16} className="search-icon" />
+          <input 
+            type="search" 
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)} 
+            placeholder={t('Search accounts...')} 
+            className="search-input"
+          />
+          {search && (
+            <button type="button" className="search-clear" onClick={() => setSearch('')}>
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="filter-select-wrap">
+          <Filter size={15} className="filter-icon" />
+          <select 
+            value={selectedTypeFilter} 
+            onChange={(e) => setSelectedTypeFilter(e.target.value)}
+            className="filter-select"
+            aria-label="Filter accounts by type"
+          >
+            <option value="all">{t('All Types')}</option>
+            <option value="customer">{t('Customer')}</option>
+            <option value="supplier">{t('Supplier')}</option>
+            <option value="worker">{t('Worker')}</option>
+            <option value="factory">{t('Factory')}</option>
+            <option value="expense">{t('Expense')}</option>
+            <option value="other">{t('Other')}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderMobileCard = (row) => (
+    <div key={row.id} className="account-mobile-card">
+      <div className="account-mobile-card__header">
+        <div>
+          <strong className="account-mobile-card__name">{row.name}</strong>
+          {row.address && <p className="account-mobile-card__address">{row.address}</p>}
+        </div>
+        <span className={`account-type-badge ${getTypeBadgeClass(row.account_type)}`}>
+          {row.account_type}
+        </span>
+      </div>
+
+      <div className="account-mobile-card__body">
+        <div className="account-mobile-card__row">
+          <span>{t('Phone')}:</span>
+          <strong className="mono-text">{row.phone || '-'}</strong>
+        </div>
+        <div className="account-mobile-card__row">
+          <span>{t('Opening AFN')}:</span>
+          <strong className="mono-text amount-positive">{currency(row.opening_balance_afn || 0)}</strong>
+        </div>
+        <div className="account-mobile-card__row">
+          <span>{t('Opening USD')}:</span>
+          <strong className="mono-text amount-neutral">{currency(row.opening_balance_usd || 0, 'USD')}</strong>
+        </div>
+      </div>
+
+      <div className="account-mobile-card__footer">
+        <NavLink to={`/ledger?account=${row.id}`} className="ghost-btn icon-btn-text">
+          <ScrollText size={15} />
+          <span>{t('Ledger')}</span>
+        </NavLink>
+        <button type="button" className="ghost-btn icon-btn-text" onClick={() => onEdit(row)}>
+          <Edit size={15} />
+          <span>{t('Edit')}</span>
+        </button>
+        <button type="button" className="ghost-btn icon-btn-text danger-text" onClick={() => onDelete(row)}>
+          <Trash2 size={15} />
+          <span>{t('Delete')}</span>
+        </button>
       </div>
     </div>
   );
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-8">
-      {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+    <div className="accounts-page">
+      {/* 1. PAGE HEADER */}
+      <header className="accounts-page-header">
         <div>
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Accounts Management</h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Manage customers, suppliers, workers, and expenses</p>
+          <span className="eyebrow">{t('Financial Records')}</span>
+          <h1 className="page-title">{t('Accounts Management')}</h1>
+          <p className="page-description">
+            {t('Manage customers, suppliers, workers, factory accounts, and expenses.')}
+          </p>
         </div>
       </header>
 
-      {/* Main Content Grid */}
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        
-        {/* Left Form Panel */}
-        <div className="w-full lg:w-96 shrink-0">
-          <div className="glass-card p-6 rounded-2xl border-2 border-indigo-500/10 shadow-indigo-500/5">
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-5 flex items-center gap-2">
-              <UserPlus size={18} className="text-indigo-500" />
-              {form.id ? 'Edit Account' : 'Add New Account'}
-            </h3>
-            
-            <form className="flex flex-col gap-4" onSubmit={onSave}>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Account Name</label>
-                <input autoFocus type="text" value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Full name or company" required dir="auto" className="w-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 rounded-xl text-sm px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm" />
-              </div>
-              
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Account Type</label>
-                <select value={form.account_type} onChange={(e) => update('account_type', e.target.value)} className="w-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 rounded-xl text-sm px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">
-                  <option value="customer">Customer</option>
-                  <option value="supplier">Supplier</option>
-                  <option value="worker">Worker</option>
-                  <option value="factory">Factory</option>
-                  <option value="expense">Expense</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Contact Info</label>
-                <input type="text" value={form.phone} onChange={(e) => update('phone', e.target.value)} placeholder="Phone number" className="w-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 rounded-xl text-sm px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm mb-2" />
-                <input type="text" value={form.address} onChange={(e) => update('address', e.target.value)} placeholder="Address" dir="auto" className="w-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 rounded-xl text-sm px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Opening AFN</label>
-                  <input type="number" value={form.opening_balance_afn} onChange={(e) => update('opening_balance_afn', e.target.value)} placeholder="0.00" step="0.01" className="w-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 rounded-xl text-sm px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm" />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Opening USD</label>
-                  <input type="number" value={form.opening_balance_usd} onChange={(e) => update('opening_balance_usd', e.target.value)} placeholder="0.00" step="0.01" className="w-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 rounded-xl text-sm px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Notes</label>
-                <input type="text" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="Optional note" dir="auto" className="w-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 rounded-xl text-sm px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm" />
-              </div>
-
-              <div className="flex items-center gap-2 mt-2">
-                {form.id && (
-                  <button type="button" className="ghost-btn flex-1 py-2.5" onClick={() => setForm({ name: '', account_type: 'customer', phone: '', address: '', opening_balance_afn: '', opening_balance_usd: '', note: '' })}>
-                    Cancel Edit
-                  </button>
-                )}
-                <button className="primary-btn flex-1 py-2.5 shadow-md hover:shadow-lg transition-all" type="submit">
-                  {form.id ? 'Save Changes' : 'Create Account'}
-                </button>
-              </div>
-            </form>
+      {/* 2. TWO-COLUMN BALANCED LAYOUT */}
+      <div className="accounts-layout">
+        {/* LEFT FORM CARD */}
+        <div className="account-form-card">
+          <div className="account-form-card__header">
+            <div className="form-title-badge">
+              <UserPlus size={18} />
+            </div>
+            <div>
+              <h3 className="form-title">{form.id ? t('Edit Account') : t('Add New Account')}</h3>
+              <p className="form-subtext">{t('Fill out account details below.')}</p>
+            </div>
           </div>
+          
+          <form className="account-form" onSubmit={onSave}>
+            <div className="form-field">
+              <label className="field-label">{t('ACCOUNT NAME')}</label>
+              <input 
+                autoFocus 
+                type="text" 
+                value={form.name || ''} 
+                onChange={(e) => update('name', e.target.value)} 
+                placeholder={t('Full name or company')} 
+                required 
+                dir="auto" 
+                className="form-control" 
+              />
+            </div>
+            
+            <div className="form-field">
+              <label className="field-label">{t('ACCOUNT TYPE')}</label>
+              <select 
+                value={form.account_type || 'customer'} 
+                onChange={(e) => update('account_type', e.target.value)} 
+                className="form-select"
+              >
+                <option value="customer">{t('Customer')}</option>
+                <option value="supplier">{t('Supplier')}</option>
+                <option value="worker">{t('Worker')}</option>
+                <option value="factory">{t('Factory')}</option>
+                <option value="expense">{t('Expense')}</option>
+                <option value="other">{t('Other')}</option>
+              </select>
+            </div>
+
+            <div className="form-grid-2">
+              <div className="form-field">
+                <label className="field-label">{t('PHONE')}</label>
+                <input 
+                  type="text" 
+                  value={form.phone || ''} 
+                  onChange={(e) => update('phone', e.target.value)} 
+                  placeholder={t('Phone number')} 
+                  className="form-control" 
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">{t('ADDRESS')}</label>
+                <input 
+                  type="text" 
+                  value={form.address || ''} 
+                  onChange={(e) => update('address', e.target.value)} 
+                  placeholder={t('Address')} 
+                  dir="auto" 
+                  className="form-control" 
+                />
+              </div>
+            </div>
+
+            <div className="form-grid-2">
+              <div className="form-field">
+                <label className="field-label">{t('OPENING AFN')}</label>
+                <input 
+                  type="number" 
+                  value={form.opening_balance_afn ?? ''} 
+                  onChange={(e) => update('opening_balance_afn', e.target.value)} 
+                  placeholder="0.00" 
+                  step="0.01" 
+                  className="form-control mono-input" 
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">{t('OPENING USD')}</label>
+                <input 
+                  type="number" 
+                  value={form.opening_balance_usd ?? ''} 
+                  onChange={(e) => update('opening_balance_usd', e.target.value)} 
+                  placeholder="0.00" 
+                  step="0.01" 
+                  className="form-control mono-input" 
+                />
+              </div>
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">{t('NOTES')}</label>
+              <input 
+                type="text" 
+                value={form.note || ''} 
+                onChange={(e) => update('note', e.target.value)} 
+                placeholder={t('Optional note')} 
+                dir="auto" 
+                className="form-control" 
+              />
+            </div>
+
+            <div className="account-form-actions">
+              {form.id ? (
+                <button type="button" className="ghost-btn action-btn-cancel" onClick={resetForm}>
+                  {t('Cancel Edit')}
+                </button>
+              ) : (
+                <button type="button" className="ghost-btn action-btn-cancel" onClick={resetForm}>
+                  {t('Clear')}
+                </button>
+              )}
+              <button className="primary-btn action-btn-submit" type="submit">
+                {form.id ? t('Save Changes') : t('Create Account')}
+              </button>
+            </div>
+          </form>
         </div>
 
-        {/* Right Table Panel */}
-        <div className="flex-1 min-w-0">
+        {/* RIGHT DIRECTORY CARD */}
+        <div className="account-directory-card">
           <DataTable
             columns={columns}
-            data={visible}
+            data={filteredAccounts}
             keyField="id"
             headerContent={headerContent}
-            emptyTitle="No accounts found"
-            emptyDescription="Create a customer, supplier, worker, or expense account to see it here."
+            renderMobileCard={renderMobileCard}
+            emptyTitle={t('No accounts found')}
+            emptyDescription={t('Create a customer, supplier, worker, or expense account to see it here.')}
           />
         </div>
-
       </div>
     </div>
   );

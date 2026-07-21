@@ -244,7 +244,8 @@ class EmployeeCreate(BaseModel):
     phone: str = ""
     position: str = Field(min_length=1, max_length=180)
     department: str = ""
-    joining_date: DateType
+    joining_date: Optional[DateType] = None
+    employment_end_date: Optional[DateType] = None
     monthly_salary: float = Field(ge=0)
     currency: Literal["AFN", "USD"] = "AFN"
     avatar_url: str = Field(default="", validation_alias=AliasChoices("avatar_url", "avatarUrl", "avatar"))
@@ -268,6 +269,7 @@ class EmployeeUpdate(BaseModel):
     position: Optional[str] = Field(default=None, min_length=1, max_length=180)
     department: Optional[str] = None
     joining_date: Optional[DateType] = None
+    employment_end_date: Optional[DateType] = None
     monthly_salary: Optional[float] = Field(default=None, ge=0)
     currency: Optional[Literal["AFN", "USD"]] = None
     avatar_url: Optional[str] = Field(default=None, validation_alias=AliasChoices("avatar_url", "avatarUrl", "avatar"))
@@ -290,6 +292,100 @@ class EmployeeRead(EmployeeCreate):
     account_id: int
     created_at: datetime
     updated_at: datetime
+
+
+class EmployeeSalaryAdjustmentCreate(BaseModel):
+    date: DateType
+    period: str = Field(min_length=7, max_length=7)
+    amount: float = Field(gt=0)
+    currency: Literal["AFN", "USD"] = "AFN"
+    adjustment_type: Literal["bonus", "deduction", "advance", "adjustment", "reversal"]
+    reason: str = Field(min_length=1)
+    notes: str = ""
+
+    @field_validator("reason", "notes", mode="before")
+    @classmethod
+    def sanitize_adjustment_fields(cls, v):
+        if isinstance(v, str):
+            return sanitize_xss(v)
+        return v
+
+
+class EmployeeSalaryAdjustmentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    employee_id: int
+    date: DateType
+    period: str
+    amount: float
+    currency: str
+    adjustment_type: str
+    reason: str
+    notes: str = ""
+    created_by: str
+    created_at: datetime
+
+
+class EmployeeLedgerEmployeeInfo(BaseModel):
+    id: int
+    employee_code: str
+    full_name: str
+    joining_date: Optional[DateType] = None
+    employment_end_date: Optional[DateType] = None
+    current_salary: float
+    currency: str
+    position: str = ""
+    department: str = ""
+    status: str = "active"
+
+
+class EmployeeLedgerPolicy(BaseModel):
+    carry_forward_enabled: bool
+    first_month_prorated: bool = True
+    notice: Optional[str] = None
+
+
+class EmployeeLedgerSummary(BaseModel):
+    total_accrued: float
+    total_paid: float
+    total_bonus: float = 0.0
+    total_deductions: float = 0.0
+    total_adjustments: float = 0.0
+    outstanding_balance: float
+    current_month_accrued: float
+    current_month_paid: float
+    current_month_remaining: float
+
+
+class EmployeeLedgerEntry(BaseModel):
+    id: str
+    date: DateType
+    period: str
+    entry_type: Literal["opening_balance", "salary_accrual", "salary_payment", "bonus", "deduction", "advance", "adjustment", "reversal"]
+    description: str
+    salary_accrued: float = 0.0
+    payment: float = 0.0
+    bonus: float = 0.0
+    deduction: float = 0.0
+    adjustment: float = 0.0
+    debit: float = 0.0
+    credit: float = 0.0
+    running_balance: float
+    currency: str
+    transaction_id: Optional[int] = None
+    reference: Optional[str] = None
+
+
+class EmployeeLedgerResponse(BaseModel):
+    employee: EmployeeLedgerEmployeeInfo
+    policy: EmployeeLedgerPolicy
+    summary: EmployeeLedgerSummary
+    entries: List[EmployeeLedgerEntry]
+    page: int = 1
+    page_size: int = 100
+    total_entries: int = 0
+
 
 
 class SalaryPaymentCreate(BaseModel):

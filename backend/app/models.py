@@ -55,7 +55,8 @@ class Employee(Base):
     phone = Column(String(100), default="", nullable=False)
     position = Column(String(180), nullable=False)
     department = Column(String(180), default="", nullable=False)
-    joining_date = Column(Date, nullable=False)
+    joining_date = Column(Date, nullable=True)
+    employment_end_date = Column(Date, nullable=True)
     monthly_salary = Column(Float, default=0.0, nullable=False)
     currency = Column(String(10), default="AFN", nullable=False)
     avatar_url = Column(Text, default="", nullable=False)
@@ -68,6 +69,25 @@ class Employee(Base):
     transactions = relationship("Transaction", back_populates="employee")
     salary_payments = relationship("SalaryPayment", back_populates="employee", cascade="all, delete-orphan")
     salary_history = relationship("SalaryHistory", back_populates="employee", cascade="all, delete-orphan")
+    salary_adjustments = relationship("EmployeeSalaryAdjustment", back_populates="employee", cascade="all, delete-orphan")
+
+
+class EmployeeSalaryAdjustment(Base):
+    __tablename__ = "employee_salary_adjustments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    date = Column(Date, nullable=False, index=True)
+    period = Column(String(7), nullable=False, index=True)
+    amount = Column(Float, nullable=False)
+    currency = Column(String(10), default="AFN", nullable=False)
+    adjustment_type = Column(String(30), nullable=False, index=True)
+    reason = Column(Text, nullable=False)
+    notes = Column(Text, default="", nullable=False)
+    created_by = Column(String(255), nullable=False, default="Administrator")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    employee = relationship("Employee", back_populates="salary_adjustments")
 
 
 class Transaction(Base):

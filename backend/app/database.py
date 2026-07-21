@@ -1,3 +1,4 @@
+# cspell:ignore sessionmaker autoflush libpq vercel VERCEL BAWAR
 import os
 import ssl
 
@@ -27,14 +28,13 @@ def resolve_database_url() -> str:
 
     if not raw_url:
         if is_vercel:
-            # /tmp is the only writable directory in Vercel serverless functions.
-            # Fall back to SQLite there so the function can start and serve requests.
             return "sqlite:////tmp/cashbook.db"
-        raw_url = "sqlite:///./cashbook.db"
+        root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        db_file = os.path.join(root_dir, "cashbook.db").replace("\\", "/")
+        return f"sqlite:///{db_file}"
 
     database_url = normalize_database_url(raw_url)
     if is_production and database_url.startswith("sqlite"):
-        # Log a warning but don't raise — allow the function to start.
         import logging
         logging.getLogger("cashbook").warning(
             "DATABASE_URL is not set or points to SQLite on Vercel production. "
@@ -196,9 +196,15 @@ def ensure_payroll_schema():
             employee_columns = {column["name"] for column in inspector.get_columns("employees")}
             if "avatar_url" not in employee_columns:
                 conn.execute(text("alter table employees add column avatar_url TEXT DEFAULT ''"))
+            if "joining_date" not in employee_columns:
+                conn.execute(text("alter table employees add column joining_date DATE"))
+            if "employment_end_date" not in employee_columns:
+                conn.execute(text("alter table employees add column employment_end_date DATE"))
 
         if "salary_payments" in tables:
             salary_payment_columns = {column["name"] for column in inspector.get_columns("salary_payments")}
             for name in ["previous_carry_forward_balance", "total_payable_salary", "carry_forward_balance"]:
                 if name not in salary_payment_columns:
                     conn.execute(text(f"alter table salary_payments add column {name} FLOAT DEFAULT 0"))
+
+    Base.metadata.create_all(bind=engine)
