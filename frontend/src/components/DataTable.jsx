@@ -58,7 +58,7 @@ function DataTable({
       )}
 
       <div className={`table-wrapper overflow-x-auto ${renderMobileCard ? 'hidden md:block' : ''}`}>
-        <table className="accounting-table w-full text-left border-collapse">
+        <table className="accounting-table w-full text-left border-collapse table-fixed">
           <thead>
             <tr>
               {columns.map((col, idx) => {
@@ -66,7 +66,7 @@ function DataTable({
                 return (
                   <th
                     key={col.key || idx}
-                    className={`${col.className || ''} ${col.sortable ? 'p-0' : 'py-3 px-4'}`}
+                    className={`${col.className || ''} ${col.sortable ? 'p-0' : 'py-2 px-2.5 text-[10.5px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 bg-slate-100/90 dark:bg-slate-900/90 border-b-2 border-slate-200 dark:border-zinc-800 whitespace-nowrap'}`}
                     style={col.style}
                     aria-sort={col.sortable && isCurrentSort ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : undefined}
                   >
@@ -79,7 +79,7 @@ function DataTable({
                           border: 'none',
                           color: 'inherit',
                           font: 'inherit',
-                          padding: '12px 16px',
+                          padding: '8px 12px',
                           width: '100%',
                           textAlign: col.align === 'right' ? 'right' : 'left',
                           display: 'flex',
@@ -107,9 +107,9 @@ function DataTable({
           <tbody>
             {isLoading ? (
               Array.from({ length: loadingRowCount }).map((_, rIdx) => (
-                <tr key={`skeleton-${rIdx}`} className="skeleton-row border-b border-white/5 dark:border-zinc-800/30">
+                <tr key={`skeleton-${rIdx}`} className="skeleton-row border-b border-slate-100 dark:border-zinc-800/30">
                   {columns.map((col, cIdx) => (
-                    <td key={`skel-${rIdx}-${cIdx}`} className={col.className} style={{ padding: '12px 16px' }}>
+                    <td key={`skel-${rIdx}-${cIdx}`} className={col.className} style={{ padding: '8px 12px' }}>
                       <div className="skeleton-box animate-pulse rounded bg-zinc-200 dark:bg-zinc-800 h-4 w-full opacity-50" style={{ maxWidth: col.skeletonWidth || '100%' }}></div>
                     </td>
                   ))}
@@ -118,7 +118,7 @@ function DataTable({
             ) : data.length === 0 ? (
               <tr>
                 <td colSpan={columns.length}>
-                  <div className="empty-state flex flex-col items-center justify-center py-16 px-4 text-center">
+                  <div className="empty-state flex flex-col items-center justify-center py-12 px-4 text-center">
                     <div className="empty-state-illustration mb-4 text-indigo-400/80 dark:text-indigo-500/80 bg-indigo-50/50 dark:bg-indigo-900/10 p-5 rounded-full shadow-inner inline-flex border border-indigo-100 dark:border-indigo-800/30">
                       <SearchX size={36} />
                     </div>
@@ -142,44 +142,44 @@ function DataTable({
                     return (
                       <tr
                         key={stableKey}
-                        className="opening-balance-row bg-indigo-50/40 dark:bg-indigo-950/20 border-b border-zinc-200/50 dark:border-zinc-800/50 font-medium"
-                        style={{ height: '36px' }}
+                        className="opening-balance-row bg-indigo-50/40 dark:bg-indigo-950/20 border-b border-slate-200/50 dark:border-zinc-800/50 font-medium"
+                        style={{ height: '32px' }}
                       >
-                        <td colSpan={6} className="py-1 px-4 text-xs font-semibold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
+                        <td colSpan={6} className="py-1.5 px-3 text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
                           Previous month closing
                         </td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1 px-4 text-sm text-right font-mono font-bold text-zinc-900 dark:text-white">
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1.5 px-3 text-xs text-right font-mono font-bold text-zinc-900 dark:text-white">
                           {columns[8]?.render ? columns[8].render(row, rowIndex, rowOffset) : '-'}
                         </td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1 px-4 text-sm text-zinc-400">-</td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 italic">Opening</td>
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1.5 px-3 text-xs text-zinc-400">-</td>
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 italic">Opening</td>
                       </tr>
                     );
                   } else if (isLedgerTable) {
                     return (
                       <tr
                         key={stableKey}
-                        className="opening-balance-row bg-indigo-50/40 dark:bg-indigo-950/20 border-b border-zinc-200/50 dark:border-zinc-800/50 font-medium"
-                        style={{ height: '36px' }}
+                        className="opening-balance-row bg-indigo-50/40 dark:bg-indigo-950/20 border-b border-slate-200/50 dark:border-zinc-800/50 font-medium"
+                        style={{ height: '32px' }}
                       >
-                        <td colSpan={4} className="py-1 px-4 text-xs font-semibold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
+                        <td colSpan={4} className="py-1.5 px-3 text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
                           Previous month closing
                         </td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1 px-4 text-sm text-right font-mono font-bold text-zinc-900 dark:text-white">
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1.5 px-3 text-xs text-right font-mono font-bold text-zinc-900 dark:text-white">
                           {columns[6]?.render ? columns[6].render(row, rowIndex, rowOffset) : '-'}
                         </td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1 px-4 text-sm text-zinc-400">-</td>
-                        <td className="py-1 px-4 text-sm text-right text-zinc-400 italic">Opening</td>
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
+                        <td className="py-1.5 px-3 text-xs text-zinc-400">-</td>
+                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 italic">Opening</td>
                       </tr>
                     );
                   }
@@ -188,11 +188,11 @@ function DataTable({
                 return (
                   <tr
                     key={stableKey}
-                    className={`border-b border-zinc-200/50 dark:border-zinc-800/50 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors ${typeof rowClassName === 'function' ? rowClassName(row) : rowClassName || ''}`}
+                    className={`border-b border-slate-100 dark:border-zinc-800/60 hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors ${typeof rowClassName === 'function' ? rowClassName(row) : rowClassName || ''}`}
                     dir={row.dir || 'auto'}
                   >
                     {columns.map((col, colIndex) => (
-                      <td key={col.key || colIndex} className={`${col.className || ''} py-4 px-4 text-sm ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} style={col.style}>
+                      <td key={col.key || colIndex} className={`${col.className || ''} py-2 px-3 text-xs text-slate-700 dark:text-slate-200 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} style={col.style}>
                         {col.render ? col.render(row, rowIndex, rowOffset) : Reflect.get(row, col.key)}
                       </td>
                     ))}

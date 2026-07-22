@@ -695,6 +695,8 @@ def filtered_transactions(
     payment_method: str | None = None,
     group_id: int | None = None,
     branch_id: int | None = None,
+    skip: int = 0,
+    limit: int | None = None,
 ) -> list[models.Transaction]:
     query = db.query(models.Transaction)
     if user and user.role not in ["Administrator", "Super Admin"]:
@@ -731,7 +733,12 @@ def filtered_transactions(
                 func.lower(models.Transaction.category).like(pattern),
             )
         )
-    return query.order_by(models.Transaction.date.asc(), models.Transaction.id.asc()).all()
+    query = query.order_by(models.Transaction.date.asc(), models.Transaction.id.asc())
+    if skip:
+        query = query.offset(skip)
+    if limit is not None:
+        query = query.limit(limit)
+    return query.all()
 
 
 def account_ledger(db: Session, account_id: int) -> dict:

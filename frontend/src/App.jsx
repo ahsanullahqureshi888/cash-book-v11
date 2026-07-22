@@ -11,6 +11,7 @@ import LoginScreen from './pages/LoginScreen';
 import SecuritySetup from './pages/SecuritySetup';
 import LiquidMobileDashboard from './components/mobile/LiquidMobileDashboard';
 import Dashboard from './pages/Dashboard';
+import MultiAccountDashboard from './components/MultiAccountDashboard';
 import { api, setAuthToken } from './services/api';
 import { isLegacyUpdateDateError, withoutTransactionDate } from './services/transactionCompatibility';
 import { currency, csvCell, dateLabel, jalaliDateLabel, todayInputValue } from './utils/format';
@@ -29,7 +30,6 @@ const Settings = lazy(() => import('./pages/Settings'));
 const EmployeesSalary = lazy(() => import('./pages/EmployeesSalary'));
 const EmployeeLedgerPage = lazy(() => import('./pages/EmployeeLedgerPage'));
 const GlassPrintPreview = lazy(() => import('./components/GlassPrintPreview'));
-const SkyArianaExportLedger = lazy(() => import('./components/SkyArianaExportLedger'));
 
 const appTranslations = {
   English: {
@@ -1555,7 +1555,7 @@ export default function App() {
                     lastBackup={lastBackupAt || 'Never'}
                   />
                 } />
-                <Route path="/exports" element={<SkyArianaExportLedger />} />
+                <Route path="/exports" element={<MultiAccountDashboard />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </>

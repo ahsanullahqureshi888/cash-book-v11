@@ -59,16 +59,16 @@ export default function CashBook(props) {
     };
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-8">
+    <div className="flex flex-col gap-4 sm:gap-6 w-full pb-28 sm:pb-8">
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Cash Book</h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Manage and track daily transactions</p>
+          <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Cash Book</h2>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Manage and track daily transactions</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
           <button 
-            className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-semibold transition-all shadow-sm"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/80 dark:bg-zinc-800/80 hover:bg-white dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs font-semibold transition-all shadow-xs"
             onClick={props.onPrint}
           >
             Print
@@ -77,74 +77,77 @@ export default function CashBook(props) {
             path="/api/transactions/export"
             filename="cash-book-export.csv"
             label="Export CSV"
-            className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-semibold transition-all shadow-sm"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/80 dark:bg-zinc-800/80 hover:bg-white dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs font-semibold transition-all shadow-xs"
           />
           <button
-            className={`flex items-center justify-center gap-2 py-2 px-4 rounded-xl border text-sm font-semibold transition-all duration-200 shadow-sm ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all duration-200 shadow-xs ${
               activeTransactionType === 'cash_in'
-                ? 'bg-emerald-500 text-white border-emerald-500 shadow-md'
-                : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/40'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
             }`}
             onClick={() => setActiveTransactionType(activeTransactionType === 'cash_in' ? null : 'cash_in')}
           >
-            <ArrowDownLeft size={16} /> Cash In
+            <ArrowDownLeft size={14} /> Cash In
           </button>
           <button
-            className={`flex items-center justify-center gap-2 py-2 px-4 rounded-xl border text-sm font-semibold transition-all duration-200 shadow-sm ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all duration-200 shadow-xs ${
               activeTransactionType === 'cash_out'
-                ? 'bg-rose-500 text-white border-rose-500 shadow-md'
-                : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800 dark:hover:bg-rose-900/40'
+                ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
             }`}
             onClick={() => setActiveTransactionType(activeTransactionType === 'cash_out' ? null : 'cash_out')}
           >
-            <ArrowUpRight size={16} /> Cash Out
+            <ArrowUpRight size={14} /> Cash Out
           </button>
         </div>
       </header>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="glass-card p-4 rounded-2xl flex flex-col gap-1 border-emerald-200 dark:border-emerald-900/30">
-          <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-1">
-            <Wallet size={14} className="text-emerald-500" /> AFN Balance
+      {/* Summary Cards: Compact 2x2 Grid on Mobile */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="glass-card p-2.5 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col gap-0.5 border-emerald-200 dark:border-emerald-900/30">
+          <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+            <Wallet size={13} className="text-emerald-500 shrink-0" /> AFN Balance
           </div>
-          <strong className="text-xl font-bold font-mono text-zinc-900 dark:text-white">
+          <strong className="text-xs sm:text-lg font-black font-mono text-zinc-900 dark:text-white truncate">
             {currency(summary?.afn_balance || 0, 'AFN')}
           </strong>
         </div>
-        <div className="glass-card p-4 rounded-2xl flex flex-col gap-1 border-indigo-200 dark:border-indigo-900/30">
-          <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-1">
-            <Wallet size={14} className="text-indigo-500" /> USD Balance
+
+        <div className="glass-card p-2.5 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col gap-0.5 border-indigo-200 dark:border-indigo-900/30">
+          <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+            <Wallet size={13} className="text-indigo-500 shrink-0" /> USD Balance
           </div>
-          <strong className="text-xl font-bold font-mono text-zinc-900 dark:text-white">
+          <strong className="text-xs sm:text-lg font-black font-mono text-zinc-900 dark:text-white truncate">
             {currency(summary?.usd_balance || 0, 'USD')}
           </strong>
         </div>
-        <div className="glass-card p-4 rounded-2xl flex flex-col gap-1">
+
+        <div className="glass-card p-2.5 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col gap-0.5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-1">
-              <CalendarDays size={14} /> Today
+            <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+              <CalendarDays size={13} className="shrink-0" /> Today
             </div>
-            <span className="text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <Hash size={10} /> {todayStats.count} entries
+            <span className="text-[9px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+              <Hash size={9} /> {todayStats.count}
             </span>
           </div>
-          <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center justify-between mt-0.5 text-xs">
             <div className="flex flex-col">
-              <span className="text-[10px] text-zinc-500 uppercase">In</span>
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">{currency(todayStats.cashIn)}</span>
+              <span className="text-[9px] text-zinc-500 uppercase font-bold">In</span>
+              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">{currency(todayStats.cashIn)}</span>
             </div>
             <div className="flex flex-col text-right">
-              <span className="text-[10px] text-zinc-500 uppercase">Out</span>
-              <span className="font-mono font-bold text-rose-600 dark:text-rose-400 text-sm">{currency(todayStats.cashOut)}</span>
+              <span className="text-[9px] text-zinc-500 uppercase font-bold">Out</span>
+              <span className="font-mono font-bold text-rose-600 dark:text-rose-400 text-xs sm:text-sm">{currency(todayStats.cashOut)}</span>
             </div>
           </div>
         </div>
-        <div className="glass-card p-4 rounded-2xl flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-1">
-            <ArrowLeftRight size={14} /> Month Net Movement
+
+        <div className="glass-card p-2.5 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+            <ArrowLeftRight size={13} className="shrink-0" /> Month Net
           </div>
-          <strong className={`text-xl font-bold font-mono ${(summary?.afn_balance || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+          <strong className={`text-xs sm:text-lg font-black font-mono truncate ${(summary?.afn_balance || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
             {currency(summary?.monthly_revenue || 0)}
           </strong>
         </div>

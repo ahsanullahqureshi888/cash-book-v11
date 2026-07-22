@@ -24,7 +24,7 @@ export default function TopHeader({
   const timeLabel = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   return (
-    <header className="app-topbar print-only-hide no-print">
+    <header className="app-topbar print-only-hide print:hidden no-print">
       {/* Title & Eyebrow */}
       <div className="topbar-title-area">
         <button 
@@ -35,10 +35,10 @@ export default function TopHeader({
           <Menu size={20} />
         </button>
         <div className="header-titles">
-          <p className="eyebrow">Professional Business Management</p>
-          <div className="topbar-title-row">
-            <h1 className="page-title">{title}</h1>
-            <div className="branch-dropdown-pill">
+          <p className="eyebrow hidden sm:block">Professional Business Management</p>
+          <div className="topbar-title-row flex items-center gap-2">
+            <h1 className="page-title text-base sm:text-xl font-black truncate">{title}</h1>
+            <div className="branch-dropdown-pill hidden sm:flex">
               <Building2 size={13} className="branch-icon" />
               <select className="branch-select-input" aria-label="Branch select filter">
                 <option value="consolidated">All Branches (Consolidated)</option>
@@ -52,7 +52,7 @@ export default function TopHeader({
       </div>
       
       {/* Central Global Search Field */}
-      <div className="topbar-search" onClick={onSearchClick} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onSearchClick()}>
+      <div className="topbar-search hidden md:flex" onClick={onSearchClick} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onSearchClick()}>
         <div className="topbar-search-input-container">
           <Search size={16} className="search-icon" />
           <input 
@@ -67,7 +67,7 @@ export default function TopHeader({
 
       {/* Right Action Buttons & Clock */}
       <div className="topbar-actions">
-        <div className="time-chip" aria-label="Current date and time">
+        <div className="time-chip hidden lg:flex" aria-label="Current date and time">
           <Clock3 size={15} className="time-chip-icon" aria-hidden="true" />
           <span className="time-chip-text">
             <strong className="time-chip-date">{dateLabel}</strong>

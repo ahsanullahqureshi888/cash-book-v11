@@ -35,47 +35,26 @@ function getGreeting() {
   return 'Good evening';
 }
 
-function MetricCard({ title, value, icon: Icon, color, subtext, trendData }) {
+function MetricCard({ title, value, icon: Icon, color, subtext }) {
   const colorStyles = {
-    emerald: {
-      bg: 'rgba(5, 150, 105, 0.12)',
-      text: '#059669',
-      border: 'rgba(5, 150, 105, 0.2)',
-      glow: 'rgba(5, 150, 105, 0.15)'
-    },
-    rose: {
-      bg: 'rgba(220, 38, 38, 0.12)',
-      text: '#dc2626',
-      border: 'rgba(220, 38, 38, 0.2)',
-      glow: 'rgba(220, 38, 38, 0.15)'
-    },
-    blue: {
-      bg: 'rgba(37, 99, 235, 0.12)',
-      text: '#2563eb',
-      border: 'rgba(37, 99, 235, 0.2)',
-      glow: 'rgba(37, 99, 235, 0.15)'
-    },
-    violet: {
-      bg: 'rgba(124, 58, 237, 0.12)',
-      text: '#7c3aed',
-      border: 'rgba(124, 58, 237, 0.2)',
-      glow: 'rgba(124, 58, 237, 0.15)'
-    }
+    emerald: { bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+    rose: { bg: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
+    blue: { bg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' },
+    violet: { bg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400' }
   };
-
   const currentStyle = colorStyles[color] || colorStyles.blue;
 
   return (
-    <div className="metric-card glass-card">
-      <div className="metric-card-header">
-        <div className="metric-card-icon" style={{ backgroundColor: currentStyle.bg, color: currentStyle.text }}>
-          <Icon size={18} />
+    <div className="glass-card p-3.5 sm:p-5 rounded-2xl flex flex-col gap-1 border border-slate-200/60 dark:border-slate-800">
+      <div className="flex items-center gap-2">
+        <div className={`p-1.5 rounded-lg ${currentStyle.bg} flex items-center justify-center shrink-0`}>
+          <Icon size={15} />
         </div>
-        <span className="metric-card-label">{title}</span>
+        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">{title}</span>
       </div>
-      <div className="metric-card-body">
-        <strong className="metric-card-value">{value}</strong>
-        {subtext && <p className="metric-card-subtext">{subtext}</p>}
+      <div className="mt-0.5">
+        <strong className="text-base sm:text-2xl font-black font-mono tracking-tight text-slate-900 dark:text-white tabular-nums truncate block">{value}</strong>
+        {subtext && <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">{subtext}</p>}
       </div>
     </div>
   );
@@ -168,7 +147,7 @@ export default function Dashboard({
 
   // Sort newest transactions first
   const sortedTransactions = useMemo(() => {
-    return [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+    return [...transactions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   }, [transactions]);
 
   const recentTransactions = useMemo(() => {
@@ -187,41 +166,42 @@ export default function Dashboard({
   };
 
   return (
-    <div className="dashboard-page">
+    <div className="dashboard-page flex flex-col gap-4 sm:gap-6 w-full pb-28 sm:pb-8">
       {/* 1. Compact Welcome Banner */}
-      <div className="dashboard-welcome-card glass-card">
-        <div className="welcome-avatar-block">
-          <div className="welcome-avatar">
+      <div className="dashboard-welcome-card glass-card p-3 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="welcome-avatar-block flex items-center gap-3">
+          <div className="welcome-avatar w-10 h-10 rounded-xl bg-indigo-600 text-white font-black flex items-center justify-center text-xs sm:text-sm shadow-sm shrink-0">
             {userInitials}
           </div>
-          <div className="welcome-info">
-            <h2 className="welcome-greeting">{greeting}, {userName}</h2>
-            <p className="welcome-subtext">
-              {displayCompanyName} &bull; <span className="status-badge-inline">Up to date</span>
+          <div className="welcome-info min-w-0">
+            <p className="text-[11px] text-slate-500 font-medium leading-none">{greeting},</p>
+            <h2 className="welcome-greeting text-sm sm:text-lg font-black text-slate-900 dark:text-white truncate">{userName}</h2>
+            <p className="welcome-subtext text-[10px] sm:text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+              <span className="truncate">{displayCompanyName}</span> &bull; <span className="status-badge-inline text-[10px] text-emerald-600 font-bold">Up to date</span>
             </p>
           </div>
         </div>
 
-        <div className="welcome-stats flex items-center gap-3">
-          <div className="stat-pill">
-            <CalendarDays size={15} />
-            <div>
-              <small>Today</small>
-              <strong>{summary.today_transactions || 0} entries</strong>
+        <div className="welcome-stats flex items-center gap-2 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/80">
+          <div className="stat-pill px-2.5 py-1 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2 text-xs">
+            <CalendarDays size={13} className="text-indigo-500 shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-[8px] uppercase font-bold text-slate-400">Today</span>
+              <strong className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{summary.today_transactions || 0} entries</strong>
             </div>
           </div>
-          <div className="stat-pill">
-            <CalendarRange size={15} />
-            <div>
-              <small>This Month</small>
-              <strong>{summary.monthly_transactions || 0} entries</strong>
+          <div className="stat-pill px-2.5 py-1 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2 text-xs">
+            <CalendarRange size={13} className="text-indigo-500 shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-[8px] uppercase font-bold text-slate-400">This Month</span>
+              <strong className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{summary.monthly_transactions || 0} entries</strong>
             </div>
           </div>
         </div>
       </div>
 
       {/* 2. Primary 4-Card Responsive Metric Grid */}
-      <div className="dashboard-metric-grid">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         <MetricCard
           title="Total Cash In (AFN)"
           value={currency(cashInAfn, 'AFN')}

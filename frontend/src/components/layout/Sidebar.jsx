@@ -306,7 +306,7 @@ export default function Sidebar({
       )}
 
       <aside 
-        className={`app-sidebar ${isCollapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'is-open' : ''} print-only-hide relative`}
+        className={`app-sidebar ${isCollapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'is-open' : ''} print-only-hide print:hidden no-print relative`}
         aria-label="Main Navigation"
       >
         {/* Loading overlay during multi-tenant database context switch */}

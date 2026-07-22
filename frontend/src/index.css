@@ -1,6 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 @import "tailwindcss";
 
+/* iOS Safe Area Utilities for Notch and Home Indicator */
+.pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+.pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+.mb-safe { margin-bottom: env(safe-area-inset-bottom, 0px); }
+
+@supports (-webkit-touch-callout: none) {
+  .ios-glass-bar {
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+}
+
 :root {
   color-scheme: dark;
   --gold: #38bdf8;
@@ -81,12 +95,17 @@ body.light {
 }
 
 * { box-sizing: border-box; }
+html {
+  font-size: 14px;
+}
 html, body, #root { min-height: 100%; }
 body {
   margin: 0;
   font-family: Inter, Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
   background: var(--bg);
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 button, input, select {
   font: inherit;
@@ -136,8 +155,8 @@ body.light .app-sidebar {
 }
 
 .top-header {
-  height: 80px;
-  padding: 0 32px;
+  height: 56px;
+  padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -147,12 +166,12 @@ body.light .app-sidebar {
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
   z-index: 30;
-  gap: 24px;
+  gap: 16px;
 }
 
 .page-container {
   flex: 1;
-  padding: 32px;
+  padding: 16px 20px;
   overflow-y: auto;
 }
 
@@ -722,10 +741,11 @@ body.light .table-card.fullscreen-fallback th.col-actions {
 
 /* Dense accounting tables: readable on screen, compact in print. */
 .accounting-table {
-  min-width: 1280px;
+  width: 100%;
+  min-width: 100%;
   table-layout: fixed;
   font-size: 12px;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
 .accounting-table th,
@@ -6327,11 +6347,15 @@ body:not(.light) .sidebar-collapse-toggle {
   /* 3. Hide Non-Printable UI Elements */
   header,
   nav,
+  aside,
   .app-topbar,
+  header.app-topbar,
+  div.app-topbar,
+  .app-sidebar,
+  aside.app-sidebar,
   .print-only-hide,
   .no-print,
   .sidebar,
-  .app-sidebar,
   .topbar,
   .section-header,
   .topbar-actions,
@@ -6357,14 +6381,23 @@ body:not(.light) .sidebar-collapse-toggle {
   .paper-ruler,
   .print-margin-guide {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
     content: none !important;
   }
 
-  /* 4. Sky Ariana Export Page Printable Table Overrides */
+  /* 4. Sky Ariana Export Page Absolute Breakout Print Overrides */
   .sky-ariana-export-page {
     display: block !important;
-    position: static !important;
-    width: 100% !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 99999 !important;
+    width: 100vw !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;

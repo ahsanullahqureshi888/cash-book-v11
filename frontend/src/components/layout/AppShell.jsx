@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
+import IosBottomTabNav from '../mobile/IosBottomTabNav';
 
 const SIDEBAR_STORAGE_KEY = 'cashbook-sidebar-collapsed';
 
@@ -53,7 +54,7 @@ export default function AppShell({
   };
 
   return (
-    <div className={`app-shell ${isCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
+    <div className={`app-shell ${isCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'} print:p-0 print:m-0 print:w-full print:bg-white`}>
       <Sidebar 
         activeView={activeView} 
         setView={setView} 
@@ -70,7 +71,7 @@ export default function AppShell({
         onLogout={onLogout}
       />
       
-      <div className="app-workspace">
+      <div className="app-workspace print:p-0 print:m-0 print:w-full print:block">
         <TopHeader 
           title={title}
           onThemeToggle={onThemeToggle}
@@ -85,10 +86,13 @@ export default function AppShell({
           isCollapsed={isCollapsed}
         />
         
-        <main className="app-main-scroll">
+        <main className="app-main-scroll pb-16 md:pb-0 print:p-0 print:m-0 print:w-full print:block print:overflow-visible">
           {children || <Outlet />}
         </main>
       </div>
+
+      {/* iOS Mobile Bottom Navigation Bar */}
+      <IosBottomTabNav />
     </div>
   );
 }

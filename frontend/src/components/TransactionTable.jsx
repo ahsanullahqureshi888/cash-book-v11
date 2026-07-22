@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react';
+import { SquarePen, Receipt, Trash2 } from 'lucide-react';
 import { currency } from '../utils/format';
 import DateDisplay from './DateDisplay';
 import DataTable from './DataTable';
@@ -21,41 +22,92 @@ function TransactionTable({
 }) {
 
   const renderCategoryBadge = (category, isOpening) => {
-    if (isOpening) return <span className="category-badge badge-other">opening</span>;
-    const cat = String(category || 'other').toLowerCase();
-    if (cat === 'salary') return <span className="category-badge badge-salary">Salary</span>;
-    if (cat === 'rent') return <span className="category-badge badge-rent">Rent</span>;
-    if (cat.includes('expense')) {
-      return <span className="category-badge badge-expense">{cat.replaceAll('_', ' ')}</span>;
+    if (isOpening) {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
+          opening
+        </span>
+      );
     }
-    return <span className="category-badge badge-other">{cat.replaceAll('_', ' ')}</span>;
+    const cat = String(category || 'other').toLowerCase();
+    let badgeStyle = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+    if (cat === 'salary') {
+      badgeStyle = 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/60';
+    } else if (cat === 'rent') {
+      badgeStyle = 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200/60 dark:border-amber-800/60';
+    } else if (cat.includes('expense') || cat.includes('factory')) {
+      badgeStyle = 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200/60 dark:border-rose-800/60';
+    }
+
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${badgeStyle}`}>
+        {cat.replaceAll('_', ' ')}
+      </span>
+    );
   };
 
   const columns = useMemo(() => [
-    { key: 'index', label: 'SN', render: (row, i, offset) => row.isOpeningBalance ? 'BF' : offset + i + 1, className: 'table-col-sn' },
-    { key: 'date', label: 'Date', render: (row) => <DateDisplay value={row.date} format={dateDisplayFormat} />, className: 'table-col-date' },
-    { key: 'transaction_no', label: 'TX No', render: (row) => <span title={row.transaction_no} className="text-zinc-500 text-xs font-mono">{row.transaction_no || '-'}</span>, className: 'table-col-ref' },
-    { key: 'account_name', label: 'Account', render: (row) => <strong className="font-semibold text-zinc-800 dark:text-zinc-200">{row.account_name}</strong>, className: 'table-col-account' },
-    { key: 'detail', label: 'Detail', render: (row) => <span className="text-zinc-600 dark:text-zinc-400 text-xs">{row.detail}</span>, className: 'table-col-desc' },
-    { key: 'category', label: 'Category', render: (row) => renderCategoryBadge(row.category, row.isOpeningBalance), className: 'table-col-category' },
-    { key: 'cash_in_afn', label: 'Cash In AFN', render: (row) => <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{row.cash_in_afn ? currency(row.cash_in_afn) : '-'}</span>, className: 'table-col-cashin' },
-    { key: 'cash_out_afn', label: 'Cash Out AFN', render: (row) => <span className="font-mono text-rose-600 dark:text-rose-400 font-semibold">{row.cash_out_afn ? currency(row.cash_out_afn) : '-'}</span>, className: 'table-col-cashout' },
-    { key: 'balance', label: 'Balance', render: (row) => <span className={`font-mono font-bold ${row.runningBalance >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>{currency(row.runningBalance)}</span>, className: 'table-col-balance' },
-    { key: 'usd_in', label: 'USD In', render: (row) => <span className="font-mono text-zinc-700 dark:text-zinc-300">{row.usd_in ? currency(row.usd_in, 'USD') : '-'}</span>, className: 'table-col-usdin' },
-    { key: 'usd_out', label: 'USD Out', render: (row) => <span className="font-mono text-zinc-700 dark:text-zinc-300">{row.usd_out ? currency(row.usd_out, 'USD') : '-'}</span>, className: 'table-col-usdout' },
-    { key: 'exchange_rate', label: 'Rate', render: (row) => <span className="text-xs font-mono text-zinc-500">{row.exchange_rate || '-'}</span>, className: 'table-col-rate' },
-    { key: 'note', label: 'Note', render: (row) => <span className="text-xs text-zinc-500 truncate max-w-[100px] block" title={row.note}>{row.note || '-'}</span>, className: 'table-col-note' },
+    { key: 'index', label: 'SN', style: { width: '3.5%' }, render: (row, i, offset) => row.isOpeningBalance ? 'BF' : offset + i + 1, className: 'table-col-sn font-mono text-zinc-400 text-center' },
+    { key: 'date', label: 'DATE', style: { width: '8.5%' }, render: (row) => <span className="text-xs text-zinc-600 dark:text-zinc-300 font-semibold whitespace-nowrap"><DateDisplay value={row.date} format={dateDisplayFormat} /></span>, className: 'table-col-date' },
+    { 
+      key: 'account_name', 
+      label: 'REF / ACCOUNT', 
+      style: { width: '15.5%' },
+      render: (row) => (
+        <div className="flex flex-col justify-center min-w-0">
+          <span title={row.transaction_no} className="text-[10px] font-mono text-slate-400 dark:text-slate-500 whitespace-nowrap block leading-tight">
+            {row.transaction_no || '-'}
+          </span>
+          <span title={row.account_name} className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate block max-w-full leading-tight">
+            {row.account_name}
+          </span>
+        </div>
+      ), 
+      className: 'table-col-account' 
+    },
+    { key: 'detail', label: 'DETAIL', style: { width: '19%' }, render: (row) => <span className="text-xs text-zinc-600 dark:text-zinc-300 truncate block max-w-full" title={row.detail}>{row.detail}</span>, className: 'table-col-desc' },
+    { key: 'category', label: 'CATEGORY', style: { width: '7.5%' }, render: (row) => renderCategoryBadge(row.category, row.isOpeningBalance), className: 'table-col-category' },
+    { key: 'cash_in_afn', label: 'CASH IN AFN', align: 'right', style: { width: '9%' }, render: (row) => <span className="font-mono text-xs tabular-nums text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap">{row.cash_in_afn ? currency(row.cash_in_afn) : '-'}</span>, className: 'table-col-cashin' },
+    { key: 'cash_out_afn', label: 'CASH OUT AFN', align: 'right', style: { width: '9%' }, render: (row) => <span className="font-mono text-xs tabular-nums text-rose-600 dark:text-rose-400 font-bold whitespace-nowrap">{row.cash_out_afn ? currency(row.cash_out_afn) : '-'}</span>, className: 'table-col-cashout' },
+    { key: 'balance', label: 'BALANCE', align: 'right', style: { width: '9.5%' }, render: (row) => <span className={`font-mono text-xs tabular-nums font-black whitespace-nowrap ${row.runningBalance >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>{currency(row.runningBalance)}</span>, className: 'table-col-balance' },
+    { key: 'usd_in', label: 'USD IN', align: 'right', style: { width: '6%' }, render: (row) => <span className="font-mono text-xs tabular-nums text-zinc-700 dark:text-zinc-300 whitespace-nowrap">{row.usd_in ? currency(row.usd_in, 'USD') : '-'}</span>, className: 'table-col-usdin' },
+    { key: 'usd_out', label: 'USD OUT', align: 'right', style: { width: '6%' }, render: (row) => <span className="font-mono text-xs tabular-nums text-zinc-700 dark:text-zinc-300 whitespace-nowrap">{row.usd_out ? currency(row.usd_out, 'USD') : '-'}</span>, className: 'table-col-usdout' },
+    { key: 'exchange_rate', label: 'RATE', align: 'right', style: { width: '3.5%' }, render: (row) => <span className="text-xs font-mono tabular-nums text-zinc-400 whitespace-nowrap">{row.exchange_rate || '-'}</span>, className: 'table-col-rate' },
+    { key: 'note', label: 'NOTE', style: { width: '5.5%' }, render: (row) => <span className="text-xs text-zinc-400 truncate block max-w-full" title={row.note}>{row.note || '-'}</span>, className: 'table-col-note' },
     { 
       key: 'actions', 
-      label: 'Actions', 
-      className: 'table-col-actions',
+      label: '', 
+      align: 'right',
+      style: { width: '3.5%' },
+      className: 'table-col-actions text-right',
       render: (row) => row.isOpeningBalance ? (
-        <span className="text-xs text-zinc-400 italic">Opening</span>
+        <span className="text-[10px] text-zinc-400 italic">BF</span>
       ) : (
-        <div className="flex items-center justify-end gap-2">
-          <button type="button" className="text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors" onClick={() => onEdit(row)}>Edit</button>
-          <button type="button" className="text-xs font-medium text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors" onClick={() => onReceipt(row)}>Receipt</button>
-          <button type="button" className="text-xs font-medium text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 transition-colors" onClick={() => onDelete(row.id)}>Delete</button>
+        <div className="flex items-center justify-end gap-0.5">
+          <button 
+            type="button" 
+            title="Edit Transaction"
+            className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300 transition-colors" 
+            onClick={() => onEdit(row)}
+          >
+            <SquarePen size={13} />
+          </button>
+          <button 
+            type="button" 
+            title="Print Receipt"
+            className="p-1 rounded text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-300 transition-colors" 
+            onClick={() => onReceipt(row)}
+          >
+            <Receipt size={13} />
+          </button>
+          <button 
+            type="button" 
+            title="Delete Transaction"
+            className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 transition-colors" 
+            onClick={() => onDelete(row.id)}
+          >
+            <Trash2 size={13} />
+          </button>
         </div>
       )
     }

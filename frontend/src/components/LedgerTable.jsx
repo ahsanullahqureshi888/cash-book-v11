@@ -20,24 +20,40 @@ export default function LedgerTable({ rows, dateDisplayFormat, onReceipt }) {
   }, [page, pageCount]);
 
   const columns = useMemo(() => [
-    { key: 'index', label: 'SN', align: 'center', render: (row, i, offset) => offset + i + 1, className: 'col-sn text-center text-slate-500 font-mono text-xs' },
-    { key: 'date', label: 'Date', align: 'center', render: (row) => <DateDisplay value={row.date} format={dateDisplayFormat} />, className: 'col-date text-center whitespace-nowrap' },
-    { key: 'transaction_no', label: 'TX No', align: 'center', render: (row) => <span title={row.transaction_no} className="text-slate-500 text-xs font-mono">{row.transaction_no || '-'}</span>, className: 'col-txno text-center' },
-    { key: 'detail', label: 'Detail', align: 'left', render: (row) => <span className="text-slate-700 dark:text-slate-300 text-xs font-medium">{row.detail}</span>, className: 'col-detail min-w-[180px]' },
-    { key: 'cash_in_afn', label: 'Cash In', align: 'right', render: (row) => <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{row.cash_in_afn ? currency(row.cash_in_afn) : '-'}</span>, className: 'col-cash-in text-right' },
-    { key: 'cash_out_afn', label: 'Cash Out', align: 'right', render: (row) => <span className="font-mono text-rose-600 dark:text-rose-400 font-semibold">{row.cash_out_afn ? currency(row.cash_out_afn) : '-'}</span>, className: 'col-cash-out text-right' },
-    { key: 'balance', label: 'Balance', align: 'right', render: (row) => <span className={`font-mono font-bold ${row.balance >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>{currency(row.balance)}</span>, className: 'col-balance text-right' },
-    { key: 'usd_in', label: 'USD In', align: 'right', render: (row) => <span className="font-mono text-slate-700 dark:text-slate-300">{row.usd_in ? currency(row.usd_in, 'USD') : '-'}</span>, className: 'col-usd-in text-right' },
-    { key: 'usd_out', label: 'USD Out', align: 'right', render: (row) => <span className="font-mono text-slate-700 dark:text-slate-300">{row.usd_out ? currency(row.usd_out, 'USD') : '-'}</span>, className: 'col-usd-out text-right' },
-    { key: 'exchange_rate', label: 'Rate', align: 'right', render: (row) => <span className="text-xs font-mono text-slate-500">{row.exchange_rate || '-'}</span>, className: 'col-rate text-right' },
-    { key: 'note', label: 'Note', align: 'left', render: (row) => <span className="text-xs text-slate-500 truncate max-w-[110px] block" title={row.note}>{row.note || '-'}</span>, className: 'col-note' },
+    { key: 'index', label: 'SN', align: 'center', width: '4%', render: (row, i, offset) => offset + i + 1, className: 'col-sn text-center text-slate-500 font-mono text-xs' },
+    { key: 'date', label: 'Date', align: 'center', width: '10%', render: (row) => <DateDisplay value={row.date} format={dateDisplayFormat} />, className: 'col-date text-center whitespace-nowrap' },
+    { 
+      key: 'tx_detail', 
+      label: 'TX / Detail', 
+      align: 'left', 
+      width: '24%',
+      render: (row) => (
+        <div className="flex flex-col min-w-0">
+          <span title={row.transaction_no} className="text-[10px] font-bold font-mono text-indigo-600 dark:text-indigo-400 tracking-tight">
+            {row.transaction_no || '-'}
+          </span>
+          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate" title={row.detail}>
+            {row.detail || '-'}
+          </span>
+        </div>
+      ), 
+      className: 'col-detail' 
+    },
+    { key: 'cash_in_afn', label: 'Cash In', align: 'right', width: '10%', render: (row) => <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-xs whitespace-nowrap tabular-nums">{row.cash_in_afn ? currency(row.cash_in_afn) : '-'}</span>, className: 'col-cash-in text-right' },
+    { key: 'cash_out_afn', label: 'Cash Out', align: 'right', width: '10%', render: (row) => <span className="font-mono text-rose-600 dark:text-rose-400 font-bold text-xs whitespace-nowrap tabular-nums">{row.cash_out_afn ? currency(row.cash_out_afn) : '-'}</span>, className: 'col-cash-out text-right' },
+    { key: 'balance', label: 'Balance', align: 'right', width: '11%', render: (row) => <span className={`font-mono font-black text-xs whitespace-nowrap tabular-nums ${row.balance >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>{currency(row.balance)}</span>, className: 'col-balance text-right' },
+    { key: 'usd_in', label: 'USD In', align: 'right', width: '8%', render: (row) => <span className="font-mono text-slate-700 dark:text-slate-300 text-xs whitespace-nowrap tabular-nums">{row.usd_in ? currency(row.usd_in, 'USD') : '-'}</span>, className: 'col-usd-in text-right' },
+    { key: 'usd_out', label: 'USD Out', align: 'right', width: '8%', render: (row) => <span className="font-mono text-slate-700 dark:text-slate-300 text-xs whitespace-nowrap tabular-nums">{row.usd_out ? currency(row.usd_out, 'USD') : '-'}</span>, className: 'col-usd-out text-right' },
+    { key: 'exchange_rate', label: 'Rate', align: 'right', width: '5%', render: (row) => <span className="text-xs font-mono text-slate-500 whitespace-nowrap">{row.exchange_rate || '-'}</span>, className: 'col-rate text-right' },
+    { key: 'note', label: 'Note', align: 'left', width: '6%', render: (row) => <span className="text-xs text-slate-500 truncate max-w-[80px] block" title={row.note}>{row.note || '-'}</span>, className: 'col-note' },
     { 
       key: 'actions', 
       label: 'Actions', 
       align: 'right',
+      width: '4%',
       className: 'col-actions text-right',
       render: (row) => (
-        <button type="button" className="receipt-btn" onClick={() => onReceipt(row)}>Receipt</button>
+        <button type="button" className="receipt-btn px-2 py-1 text-[11px]" onClick={() => onReceipt(row)}>Receipt</button>
       )
     }
   ], [dateDisplayFormat, onReceipt]);
