@@ -1,0 +1,696 @@
+import React, { useState, useMemo } from 'react';
+import { 
+  Building2, 
+  Search, 
+  Download, 
+  Printer, 
+  ArrowDownCircle, 
+  ArrowUpCircle, 
+  Ship, 
+  Container, 
+  DollarSign, 
+  MapPin, 
+  Award,
+  Plus,
+  X,
+  SquarePen,
+  Trash2,
+  CheckCircle2,
+  FileCheck,
+  ShieldCheck,
+  Check
+} from 'lucide-react';
+import { ACCOUNT_PROFILE, SKY_ARIANA_EXPORT_TRANSACTIONS } from '../data/skyArianaExportData';
+import { useCompany } from '../context/CompanyContext';
+import NewExportTransactionModal from './NewExportTransactionModal';
+
+export default function SkyArianaExportLedger() {
+  const { currentCompany } = useCompany();
+  const [transactions, setTransactions] = useState(SKY_ARIANA_EXPORT_TRANSACTIONS);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all'); // 'all' | 'invoice' | 'payment' | 'surrendered'
+
+  // Modal State for New / Edit Export Transaction
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
+    type: 'invoice',
+    date: new Date().toISOString().split('T')[0],
+    shipper: '',
+    consignee: '',
+    commodityInvoice: '',
+    blContainer: '',
+    quantity: 1,
+    amountUSD: '',
+    notes: '',
+    isSurrenderedBL: false
+  });
+
+  // Recalculate running balance for full dataset
+  const recalculateBalances = (dataList) => {
+    let currentBal = 0;
+    return dataList.map((tx, idx) => {
+      const credit = tx.creditUSD || 0;
+      const debit = tx.debitUSD || 0;
+      currentBal += (credit - debit);
+      return {
+        ...tx,
+        sn: idx + 1,
+        balanceUSD: currentBal
+      };
+    });
+  };
+
+  // Dynamic Filter Logic
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((tx) => {
+      if (filterType === 'invoice' && tx.type !== 'invoice') return false;
+      if (filterType === 'payment' && tx.type !== 'payment') return false;
+      if (filterType === 'surrendered' && !tx.isSurrenderedBL) return false;
+
+      if (!searchTerm.trim()) return true;
+      const q = searchTerm.toLowerCase();
+      return (
+        tx.date.toLowerCase().includes(q) ||
+        (tx.shipper && tx.shipper.toLowerCase().includes(q)) ||
+        (tx.consignee && tx.consignee.toLowerCase().includes(q)) ||
+        tx.commodityInvoice.toLowerCase().includes(q) ||
+        (tx.blContainer && tx.blContainer.toLowerCase().includes(q)) ||
+        (tx.notes && tx.notes.toLowerCase().includes(q))
+      );
+    });
+  }, [transactions, searchTerm, filterType]);
+
+  // Aggregate Metrics Calculations
+  const totals = useMemo(() => {
+    let credit = 0;
+    let debit = 0;
+    let containers = 0;
+    let surrenderedCount = 0;
+
+    transactions.forEach((tx) => {
+      credit += tx.creditUSD || 0;
+      debit += tx.debitUSD || 0;
+      containers += tx.quantity || 0;
+      if (tx.isSurrenderedBL) surrenderedCount += 1;
+    });
+
+    const netBalance = credit - debit;
+
+    return {
+      totalCredit: credit,
+      totalDebit: debit,
+      netBalance,
+      totalContainers: containers,
+      surrenderedCount
+    };
+  }, [transactions]);
+
+  // Format Currency USD
+  const formatUSD = (amount) => {
+    if (amount === 0 || amount === null || amount === undefined) return '$0.00';
+    const isNegative = amount < 0;
+    const absVal = Math.abs(amount).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return isNegative ? `-$${absVal}` : `$${absVal}`;
+  };
+
+  // Open Modal for Add
+  const handleOpenAddModal = () => {
+    setEditingId(null);
+    setFormData({
+      type: 'invoice',
+      date: new Date().toISOString().split('T')[0],
+      shipper: '',
+      consignee: '',
+      commodityInvoice: '',
+      blContainer: '',
+      quantity: 1,
+      amountUSD: '',
+      notes: '',
+      isSurrenderedBL: false
+    });
+    setIsModalOpen(true);
+  };
+
+  // Open Modal for Edit
+  const handleOpenEditModal = (tx) => {
+    setEditingId(tx.id);
+    setFormData({
+      type: tx.type || 'invoice',
+      date: tx.date || new Date().toISOString().split('T')[0],
+      shipper: tx.shipper || '',
+      consignee: tx.consignee || '',
+      commodityInvoice: tx.commodityInvoice || '',
+      blContainer: tx.blContainer || '',
+      quantity: tx.quantity || 1,
+      amountUSD: (tx.creditUSD || tx.debitUSD || 0).toString(),
+      notes: tx.notes || '',
+      isSurrenderedBL: !!tx.isSurrenderedBL
+    });
+    setIsModalOpen(true);
+  };
+
+  // Delete Transaction Handler
+  const handleDeleteTransaction = (id) => {
+    if (window.confirm('Are you sure you want to delete this export transaction?')) {
+      const updated = transactions.filter(t => t.id !== id);
+      setTransactions(recalculateBalances(updated));
+    }
+  };
+
+  // Save (Add or Update) Transaction Handler
+  const handleSaveTransaction = (e) => {
+    e.preventDefault();
+    const amountNum = parseFloat(formData.amountUSD) || 0;
+    if (amountNum <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    const isInvoice = formData.type === 'invoice';
+    const creditUSD = isInvoice ? amountNum : 0;
+    const debitUSD = !isInvoice ? amountNum : 0;
+
+    let updatedList = [];
+
+    if (editingId !== null) {
+      // EDIT Mode
+      updatedList = transactions.map(tx => {
+        if (tx.id === editingId) {
+          return {
+            ...tx,
+            type: formData.type,
+            date: formData.date,
+            shipper: formData.shipper || (isInvoice ? 'NAJEB-AMIN LTD' : 'CASH DEPOSIT'),
+            consignee: formData.consignee || (isInvoice ? 'EXPORT CLIENT' : 'DUBAI DEPOSIT'),
+            commodityInvoice: formData.commodityInvoice || (isInvoice ? 'EXPORT INVOICE' : 'PAYMENT DEPOSIT'),
+            blContainer: formData.blContainer || (isInvoice ? '1X40 HC / BL-PENDING' : 'TRANSFER / CASH'),
+            quantity: isInvoice ? (parseInt(formData.quantity) || 1) : 0,
+            creditUSD,
+            debitUSD,
+            notes: formData.notes,
+            isSurrenderedBL: isInvoice ? formData.isSurrenderedBL : false
+          };
+        }
+        return tx;
+      });
+    } else {
+      // ADD Mode
+      const newTx = {
+        id: Date.now(),
+        sn: transactions.length + 1,
+        date: formData.date,
+        shipper: formData.shipper || (isInvoice ? 'NAJEB-AMIN LTD' : 'CASH DEPOSIT'),
+        consignee: formData.consignee || (isInvoice ? 'EXPORT CLIENT' : 'DUBAI DEPOSIT'),
+        commodityInvoice: formData.commodityInvoice || (isInvoice ? 'EXPORT INVOICE' : 'PAYMENT DEPOSIT'),
+        blContainer: formData.blContainer || (isInvoice ? '1X40 HC / BL-PENDING' : 'TRANSFER / CASH'),
+        quantity: isInvoice ? (parseInt(formData.quantity) || 1) : 0,
+        creditUSD,
+        debitUSD,
+        balanceUSD: 0,
+        type: formData.type,
+        notes: formData.notes,
+        isSurrenderedBL: isInvoice ? formData.isSurrenderedBL : false
+      };
+      updatedList = [...transactions, newTx];
+    }
+
+    setTransactions(recalculateBalances(updatedList));
+    setIsModalOpen(false);
+  };
+
+  // CSV Export Handler
+  const handleExportCSV = () => {
+    const headers = [
+      'S.N',
+      'Date',
+      'Shipper',
+      'Consignee',
+      'Commodity & Invoice',
+      'B/L & Container',
+      'Surrendered B/L',
+      'Qty',
+      'Credit (USD)',
+      'Debit (USD)',
+      'Balance (USD)'
+    ];
+
+    const rows = filteredTransactions.map(tx => [
+      tx.sn,
+      tx.date,
+      `"${tx.shipper || ''}"`,
+      `"${tx.consignee || ''}"`,
+      `"${tx.commodityInvoice || ''}"`,
+      `"${tx.blContainer || ''}"`,
+      tx.isSurrenderedBL ? 'YES (Surrendered)' : 'NO (Original)',
+      tx.quantity,
+      tx.creditUSD,
+      tx.debitUSD,
+      tx.balanceUSD
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Sky_Ariana_Export_Ledger_${ACCOUNT_PROFILE.accountName.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const logoPath = currentCompany?.id === 'sky-ariana' && currentCompany?.logo
+    ? currentCompany.logo 
+    : ACCOUNT_PROFILE.logo;
+
+  return (
+    <div className="sky-ariana-export-page h-[calc(100vh-68px)] flex flex-col gap-2 p-3 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans overflow-hidden">
+      
+      {/* PRINT-ONLY CORPORATE EXECUTIVE LETTERHEAD HEADER */}
+      <div className="hidden print:flex flex-col gap-2 mb-3 pb-2 border-b-2 border-slate-900 text-slate-900">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={logoPath} alt="SKY ARIANA" className="w-12 h-12 object-contain rounded-lg p-1 bg-slate-900" />
+            <div>
+              <h1 className="text-xl font-black tracking-wider text-slate-900 uppercase leading-none">SKY ARIANA LTD</h1>
+              <p className="text-[10px] font-bold text-blue-900 uppercase tracking-widest mt-1">International Freight Forwarding & Logistics Management</p>
+              <p className="text-[9px] text-slate-600 font-mono">Lic: {ACCOUNT_PROFILE.licenseNo} | Kandahar Freight Center, AF | Dubai Office: Al Ras, Deira</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="inline-block px-3 py-1 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded shadow-sm">
+              OFFICIAL STATEMENT OF ACCOUNT
+            </span>
+            <p className="text-[10px] text-slate-600 font-mono mt-1">Date: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+            <p className="text-[10px] text-slate-600 font-mono">Currency: USD ($)</p>
+          </div>
+        </div>
+
+        {/* Executive Summary Info Box */}
+        <div className="grid grid-cols-3 gap-3 p-2 bg-slate-100 rounded-lg border border-slate-300 text-xs">
+          <div>
+            <span className="text-[9px] font-bold text-slate-500 uppercase block">Account Holder / Client</span>
+            <strong className="text-sm font-black text-slate-900">{ACCOUNT_PROFILE.accountName}</strong>
+            <span className="text-xs text-amber-800 font-bold block dir-rtl">({ACCOUNT_PROFILE.accountNameDari})</span>
+          </div>
+          <div>
+            <span className="text-[9px] font-bold text-slate-500 uppercase block">Ledger Records & Fleet</span>
+            <strong className="text-xs font-mono font-bold text-slate-900">{filteredTransactions.length} Activity Rows</strong>
+            <span className="text-[10px] text-blue-900 font-bold block">{totals.totalContainers} Containers ({totals.surrenderedCount} Surrendered)</span>
+          </div>
+          <div className="text-right">
+            <span className="text-[9px] font-bold text-slate-500 uppercase block">Net Outstanding Balance</span>
+            <strong className="text-sm font-black font-mono text-slate-900">{formatUSD(totals.netBalance)}</strong>
+            <span className="text-[10px] text-slate-700 font-bold block">
+              {totals.netBalance <= 0 ? '(PAID IN FULL / CREDIT)' : '(RECEIVABLE DEBT)'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 1. COMPACT INTEGRATED HEADER & METRICS BAR (SCREEN VIEW) */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl px-4 py-2.5 shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0 no-print">
+        
+        {/* Left: Branding & Account Title */}
+        <div className="flex items-center gap-3 min-w-0">
+          <img 
+            src={logoPath} 
+            alt={ACCOUNT_PROFILE.companyName}
+            className="w-10 h-10 object-contain rounded-xl bg-slate-900 p-0.5 border border-blue-500/30 shrink-0"
+          />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-black tracking-tight truncate text-slate-900 dark:text-slate-100">
+                {ACCOUNT_PROFILE.accountName}
+              </h1>
+              <span className="text-xs font-bold text-amber-500 dir-rtl hidden sm:inline">
+                ({ACCOUNT_PROFILE.accountNameDari})
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+              <span className="font-semibold text-blue-600 dark:text-blue-400">SKY ARIANA LOGISTICS</span>
+              <span>•</span>
+              <span className="truncate">Kandahar, AF | Lic: {ACCOUNT_PROFILE.licenseNo}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Streamlined KPI Summary Badges */}
+        <div className="flex items-center gap-2 text-xs shrink-0 overflow-x-auto">
+          {/* Credit Billed */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60">
+            <ArrowUpCircle size={14} className="text-amber-600 dark:text-amber-400" />
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Invoices</span>
+              <strong className="text-xs font-mono font-bold text-amber-700 dark:text-amber-300">
+                {formatUSD(totals.totalCredit)}
+              </strong>
+            </div>
+          </div>
+
+          {/* Debit Received */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60">
+            <ArrowDownCircle size={14} className="text-emerald-600 dark:text-emerald-400" />
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Payments</span>
+              <strong className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                {formatUSD(totals.totalDebit)}
+              </strong>
+            </div>
+          </div>
+
+          {/* Net Balance */}
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border ${
+            totals.netBalance <= 0 
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 text-emerald-700' 
+              : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 text-rose-700'
+          }`}>
+            <DollarSign size={14} />
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Balance</span>
+              <strong className="text-xs font-mono font-black">
+                {formatUSD(totals.netBalance)}
+              </strong>
+            </div>
+          </div>
+
+          {/* Containers & Surrendered B/Ls */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300">
+            <Container size={14} />
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Fleet</span>
+              <strong className="text-xs font-mono font-bold">
+                {totals.totalContainers} Units ({totals.surrenderedCount} Surrendered)
+              </strong>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* 2. COMPACT SEARCH & FILTER CONTROLS TOOLBAR */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl px-3 py-2 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0 no-print">
+        
+        {/* Search */}
+        <div className="relative w-full sm:w-64">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search B/L, Container, Shipper..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+          />
+        </div>
+
+        {/* Filter Pills & Actions */}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg flex items-center text-xs">
+            <button
+              type="button"
+              className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition-all ${
+                filterType === 'all' ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs' : 'text-slate-500'
+              }`}
+              onClick={() => setFilterType('all')}
+            >
+              All ({transactions.length})
+            </button>
+            <button
+              type="button"
+              className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition-all ${
+                filterType === 'invoice' ? 'bg-white dark:bg-slate-900 text-amber-600 shadow-xs' : 'text-slate-500'
+              }`}
+              onClick={() => setFilterType('invoice')}
+            >
+              Invoices
+            </button>
+            <button
+              type="button"
+              className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition-all ${
+                filterType === 'payment' ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-xs' : 'text-slate-500'
+              }`}
+              onClick={() => setFilterType('payment')}
+            >
+              Payments
+            </button>
+            <button
+              type="button"
+              className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition-all flex items-center gap-1 ${
+                filterType === 'surrendered' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-600 dark:text-emerald-400'
+              }`}
+              onClick={() => setFilterType('surrendered')}
+            >
+              <ShieldCheck size={12} />
+              <span>Surrendered B/L</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleOpenAddModal}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors"
+          >
+            <Plus size={14} />
+            <span>New Record</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
+            title="Export CSV"
+          >
+            <Download size={14} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
+            title="Print Statement"
+          >
+            <Printer size={14} />
+          </button>
+        </div>
+
+      </div>
+
+      {/* 3. ONE-SCREEN FIT EXPORT TABLE WITH STICKY HEADER */}
+      <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-auto relative">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr className="sticky top-0 z-20 bg-slate-900 text-slate-200 uppercase font-bold tracking-wider text-[10px] border-b border-slate-800">
+              <th className="py-2.5 px-2 text-center w-10">S.N</th>
+              <th className="py-2.5 px-2 min-w-[85px]">Date (تاریخ)</th>
+              <th className="py-2.5 px-2 min-w-[130px]">Shipper (ارسال کننده)</th>
+              <th className="py-2.5 px-2 min-w-[130px]">Consignee (گیرنده)</th>
+              <th className="py-2.5 px-2 min-w-[180px]">Commodity & Invoice</th>
+              <th className="py-2.5 px-2 min-w-[210px]">B/L & Container No.</th>
+              <th className="py-2.5 px-2 text-center w-12">Qty</th>
+              <th className="py-2.5 px-2 text-right text-amber-400 min-w-[90px]">Credit ($)</th>
+              <th className="py-2.5 px-2 text-right text-emerald-400 min-w-[90px]">Debit ($)</th>
+              <th className="py-2.5 px-2 text-right min-w-[95px]">Balance ($)</th>
+              <th className="py-2.5 px-2 text-center w-20 no-print">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-[11px]">
+            {filteredTransactions.length === 0 ? (
+              <tr>
+                <td colSpan={11} className="py-12 text-center text-slate-400 text-xs">
+                  No matching export records found.
+                </td>
+              </tr>
+            ) : (
+              filteredTransactions.map((tx) => {
+                const isPayment = tx.type === 'payment';
+                return (
+                  <tr 
+                    key={tx.id} 
+                    className={`hover:bg-slate-50/90 dark:hover:bg-slate-800/50 transition-colors ${
+                      isPayment ? 'bg-emerald-50/20 dark:bg-emerald-950/10' : ''
+                    }`}
+                  >
+                    {/* S.N */}
+                    <td className="py-2 px-2 text-center text-slate-400 font-bold font-mono">
+                      {tx.sn}
+                    </td>
+
+                    {/* Date */}
+                    <td className="py-2 px-2 font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                      {tx.date}
+                    </td>
+
+                    {/* Shipper */}
+                    <td className="py-2 px-2 font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[140px]" title={tx.shipper}>
+                      {tx.shipper || 'N/A'}
+                    </td>
+
+                    {/* Consignee */}
+                    <td className="py-2 px-2 text-slate-700 dark:text-slate-300 truncate max-w-[140px]" title={tx.consignee}>
+                      {tx.consignee || 'N/A'}
+                    </td>
+
+                    {/* Commodity & Invoice */}
+                    <td className="py-2 px-2">
+                      <div className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px]" title={tx.commodityInvoice}>
+                        {tx.commodityInvoice}
+                      </div>
+                      {tx.notes && (
+                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans truncate dir-rtl" title={tx.notes}>
+                          {tx.notes}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* B/L & Container + SURRENDERED BADGE */}
+                    <td className="py-2 px-2">
+                      <div className="font-mono text-slate-700 dark:text-slate-300 text-[11px] truncate" title={tx.blContainer}>
+                        {tx.blContainer || '-'}
+                      </div>
+                      {tx.isSurrenderedBL && (
+                        <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-600 text-white mt-0.5 tracking-wider shadow-xs">
+                          <ShieldCheck size={11} />
+                          <span>SURRENDERED B/L</span>
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Qty */}
+                    <td className="py-2 px-2 text-center font-bold">
+                      {tx.quantity > 0 ? (
+                        <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-300 font-mono text-[10px]">
+                          {tx.quantity}
+                        </span>
+                      ) : '-'}
+                    </td>
+
+                    {/* Credit (USD) */}
+                    <td className="py-2 px-2 text-right font-mono font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                      {tx.creditUSD > 0 ? formatUSD(tx.creditUSD) : '-'}
+                    </td>
+
+                    {/* Debit (USD) */}
+                    <td className="py-2 px-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                      {tx.debitUSD > 0 ? formatUSD(tx.debitUSD) : '-'}
+                    </td>
+
+                    {/* Running Balance (USD) */}
+                    <td className={`py-2 px-2 text-right font-mono font-black text-xs whitespace-nowrap ${
+                      tx.balanceUSD <= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'
+                    }`}>
+                      {formatUSD(tx.balanceUSD)}
+                    </td>
+
+                    {/* Actions Column (Edit / Delete) */}
+                    <td className="py-2 px-2 text-center whitespace-nowrap no-print">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(tx)}
+                          className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors"
+                          title="Edit Record"
+                        >
+                          <SquarePen size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTransaction(tx.id)}
+                          className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors"
+                          title="Delete Record"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+
+          {/* Sticky Table Footer Summary */}
+          <tfoot className="sticky bottom-0 z-20 bg-slate-900 text-slate-100 font-bold border-t-2 border-slate-700 text-xs">
+            <tr>
+              <td colSpan={6} className="py-2 px-2 text-right uppercase text-[10px] tracking-wider text-slate-300">
+                Totals ({filteredTransactions.length} items):
+              </td>
+              <td className="py-2 px-2 text-center font-mono text-blue-400">
+                {totals.totalContainers}
+              </td>
+              <td className="py-2 px-2 text-right font-mono text-amber-400">
+                {formatUSD(totals.totalCredit)}
+              </td>
+              <td className="py-2 px-2 text-right font-mono text-emerald-400">
+                {formatUSD(totals.totalDebit)}
+              </td>
+              <td className={`py-2 px-2 text-right font-mono ${
+                totals.netBalance <= 0 ? 'text-emerald-400' : 'text-rose-400'
+              }`}>
+                {formatUSD(totals.netBalance)}
+              </td>
+              <td className="py-2 px-2 text-center no-print">-</td>
+            </tr>
+          </tfoot>
+
+        </table>
+      </div>
+
+      {/* PRINT-ONLY EXECUTIVE SIGNATURE & STAMP FOOTER */}
+      <div className="hidden print:flex flex-col gap-3 mt-4 pt-3 border-t-2 border-slate-900 text-xs font-sans">
+        <div className="grid grid-cols-3 gap-6 text-center">
+          <div>
+            <div className="h-10 border-b border-slate-400"></div>
+            <span className="text-[10px] font-bold uppercase text-slate-800 block mt-1">Prepared By (ترتيب کننده)</span>
+            <span className="text-[9px] text-slate-500">Logistics & Accounting Dept</span>
+          </div>
+          <div>
+            <div className="h-10 border-b border-slate-400"></div>
+            <span className="text-[10px] font-bold uppercase text-slate-800 block mt-1">Approved Manager (منظوری اداره)</span>
+            <span className="text-[9px] text-slate-500">SKY ARIANA LTD Authority</span>
+          </div>
+          <div>
+            <div className="h-10 border-b border-slate-400"></div>
+            <span className="text-[10px] font-bold uppercase text-slate-800 block mt-1">Client Confirmation (تائیدی مشتری)</span>
+            <span className="text-[9px] text-slate-500">{ACCOUNT_PROFILE.accountName}</span>
+          </div>
+        </div>
+
+        <div className="text-center text-[8.5px] text-slate-500 font-sans border-t border-slate-200 pt-1.5">
+          <p>Official Statement of Account issued by SKY ARIANA LTD. All freight charges, container surrendered B/Ls, and Hawala payments recorded herein are verified against shipping manifests.</p>
+        </div>
+      </div>
+
+      {/* 4. ADD / EDIT RECORD MODAL COMPONENT */}
+      <NewExportTransactionModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingId(null);
+        }}
+        onSave={(payload) => {
+          let updatedList = [];
+          if (editingId !== null) {
+            updatedList = transactions.map(tx => (tx.id === editingId ? { ...tx, ...payload } : tx));
+          } else {
+            updatedList = [...transactions, payload];
+          }
+          setTransactions(recalculateBalances(updatedList));
+          setEditingId(null);
+          setIsModalOpen(false);
+        }}
+        initialData={transactions.find(t => t.id === editingId) || null}
+        clientName={ACCOUNT_PROFILE.accountName}
+      />
+
+    </div>
+  );
+}

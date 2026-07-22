@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import ToastProvider from './components/ToastProvider';
+import { CompanyProvider } from './context/CompanyContext';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import './modern-theme.css';
@@ -17,9 +18,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        <ToastProvider>
-          <App />
-        </ToastProvider>
+        <CompanyProvider>
+          <ToastProvider>
+            <App />
+          </ToastProvider>
+        </CompanyProvider>
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>

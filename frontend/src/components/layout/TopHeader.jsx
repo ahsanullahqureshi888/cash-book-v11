@@ -24,7 +24,7 @@ export default function TopHeader({
   const timeLabel = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   return (
-    <header className="app-topbar print-only-hide">
+    <header className="app-topbar print-only-hide no-print">
       {/* Title & Eyebrow */}
       <div className="topbar-title-area">
         <button 

@@ -577,3 +577,78 @@ class BranchRead(BranchBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
 
+
+# ---------------------------------------------------------------------------
+# Transport & Export Multi-Client Ledger Schemas (SKY ARIANA LTD)
+# ---------------------------------------------------------------------------
+class ExportClientCreate(BaseModel):
+    name: str
+    contact_info: Optional[str] = ""
+    currency: Optional[str] = "USD"
+
+
+class ExportClientResponse(BaseModel):
+    id: int
+    name: str
+    contact_info: str
+    currency: str
+    total_credit_usd: float = 0.0
+    total_debit_usd: float = 0.0
+    net_balance_usd: float = 0.0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TransportLedgerCreate(BaseModel):
+    client_id: Optional[int] = None
+    client_name: Optional[str] = None
+    transaction_type: Literal["shipment", "payment", "invoice"] = "shipment"
+    date: str
+    shipper: Optional[str] = ""
+    consignee: Optional[str] = ""
+    commodity_description: Optional[str] = ""
+    invoice_no: Optional[str] = ""
+    bill_of_lading: Optional[str] = ""
+    container_no: Optional[str] = ""
+    container_size: Optional[str] = "1X40_HC"
+    quantity: Optional[int] = 1
+    price_per_container: Optional[float] = 0.0
+    credit_usd: Optional[float] = 0.0
+    debit_usd: Optional[float] = 0.0
+    is_surrendered_bl: Optional[bool] = False
+    notes: Optional[str] = ""
+
+
+class TransportLedgerResponse(BaseModel):
+    id: int
+    client_id: int
+    sn: int
+    transaction_type: str
+    date: str
+    shipper: str
+    consignee: str
+    commodity_description: str
+    invoice_no: str
+    bill_of_lading: str
+    container_no: str
+    container_size: str
+    quantity: int
+    price_per_container: float
+    credit_usd: float
+    debit_usd: float
+    running_balance_usd: float
+    is_surrendered_bl: bool
+    notes: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GrandSummaryResponse(BaseModel):
+    grand_total_credits_usd: float
+    grand_total_debits_usd: float
+    net_outstanding_balance_usd: float
+    total_containers: int
+    surrendered_bl_count: int
+    clients: List[ExportClientResponse]
+
+

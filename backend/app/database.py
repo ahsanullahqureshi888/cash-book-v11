@@ -60,7 +60,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-def ensure_sqlite_schema():
+def ensure_sqlite_schema(bind_engine=None):
     """Add columns introduced after the first local database version.
 
     SQLite create_all does not alter existing tables, so this keeps older local
@@ -69,7 +69,8 @@ def ensure_sqlite_schema():
     if not IS_SQLITE:
         return
 
-    with engine.begin() as conn:
+    target_engine = bind_engine or engine
+    with target_engine.begin() as conn:
         tables = {row[0] for row in conn.execute(text("select name from sqlite_master where type='table'"))}
 
         def columns(table):
@@ -145,9 +146,10 @@ def ensure_sqlite_schema():
             conn.execute(text("update settings set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"))
 
 
-def ensure_user_schema():
+def ensure_user_schema(bind_engine=None):
     """Keep deployed user tables aligned with the current auth model."""
-    inspector = inspect(engine)
+    target_engine = bind_engine or engine
+    inspector = inspect(target_engine)
     if "users" not in inspector.get_table_names():
         return
 
@@ -163,7 +165,7 @@ def ensure_user_schema():
         ("assigned_branch_id", "INTEGER"),
     ]
 
-    with engine.begin() as conn:
+    with target_engine.begin() as conn:
         for name, sql_type in additions:
             if name not in user_columns:
                 conn.execute(text(f"alter table users add column {name} {sql_type}"))
@@ -176,11 +178,12 @@ def ensure_user_schema():
             conn.execute(text(f"update users set updated_at = coalesce(updated_at, created_at, {created_source}, CURRENT_TIMESTAMP)"))
 
 
-def ensure_payroll_schema():
+def ensure_payroll_schema(bind_engine=None):
     """Add payroll columns to existing local/deployed tables."""
-    inspector = inspect(engine)
+    target_engine = bind_engine or engine
+    inspector = inspect(target_engine)
     tables = set(inspector.get_table_names())
-    with engine.begin() as conn:
+    with target_engine.begin() as conn:
         if "transactions" in tables:
             transaction_columns = {column["name"] for column in inspector.get_columns("transactions")}
             for name, sql_type in [
@@ -207,4 +210,77 @@ def ensure_payroll_schema():
                 if name not in salary_payment_columns:
                     conn.execute(text(f"alter table salary_payments add column {name} FLOAT DEFAULT 0"))
 
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=target_engine)
+
+
+# ---------------------------------------------------------------------------
+# Dynamic Multi-Tenant Engine Cache & Request Session Resolver
+# ---------------------------------------------------------------------------
+engines = {}
+
+def get_tenant_db_url(company_id: str) -> str:
+    if not DATABASE_URL.startswith("sqlite"):
+        return DATABASE_URL
+
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if company_id == "sky-ariana":
+        db_file = os.path.join(root_dir, "cashbook_skyariana.db").replace("\\", "/")
+    else:
+        db_file = os.path.join(root_dir, "cashbook.db").replace("\\", "/")
+    return f"sqlite:///{db_file}"
+
+
+def get_tenant_session(request=None, company_id=None):
+    if not company_id:
+        if request and hasattr(request, "headers"):
+            company_id = request.headers.get("X-Company-Id", "bawar-star")
+        else:
+            company_id = "bawar-star"
+
+    if company_id == "bawar-star" or not company_id:
+        return SessionLocal()
+
+    if company_id not in engines:
+        db_url = get_tenant_db_url(company_id)
+        tenant_engine_options = {"pool_pre_ping": True}
+        if db_url.startswith("sqlite"):
+            tenant_engine_options["connect_args"] = {"check_same_thread": False}
+        elif db_url.startswith("postgresql+pg8000"):
+            tenant_engine_options["connect_args"] = {"ssl_context": ssl.create_default_context()}
+
+        tenant_engine = create_engine(db_url, **tenant_engine_options)
+        Base.metadata.create_all(bind=tenant_engine)
+        ensure_sqlite_schema(bind_engine=tenant_engine)
+        ensure_user_schema(bind_engine=tenant_engine)
+        ensure_payroll_schema(bind_engine=tenant_engine)
+
+        from . import models
+        TenantSession = sessionmaker(autocommit=False, autoflush=False, bind=tenant_engine)
+        db_temp = TenantSession()
+        try:
+            if not db_temp.query(models.Setting).first():
+                db_temp.add(models.Setting(
+                    company_name="SKY ARIANA LTD",
+                    default_currency="USD",
+                    print_footer_text="Prepared by SKY ARIANA LTD"
+                ))
+                db_temp.commit()
+        except Exception:
+            db_temp.rollback()
+        finally:
+            db_temp.close()
+
+        engines[company_id] = tenant_engine
+
+    target_engine = engines[company_id]
+    TenantSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=target_engine)
+    return TenantSessionLocal()
+
+
+def get_db(request=None):
+    db = get_tenant_session(request)
+    try:
+        yield db
+    finally:
+        db.close()
+

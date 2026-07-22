@@ -37,6 +37,7 @@ from .routes import (
     reports,
     settings,
     transactions,
+    transport,
 )
 
 app = FastAPI(title=APP_NAME)
@@ -287,3 +288,4 @@ app.include_router(backup.router)
 app.include_router(reports.router)
 app.include_router(auth.router)
 app.include_router(neon_auth.router)
+app.include_router(transport.router)

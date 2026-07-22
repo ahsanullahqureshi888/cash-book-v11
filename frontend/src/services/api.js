@@ -29,12 +29,21 @@ async function request(path, options = {}) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 15000);
   
+  const activeCompanyId = (() => {
+    try {
+      return localStorage.getItem('cashbook_active_company_id') || 'bawar-star';
+    } catch {
+      return 'bawar-star';
+    }
+  })();
+
   try {
     response = await fetch(`${API_BASE}${path}`, {
       signal: controller.signal,
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(authToken ? { 'X-Session-Token': authToken, 'Authorization': `Bearer ${authToken}` } : {}),
+        'X-Company-Id': activeCompanyId,
         ...(options.headers || {})
       },
       ...options

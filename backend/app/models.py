@@ -253,3 +253,44 @@ class AuditLog(Base):
     status = Column(String(30), nullable=False)
     detail = Column(Text, default="", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# Transport & Export Multi-Client Ledger Models (SKY ARIANA LTD)
+# ---------------------------------------------------------------------------
+class ExportClient(Base):
+    __tablename__ = "export_clients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), unique=True, nullable=False, index=True)
+    contact_info = Column(String(255), default="", nullable=False)
+    currency = Column(String(10), default="USD", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    ledgers = relationship("TransportLedger", back_populates="client", cascade="all, delete-orphan")
+
+
+class TransportLedger(Base):
+    __tablename__ = "transport_ledgers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("export_clients.id"), nullable=False, index=True)
+    transaction_type = Column(String(20), nullable=False) # "shipment" (Credit) | "payment" (Debit)
+    date = Column(String(30), nullable=False)
+    shipper = Column(String(255), default="", nullable=False)
+    consignee = Column(String(255), default="", nullable=False)
+    commodity_description = Column(Text, default="", nullable=False)
+    invoice_no = Column(String(100), default="", nullable=False)
+    bill_of_lading = Column(String(100), default="", nullable=False)
+    container_no = Column(String(100), default="", nullable=False)
+    container_size = Column(String(50), default="1X40_HC", nullable=False)
+    quantity = Column(Integer, default=1, nullable=False)
+    price_per_container = Column(Float, default=0.0, nullable=False)
+    credit_usd = Column(Float, default=0.0, nullable=False) # Freight charge owed by client
+    debit_usd = Column(Float, default=0.0, nullable=False) # Cash/Hawala payment received
+    is_surrendered_bl = Column(Boolean, default=False, nullable=False)
+    notes = Column(Text, default="", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    client = relationship("ExportClient", back_populates="ledgers")
+

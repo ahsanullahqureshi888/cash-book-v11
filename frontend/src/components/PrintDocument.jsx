@@ -92,8 +92,8 @@ function DashboardTable({ rows, dateDisplayFormat }) {
             <td className="col-date"><DateDisplay value={row.date} format={dateDisplayFormat} /></td>
             <td className="col-account" dir="auto">{row.account_name}</td>
             <td className="col-detail" dir="auto">{row.detail}</td>
-            <td className="print-money col-amount">{row.transaction_type === 'cash_in' ? amount(row.cash_in_afn) : '-'}</td>
-            <td className="print-money col-amount">{row.transaction_type === 'cash_out' ? amount(row.cash_out_afn) : '-'}</td>
+            <td className="print-money col-amount income-amount">{row.transaction_type === 'cash_in' ? amount(row.cash_in_afn) : '-'}</td>
+            <td className="print-money col-amount expense-amount">{row.transaction_type === 'cash_out' ? amount(row.cash_out_afn) : '-'}</td>
           </tr>
         ))}
       </tbody>
@@ -121,10 +121,10 @@ function CashBookTable({ rows, dateDisplayFormat }) {
             <td className="col-date"><DateDisplay value={row.date} format={dateDisplayFormat} /></td>
             <td className="col-account" dir="auto">{row.account_name}</td>
             <td className="col-detail" dir="auto">{row.detail}</td>
-            <td className="print-money col-amount">{amount(row.cash_in_afn)}</td>
-            <td className="print-money col-amount">{amount(row.cash_out_afn)}</td>
-            <td className="print-money col-amount col-usd">{amount(row.usd_in, 'USD')}</td>
-            <td className="print-money col-amount col-usd">{amount(row.usd_out, 'USD')}</td>
+            <td className="print-money col-amount income-amount">{amount(row.cash_in_afn)}</td>
+            <td className="print-money col-amount expense-amount">{amount(row.cash_out_afn)}</td>
+            <td className="print-money col-amount col-usd income-amount">{amount(row.usd_in, 'USD')}</td>
+            <td className="print-money col-amount col-usd expense-amount">{amount(row.usd_out, 'USD')}</td>
             <td className="print-money col-rate">{row.exchange_rate || '-'}</td>
             <td className="print-money col-amount">{currency(row.runningBalance)}</td>
             <td className="col-type">{row.isOpeningBalance ? t('print.broughtForward') : row.transaction_type === 'cash_in' ? t('print.cashIn') : t('print.cashOut')}</td>
@@ -153,11 +153,11 @@ function LedgerTable({ rows, dateDisplayFormat }) {
             <td className="col-date"><DateDisplay value={row.date} format={dateDisplayFormat} /></td>
             <td className="col-tx" title={row.transaction_no}>{row.transaction_no || '-'}</td>
             <td className="col-detail" dir="auto">{row.detail}</td>
-            <td className="print-money col-amount">{amount(row.cash_in_afn)}</td>
-            <td className="print-money col-amount">{amount(row.cash_out_afn)}</td>
+            <td className="print-money col-amount income-amount">{amount(row.cash_in_afn)}</td>
+            <td className="print-money col-amount expense-amount">{amount(row.cash_out_afn)}</td>
             <td className="print-money col-amount">{currency(row.runningBalance || row.balance)}</td>
-            <td className="print-money col-amount col-usd">{amount(row.usd_in, 'USD')}</td>
-            <td className="print-money col-amount col-usd">{amount(row.usd_out, 'USD')}</td>
+            <td className="print-money col-amount col-usd income-amount">{amount(row.usd_in, 'USD')}</td>
+            <td className="print-money col-amount col-usd expense-amount">{amount(row.usd_out, 'USD')}</td>
             <td className="print-money col-rate">{row.exchange_rate || '-'}</td>
             <td className="col-note" dir="auto">{row.note || '-'}</td>
           </tr>
@@ -181,8 +181,8 @@ function ReportTable({ rows, dateDisplayFormat }) {
             <td className="col-account" dir="auto">{row.account_name}</td>
             <td className="col-detail" dir="auto">{row.detail}</td>
             <td className="col-category">{String(row.category || 'other').replaceAll('_', ' ')}</td>
-            <td className="print-money col-amount">{amount(row.cash_in_afn)}</td>
-            <td className="print-money col-amount">{amount(row.cash_out_afn)}</td>
+            <td className="print-money col-amount income-amount">{amount(row.cash_in_afn)}</td>
+            <td className="print-money col-amount expense-amount">{amount(row.cash_out_afn)}</td>
           </tr>
         ))}
       </tbody>
@@ -220,9 +220,18 @@ export default function PrintDocument({ report, documentRef, zoom = 1 }) {
         <ReportRows report={report} />
       </section>
       <section className="print-signature-grid" aria-label="Report authorization signatures">
-        <div><span>{t('print.preparedBy')}</span></div>
-        <div><span>{t('print.accountantSignature')}</span></div>
-        <div><span>{t('print.authorizedManager')}</span></div>
+        <div className="signature-col">
+          <div className="signature-line-placeholder"></div>
+          <span className="signature-label">{t('print.preparedBy')}</span>
+        </div>
+        <div className="signature-col">
+          <div className="signature-line-placeholder"></div>
+          <span className="signature-label">{t('print.accountantSignature')}</span>
+        </div>
+        <div className="signature-col">
+          <div className="signature-line-placeholder"></div>
+          <span className="signature-label">{t('print.authorizedManager')}</span>
+        </div>
       </section>
       <footer className="print-document-footer">
         <span>{t('print.generatedBySky')}</span>

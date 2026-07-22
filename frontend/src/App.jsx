@@ -29,6 +29,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const EmployeesSalary = lazy(() => import('./pages/EmployeesSalary'));
 const EmployeeLedgerPage = lazy(() => import('./pages/EmployeeLedgerPage'));
 const GlassPrintPreview = lazy(() => import('./components/GlassPrintPreview'));
+const SkyArianaExportLedger = lazy(() => import('./components/SkyArianaExportLedger'));
 
 const appTranslations = {
   English: {
@@ -1554,6 +1555,7 @@ export default function App() {
                     lastBackup={lastBackupAt || 'Never'}
                   />
                 } />
+                <Route path="/exports" element={<SkyArianaExportLedger />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </>
