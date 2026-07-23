@@ -64,12 +64,18 @@ export function CompanyProvider({ children, onCompanyChange }) {
     return INITIAL_COMPANIES;
   });
 
-  // Initialize selected company from localStorage
+  // Initialize selected company from URL query param or localStorage
   const [currentCompany, setCurrentCompany] = useState(() => {
     try {
+      const params = new URLSearchParams(window.location.search);
+      const urlCompany = params.get('company') || params.get('tenant');
+      if (urlCompany) {
+        const foundUrl = companies.find(c => c.id === urlCompany || c.dbName === urlCompany || c.shortName?.toLowerCase() === urlCompany.toLowerCase());
+        if (foundUrl) return foundUrl;
+      }
       const storedId = localStorage.getItem(STORAGE_KEY_COMPANY);
-      const found = companies.find(c => c.id === storedId);
-      return found || companies[0];
+      const foundStored = companies.find(c => c.id === storedId);
+      return foundStored || companies[0];
     } catch {
       return companies[0];
     }
@@ -90,19 +96,26 @@ export function CompanyProvider({ children, onCompanyChange }) {
 
   const [isSwitching, setIsSwitching] = useState(false);
 
-  // Synchronize active state to localStorage
+  // Synchronize active state to localStorage and URL query params
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_COMPANY, currentCompany.id);
+      localStorage.setItem('activeTenantId', currentCompany.dbName || currentCompany.id);
       localStorage.setItem(STORAGE_KEY_BRANCH, activeBranch);
+      
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('company') !== currentCompany.id) {
+        url.searchParams.set('company', currentCompany.id);
+        window.history.replaceState({}, '', url.toString());
+      }
     } catch (e) {
-      console.warn('Unable to persist company state in localStorage:', e);
+      console.warn('Unable to persist company state:', e);
     }
-  }, [currentCompany.id, activeBranch]);
+  }, [currentCompany, activeBranch]);
 
   // Context Switcher Logic
   const switchCompany = useCallback((companyId) => {
-    const target = companies.find(c => c.id === companyId);
+    const target = companies.find(c => c.id === companyId || c.dbName === companyId);
     if (!target || target.id === currentCompany.id) return;
 
     setIsSwitching(true);
@@ -114,7 +127,11 @@ export function CompanyProvider({ children, onCompanyChange }) {
       
       try {
         localStorage.setItem(STORAGE_KEY_COMPANY, target.id);
+        localStorage.setItem('activeTenantId', target.dbName || target.id);
         localStorage.setItem(STORAGE_KEY_BRANCH, newDefaultBranch);
+        const url = new URL(window.location.href);
+        url.searchParams.set('company', target.id);
+        window.history.replaceState({}, '', url.toString());
       } catch (e) {
         console.warn('Failed to update localStorage on company switch:', e);
       }
@@ -124,7 +141,7 @@ export function CompanyProvider({ children, onCompanyChange }) {
       }
 
       setIsSwitching(false);
-    }, 250);
+    }, 200);
   }, [companies, currentCompany.id, onCompanyChange]);
 
   // Branch Switcher Logic
@@ -252,5 +269,20 @@ export function useCompany() {
   }
   return context;
 }
+
+export const useTenant = () => {
+  const ctx = useCompany();
+  return {
+    activeCompany: ctx.currentCompany,
+    companies: ctx.companies,
+    switchCompany: ctx.switchCompany,
+    activeBranch: ctx.activeBranch,
+    switchBranch: ctx.switchBranch,
+    tenantId: ctx.currentCompany?.id || ctx.currentCompany?.dbName
+  };
+};
+
+export const TenantContext = CompanyContext;
+export const TenantProvider = CompanyProvider;
 
 export default CompanyContext;

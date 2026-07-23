@@ -24,6 +24,7 @@ from .database import (
     Base,
     SessionLocal,
     engine,
+    ensure_company_schema,
     ensure_payroll_schema,
     ensure_sqlite_schema,
     ensure_user_schema,
@@ -57,6 +58,7 @@ Base.metadata.create_all(bind=engine)
 ensure_sqlite_schema()
 ensure_user_schema()
 ensure_payroll_schema()
+ensure_company_schema()
 
 
 @app.exception_handler(RequestValidationError)
@@ -289,3 +291,59 @@ app.include_router(reports.router)
 app.include_router(auth.router)
 app.include_router(neon_auth.router)
 app.include_router(transport.router)
+
+
+from fastapi import Depends, File, HTTPException, UploadFile
+from sqlalchemy.orm import Session
+from . import crud
+from .auth_dependencies import require_administrator_request
+from .database import SessionLocal
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@app.post("/api/import-master-excel", dependencies=[Depends(require_administrator_request)])
+async def direct_import_master_excel(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    filename = file.filename or "master-excel.xlsx"
+    if not (filename.lower().endswith(".xlsx") or filename.lower().endswith(".xls")):
+        raise HTTPException(status_code=400, detail="Invalid file format. Only .xlsx and .xls files are supported.")
+    
+    contents = await file.read()
+    if len(contents) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Excel file size exceeds 50MB limit.")
+        
+    try:
+        return crud.import_master_excel(db, contents, filename)
+    except Exception as error:
+        raise HTTPException(status_code=422, detail=f"Master Excel import failed: {error}") from error
+
+
+import shutil
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+uploads_dir = Path("uploads")
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+
+@app.post("/api/upload")
+async def upload_media_file(file: UploadFile = File(...)):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    ext = Path(file.filename).suffix or ".jpg"
+    filename = f"{uuid.uuid4().hex}{ext}"
+    file_path = uploads_dir / filename
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {"url": f"/uploads/{filename}", "filename": filename}
+

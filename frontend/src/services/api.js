@@ -1,7 +1,7 @@
 import { formatApiErrorDetail } from './errorFormatting.js';
 
 // We default to relative paths to utilize Vite's dev proxy and Nginx's same-origin routing.
-const apiBaseUrl = (import.meta.env?.PROD ? '' : (import.meta.env?.VITE_API_URL || 'http://localhost:8000')).replace(/\/+$/, '');
+const apiBaseUrl = (import.meta.env?.VITE_API_URL || '').replace(/\/+$/, '');
 export const API_BASE = apiBaseUrl;
 let authToken = localStorage.getItem('cashbook-session-token') || '';
 
@@ -29,11 +29,11 @@ async function request(path, options = {}) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 15000);
   
-  const activeCompanyId = (() => {
+  const activeTenantId = (() => {
     try {
-      return localStorage.getItem('cashbook_active_company_id') || 'bawar-star';
+      return localStorage.getItem('activeTenantId') || localStorage.getItem('cashbook_active_company_id') || 'cashbook_bawar_prod';
     } catch {
-      return 'bawar-star';
+      return 'cashbook_bawar_prod';
     }
   })();
 
@@ -43,7 +43,8 @@ async function request(path, options = {}) {
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(authToken ? { 'X-Session-Token': authToken, 'Authorization': `Bearer ${authToken}` } : {}),
-        'X-Company-Id': activeCompanyId,
+        'X-Tenant-ID': activeTenantId,
+        'X-Company-Id': activeTenantId,
         ...(options.headers || {})
       },
       ...options
@@ -170,7 +171,14 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ content, filename })
   }),
-  clearAll: () => request('/api/backup/clear-all', { method: 'DELETE' }),
+  importMasterExcel: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request('/api/import-master-excel', {
+      method: 'POST',
+      body: formData
+    });
+  },
   uploadMedia: (file) => {
     const formData = new FormData();
     formData.append('file', file);

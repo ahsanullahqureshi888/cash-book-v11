@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from .. import crud, models, schemas
-from ..auth_dependencies import require_authenticated_request
+from ..auth_dependencies import get_current_tenant, require_authenticated_request
 from ..database import SessionLocal
 
 router = APIRouter(prefix="/api/transactions", tags=["transactions"], dependencies=[Depends(require_authenticated_request)])
@@ -27,10 +27,12 @@ def get_db():
 def read_transactions(
     group_id: int | None = Query(default=None),
     branch_id: int | None = Query(default=None),
+    skip: int = Query(default=0, ge=0),
+    limit: int | None = Query(default=None, ge=1, le=10000),
     user: models.User = Depends(require_authenticated_request),
     db: Session = Depends(get_db),
 ):
-    return crud.filtered_transactions(db, user=user, group_id=group_id, branch_id=branch_id)
+    return crud.filtered_transactions(db, user=user, group_id=group_id, branch_id=branch_id, skip=skip, limit=limit)
 
 
 @router.get("/summary", response_model=schemas.SummaryResponse)
@@ -54,6 +56,8 @@ def filter_transactions(
     payment_method: str | None = Query(default=None),
     group_id: int | None = Query(default=None),
     branch_id: int | None = Query(default=None),
+    skip: int = Query(default=0, ge=0),
+    limit: int | None = Query(default=None, ge=1, le=10000),
     user: models.User = Depends(require_authenticated_request),
     db: Session = Depends(get_db),
 ):
@@ -69,6 +73,8 @@ def filter_transactions(
         payment_method=payment_method,
         group_id=group_id,
         branch_id=branch_id,
+        skip=skip,
+        limit=limit,
     )
 
 
@@ -133,6 +139,49 @@ def export_transactions(user: models.User = Depends(require_authenticated_reques
     )
 
 
+@router.get("/export/csv")
+def export_ledger_csv(
+    branch: Optional[str] = Query(None),
+    user: models.User = Depends(require_authenticated_request),
+    tenant_id: str = Depends(get_current_tenant),
+    db: Session = Depends(get_db)
+):
+    txs = crud.filtered_transactions(db, user=user)
+    if branch and not branch.startswith("All"):
+        txs = [t for t in txs if getattr(t, "branch_name", "") == branch or getattr(t, "branch_id", "") == branch]
+
+    stream = io.StringIO()
+    writer = csv.writer(stream)
+    writer.writerow(["Transaction ID", "Date", "Branch", "Account / Ref", "Description", "Type", "Amount", "Running Balance"])
+
+    running_bal = 0.0
+    for tx in txs:
+        is_in = tx.transaction_type == "cash_in"
+        amount = (tx.usd_in or tx.cash_in_afn) if is_in else (tx.usd_out or tx.cash_out_afn)
+        amount_val = float(amount or 0.0)
+        running_bal += amount_val if is_in else -amount_val
+        writer.writerow([
+            tx.id,
+            tx.date.isoformat() if hasattr(tx.date, "isoformat") else str(tx.date),
+            getattr(tx, "branch_name", "Main Branch"),
+            tx.account_name,
+            tx.detail,
+            "CREDIT" if is_in else "DEBIT",
+            f"{amount_val:.2f}",
+            f"{running_bal:.2f}"
+        ])
+
+    stream.seek(0)
+    clean_branch = "consolidated" if not branch or branch.startswith("All") else branch.lower().replace(" ", "_")
+    filename = f"{tenant_id}_{clean_branch}_export_{datetime.now().strftime('%Y%m%d')}.csv"
+
+    return StreamingResponse(
+        iter([stream.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 @router.get("/{transaction_id}", response_model=schemas.TransactionRead)
 def read_transaction(transaction_id: int, user: models.User = Depends(require_authenticated_request), db: Session = Depends(get_db)):
     tx = crud.get_transaction(db, transaction_id, user=user)
@@ -141,8 +190,20 @@ def read_transaction(transaction_id: int, user: models.User = Depends(require_au
     return tx
 
 
+from ..auth_dependencies import get_current_tenant, require_authenticated_request
+
 @router.post("", response_model=schemas.TransactionRead, status_code=201)
-def create_transaction(payload: schemas.TransactionCreate, user: models.User = Depends(require_authenticated_request), db: Session = Depends(get_db)):
+def create_transaction(
+    payload: schemas.TransactionCreate,
+    user: models.User = Depends(require_authenticated_request),
+    tenant_id: str = Depends(get_current_tenant),
+    db: Session = Depends(get_db)
+):
+    if payload.company_id and payload.company_id != tenant_id and tenant_id not in payload.company_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Cross-tenant transaction modification is prohibited."
+        )
     if user.role in ["Branch Manager", "Clerk"]:
         if payload.branch_id and payload.branch_id != user.assigned_branch_id:
             raise HTTPException(status_code=403, detail="Forbidden: Cannot create transaction for another branch")
@@ -179,3 +240,51 @@ def delete_transaction(transaction_id: int, user: models.User = Depends(require_
         raise HTTPException(status_code=404, detail="Transaction not found")
     crud.delete_transaction(db, tx)
     return {"ok": True}
+
+
+@router.get("/filter")
+def filter_ledger_transactions(
+    search: Optional[str] = Query(None),
+    account: Optional[str] = Query("ALL"),
+    date_range: Optional[str] = Query("ALL_TIME"),
+    branch: Optional[str] = Query(None),
+    user: models.User = Depends(require_authenticated_request),
+    tenant_id: str = Depends(get_current_tenant),
+    db: Session = Depends(get_db)
+):
+    txs = crud.filtered_transactions(db, user=user)
+    if branch and not branch.startswith("All"):
+        txs = [t for t in txs if getattr(t, "branch_name", "") == branch or getattr(t, "branch_id", "") == branch]
+    if account and account != "ALL":
+        txs = [t for t in txs if t.account_name == account]
+    if search and search.strip():
+        term = search.lower()
+        txs = [t for t in txs if term in (t.detail or "").lower() or term in (t.account_name or "").lower() or term in (t.note or "").lower()]
+
+    today = date.today()
+    if date_range == "TODAY":
+        txs = [t for t in txs if t.date == today]
+    elif date_range == "THIS_WEEK":
+        week_ago = today - timedelta(days=7)
+        txs = [t for t in txs if t.date >= week_ago]
+    elif date_range == "THIS_MONTH":
+        month_start = today.replace(day=1)
+        txs = [t for t in txs if t.date >= month_start]
+
+    return {"status": "success", "count": len(txs), "records": txs}
+
+
+@router.post("/dual-currency")
+def create_dual_currency_tx(
+    payload: schemas.TransactionCreate,
+    user: models.User = Depends(require_authenticated_request),
+    tenant_id: str = Depends(get_current_tenant),
+    db: Session = Depends(get_db)
+):
+    if payload.company_id and payload.company_id != tenant_id and tenant_id not in payload.company_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch detected.")
+    try:
+        tx = crud.create_transaction(db, payload)
+        return {"status": "success", "message": f"Recorded transaction at exchange rate {payload.exchange_rate}", "data": tx}
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error

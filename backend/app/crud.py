@@ -567,6 +567,178 @@ def import_cashbook_csv(db: Session, content: str, filename: str = "cashbook.csv
     }
 
 
+def import_master_excel(db: Session, file_bytes: bytes, filename: str) -> dict:
+    import io
+    import openpyxl
+
+    try:
+        wb = openpyxl.load_workbook(filename=io.BytesIO(file_bytes), data_only=True)
+    except Exception as error:
+        raise ValueError(f"Failed to parse Excel file: {error}") from error
+
+    sheets_processed = len(wb.sheetnames)
+    imported_transactions = 0
+    created_accounts = 0
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+
+    accounts = {acc.name.strip().lower(): acc for acc in db.query(models.Account).all()}
+    existing_sigs = set()
+    for row in db.query(
+        models.Transaction.date,
+        models.Transaction.account_name,
+        models.Transaction.detail,
+        models.Transaction.transaction_type,
+        models.Transaction.cash_in_afn,
+        models.Transaction.cash_out_afn,
+        models.Transaction.usd_in,
+        models.Transaction.usd_out,
+    ).all():
+        existing_sigs.add((
+            str(row[0] or ""),
+            (row[1] or "").strip().lower(),
+            (row[2] or "").strip().lower(),
+            str(row[3] or ""),
+            float(row[4] or 0),
+            float(row[5] or 0),
+            float(row[6] or 0),
+            float(row[7] or 0),
+        ))
+
+    try:
+        for sheet_name in wb.sheetnames:
+            sheet = wb[sheet_name]
+            rows = list(sheet.iter_rows(values_only=True))
+            if not rows or len(rows) < 2:
+                continue
+
+            header_idx = -1
+            col_map = {}
+            for idx, r in enumerate(rows[:10]):
+                r_str = [str(c or "").strip().lower() for c in r]
+                joined = " ".join(r_str)
+                if any(k in joined for k in ["date", "detail", "description", "received", "paid", "amount", "in", "out", "debit", "credit"]):
+                    header_idx = idx
+                    for c_idx, val in enumerate(r_str):
+                        if "date" in val:
+                            col_map["date"] = c_idx
+                        elif any(k in val for k in ["account", "name", "customer", "vendor"]):
+                            col_map["account"] = c_idx
+                        elif any(k in val for k in ["detail", "description", "particular", "item"]):
+                            col_map["detail"] = c_idx
+                        elif any(k in val for k in ["received", "cash in", "debit"]) or (val == "in"):
+                            col_map["cash_in"] = c_idx
+                        elif any(k in val for k in ["paid", "cash out", "credit"]) or (val == "out"):
+                            col_map["cash_out"] = c_idx
+                        elif "usd" in val:
+                            col_map["usd"] = c_idx
+                        elif any(k in val for k in ["rate", "exchange"]):
+                            col_map["rate"] = c_idx
+                        elif any(k in val for k in ["note", "remark", "ref"]):
+                            col_map["note"] = c_idx
+                    break
+
+            if header_idx == -1:
+                # Fallback mapping
+                col_map = {"date": 0, "detail": 1, "cash_in": 2, "cash_out": 3}
+                header_idx = 0
+
+            for r in rows[header_idx + 1:]:
+                if not r or not any(r):
+                    continue
+
+                raw_date = r[col_map["date"]] if "date" in col_map and col_map["date"] < len(r) else None
+                if isinstance(raw_date, datetime):
+                    tx_date = raw_date.strftime("%Y-%m-%d")
+                elif isinstance(raw_date, date):
+                    tx_date = raw_date.strftime("%Y-%m-%d")
+                elif isinstance(raw_date, str) and raw_date.strip():
+                    tx_date = raw_date.strip()[:10]
+                else:
+                    tx_date = today_str
+
+                acc_cell = r[col_map["account"]] if "account" in col_map and col_map["account"] < len(r) else None
+                acc_name = str(acc_cell).strip() if acc_cell else sheet_name.strip()
+                if not acc_name or acc_name.lower() in ("sheet", "total", "summary"):
+                    acc_name = sheet_name.strip()
+
+                detail_cell = r[col_map["detail"]] if "detail" in col_map and col_map["detail"] < len(r) else None
+                detail = str(detail_cell).strip() if detail_cell else f"Entry from {sheet_name}"
+
+                cin = _amount(r[col_map["cash_in"]]) if "cash_in" in col_map and col_map["cash_in"] < len(r) else 0.0
+                cout = _amount(r[col_map["cash_out"]]) if "cash_out" in col_map and col_map["cash_out"] < len(r) else 0.0
+                usd_amt = _amount(r[col_map["usd"]]) if "usd" in col_map and col_map["usd"] < len(r) else 0.0
+                rate = _amount(r[col_map["rate"]]) if "rate" in col_map and col_map["rate"] < len(r) else 0.0
+                note_cell = r[col_map["note"]] if "note" in col_map and col_map["note"] < len(r) else None
+                note = str(note_cell).strip() if note_cell else ""
+
+                if cin == 0.0 and cout == 0.0 and usd_amt == 0.0:
+                    continue
+
+                tx_type = "cash_in" if (cin > 0 or (usd_amt > 0 and cout == 0)) else "cash_out"
+                cash_in_afn = cin if tx_type == "cash_in" else 0.0
+                cash_out_afn = cout if tx_type == "cash_out" else 0.0
+                usd_in = usd_amt if tx_type == "cash_in" else 0.0
+                usd_out = usd_amt if tx_type == "cash_out" else 0.0
+
+                sig = (tx_date, acc_name.lower(), detail.lower(), tx_type, cash_in_afn, cash_out_afn, usd_in, usd_out)
+                if sig in existing_sigs:
+                    continue
+
+                acc_key = acc_name.lower()
+                account = accounts.get(acc_key)
+                if not account:
+                    account = models.Account(
+                        name=_normalize_text(acc_name),
+                        opening_balance_afn=0,
+                        opening_balance_usd=0,
+                    )
+                    db.add(account)
+                    db.flush()
+                    accounts[acc_key] = account
+                    created_accounts += 1
+
+                tx = models.Transaction(
+                    transaction_no=_next_transaction_no(db, tx_date),
+                    date=tx_date,
+                    account_id=account.id,
+                    account_name=account.name,
+                    detail=_normalize_text(detail),
+                    transaction_type=tx_type,
+                    cash_in_afn=cash_in_afn,
+                    cash_out_afn=cash_out_afn,
+                    usd_in=usd_in,
+                    usd_out=usd_out,
+                    exchange_rate=rate,
+                    converted_afn=cash_in_afn or cash_out_afn,
+                    payment_method="cash",
+                    category="other",
+                    note=_normalize_text(note),
+                )
+                db.add(tx)
+                db.flush()
+                existing_sigs.add(sig)
+                imported_transactions += 1
+
+        db.add(models.BackupLog(
+            backup_name=_normalize_text(filename) or "master-excel.xlsx",
+            backup_type="excel_import",
+            note=f"Parsed {sheets_processed} sheets. Imported {imported_transactions} transactions, created {created_accounts} accounts",
+        ))
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    return {
+        "ok": True,
+        "message": "Master ledger Excel data imported successfully.",
+        "filename": filename,
+        "sheets_processed": sheets_processed,
+        "imported_transactions": imported_transactions,
+        "created_accounts": created_accounts,
+    }
+
+
 def update_transaction(db: Session, transaction: models.Transaction, payload: schemas.TransactionUpdate) -> models.Transaction:
     data = payload.model_dump(exclude_unset=True)
     for key, value in data.items():

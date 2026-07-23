@@ -83,7 +83,10 @@ export default function MultiAccountDashboard() {
   };
 
   return (
-    <div className="multi-account-dashboard flex flex-col md:flex-row h-[calc(100vh-64px)] bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
+    <div 
+      className="multi-account-dashboard flex flex-col md:flex-row h-[calc(100vh-64px)] bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden"
+      style={{ zoom: 0.90 }}
+    >
       
       {/* 1. LEFT SIDEBAR: CLIENT ACCOUNTS LIST */}
       <aside className="w-full md:w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 no-print">
@@ -156,38 +159,38 @@ export default function MultiAccountDashboard() {
                   key={account.id}
                   type="button"
                   onClick={() => setActiveAccountId(account.id)}
-                  className={`w-full text-left p-3 rounded-xl transition-all border flex flex-col gap-1.5 relative group ${
+                  className={`w-full text-left p-3.5 rounded-2xl transition-all duration-200 border flex flex-col gap-2 relative group ${
                     isActive
-                      ? 'bg-slate-900 text-white dark:bg-slate-800 border-slate-900 dark:border-slate-700 shadow-md'
-                      : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-200/80 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                      ? 'bg-slate-900 text-white dark:bg-slate-800 border-slate-900 dark:border-slate-700 shadow-md ring-1 ring-blue-500/30'
+                      : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 hover:shadow-sm'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <strong className={`text-xs font-black block truncate ${isActive ? 'text-white' : 'text-slate-900 dark:text-slate-100'}`}>
+                    <div className="min-w-0 flex-1">
+                      <strong className={`text-sm font-bold block truncate tracking-tight ${isActive ? 'text-white' : 'text-slate-900 dark:text-slate-100'}`}>
                         {account.clientName}
                       </strong>
-                      <span className={`text-[10px] font-bold block dir-rtl ${isActive ? 'text-amber-300' : 'text-amber-600'}`}>
+                      <span className={`text-xs font-semibold block dir-rtl mt-0.5 ${isActive ? 'text-amber-300' : 'text-amber-600 dark:text-amber-400'}`}>
                         ({account.clientNameDari})
                       </span>
                     </div>
-                    <ChevronRight size={14} className={`shrink-0 transition-transform ${isActive ? 'text-blue-400 translate-x-0.5' : 'text-slate-400 opacity-0 group-hover:opacity-100'}`} />
+                    <ChevronRight size={16} className={`shrink-0 transition-transform ${isActive ? 'text-blue-400 translate-x-0.5' : 'text-slate-400 opacity-0 group-hover:opacity-100'}`} />
                   </div>
 
                   {/* Subtitle / Location */}
-                  <div className={`text-[10px] truncate ${isActive ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <div className={`text-[11px] truncate font-medium ${isActive ? 'text-slate-400' : 'text-slate-500'}`}>
                     {account.location || account.contactInfo}
                   </div>
 
                   {/* Badges Summary */}
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-200/30 dark:border-slate-700/40 text-[10px]">
-                    <span className={`font-mono font-bold ${isActive ? 'text-slate-300' : 'text-slate-500'}`}>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/30 dark:border-slate-700/40 text-[11px]">
+                    <span className={`font-mono font-semibold ${isActive ? 'text-slate-300' : 'text-slate-500'}`}>
                       {txCount} Activity Rows • {containers} Cnt
                     </span>
-                    <strong className={`font-mono font-black ${
+                    <strong className={`font-mono tabular-nums font-black text-xs ${
                       netBalance <= 0 
-                        ? (isActive ? 'text-emerald-400' : 'text-emerald-600') 
-                        : (isActive ? 'text-rose-300' : 'text-rose-600')
+                        ? (isActive ? 'text-emerald-400' : 'text-emerald-600 dark:text-emerald-400') 
+                        : (isActive ? 'text-rose-300' : 'text-rose-600 dark:text-rose-400')
                     }`}>
                       {formatUSD(netBalance)}
                     </strong>

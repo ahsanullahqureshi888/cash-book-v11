@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import BaseModal from './BaseModal';
 import { api } from '../services/api';
-import { currency as formatCurrency, dateLabel, csvCell } from '../utils/format';
+import { currency as formatCurrency, dateLabel, csvCell, resolveAvatarUrl } from '../utils/format';
+import { generateEmployeeLedgerPrintHtml } from '../utils/employeePrint';
 
 export default function EmployeeLedgerModal({
   employee,
@@ -171,104 +172,20 @@ export default function EmployeeLedgerModal({
   }
 
   function handlePrint() {
-    if (!ledgerData) return;
+    if (!ledgerData || !employee) return;
     const printWin = window.open('', '_blank');
     if (!printWin) return;
 
-    const rowsHtml = (ledgerData.entries || []).map((e) => `
-      <tr>
-        <td>${e.date}</td>
-        <td>${e.period}</td>
-        <td><span class="badge ${e.entry_type}">${e.entry_type.replace('_', ' ')}</span></td>
-        <td>${e.description}</td>
-        <td style="text-align:right">${e.debit ? e.debit.toLocaleString() : '-'}</td>
-        <td style="text-align:right">${e.credit ? e.credit.toLocaleString() : '-'}</td>
-        <td style="text-align:right">${e.running_balance.toLocaleString()} ${e.currency}</td>
-      </tr>
-    `).join('');
+    const html = generateEmployeeLedgerPrintHtml({
+      employee,
+      ledgerData,
+      entries: ledgerData.entries,
+      companyName: 'BAWAR STAR PLASTIC INDUSTRY',
+      currencyCode: selectedCurrency
+    });
 
-    printWin.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Salary Ledger - ${employee.full_name}</title>
-        <style>
-          body { font-family: system-ui, sans-serif; padding: 20px; color: #1e293b; }
-          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px; }
-          .title { font-size: 24px; font-weight: bold; }
-          .sub { color: #64748b; font-size: 14px; margin-top: 4px; }
-          .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-          .card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; borderRadius: 6px; }
-          .card-title { font-size: 12px; color: #64748b; text-transform: uppercase; }
-          .card-val { font-size: 18px; font-weight: bold; margin-top: 4px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th, td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 13px; }
-          th { background: #f1f5f9; text-align: left; }
-          .badge { padding: 2px 6px; border-radius: 4px; font-size: 11px; text-transform: capitalize; font-weight: 600; }
-          .salary_accrual { background: #dbeafe; color: #1e40af; }
-          .salary_payment { background: #dcfce7; color: #166534; }
-          .bonus { background: #ecfdf5; color: #047857; }
-          .deduction { background: #ffe4e6; color: #9f1239; }
-          @media print {
-            body { padding: 0; }
-            button { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div>
-            <div class="title">${employee.full_name} (${employee.employee_code})</div>
-            <div class="sub">${employee.position || 'Employee'} • ${employee.department || 'General'}</div>
-            <div class="sub">Joining Date: ${employee.joining_date ? employee.joining_date : 'Not set (Carry forward disabled)'}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-weight:bold; font-size:16px;">Employee Salary Ledger Report</div>
-            <div class="sub">Printed: ${new Date().toLocaleDateString()}</div>
-          </div>
-        </div>
-
-        <div class="summary-grid">
-          <div class="card">
-            <div class="card-title">Total Accrued</div>
-            <div class="card-val">${ledgerData.summary.total_accrued.toLocaleString()} ${selectedCurrency}</div>
-          </div>
-          <div class="card">
-            <div class="card-title">Total Paid</div>
-            <div class="card-val">${ledgerData.summary.total_paid.toLocaleString()} ${selectedCurrency}</div>
-          </div>
-          <div class="card">
-            <div class="card-title">Total Adjustments</div>
-            <div class="card-val">${ledgerData.summary.total_adjustments.toLocaleString()} ${selectedCurrency}</div>
-          </div>
-          <div class="card">
-            <div class="card-title">Outstanding Balance</div>
-            <div class="card-val">${ledgerData.summary.outstanding_balance.toLocaleString()} ${selectedCurrency}</div>
-          </div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Period</th>
-              <th>Type</th>
-              <th>Description</th>
-              <th style="text-align:right">Accrued</th>
-              <th style="text-align:right">Paid</th>
-              <th style="text-align:right">Running Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `);
+    printWin.document.write(html);
     printWin.document.close();
-    printWin.focus();
-    setTimeout(() => printWin.print(), 300);
   }
 
   const getBadgeStyle = (type) => {
@@ -295,15 +212,20 @@ export default function EmployeeLedgerModal({
       isOpen={true}
       onClose={onClose}
       title=""
-      maxWidth="max-w-6xl"
+      maxWidth="96vw"
     >
       <div className="space-y-6 text-slate-100">
         {/* Header section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80 backdrop-blur-md">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-bold text-2xl text-white shadow-lg shadow-blue-500/20 overflow-hidden">
-              {employee.avatar_url ? (
-                <img src={employee.avatar_url} alt={employee.full_name} className="w-full h-full object-cover" />
+              {(employee.avatar_url || employee.photo) ? (
+                <img 
+                  src={resolveAvatarUrl(employee.avatar_url || employee.photo)} 
+                  alt={employee.full_name} 
+                  className="w-full h-full object-cover" 
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
               ) : (
                 employee.full_name.slice(0, 2).toUpperCase()
               )}
@@ -523,37 +445,49 @@ export default function EmployeeLedgerModal({
             <table className="w-full text-left text-xs text-slate-300 border-collapse">
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-900/80 text-slate-400 uppercase text-[11px] font-semibold tracking-wider">
-                  <th className="p-3.5">Date</th>
-                  <th className="p-3.5">Period</th>
-                  <th className="p-3.5">Entry Type</th>
-                  <th className="p-3.5">Description</th>
-                  <th className="p-3.5 text-right">Accrued (Debit)</th>
-                  <th className="p-3.5 text-right">Payment (Credit)</th>
-                  <th className="p-3.5 text-right">Running Balance</th>
-                  <th className="p-3.5 text-center">Ref</th>
+                  <th className="py-3.5 px-3.5 whitespace-nowrap min-w-[105px]">Date</th>
+                  <th className="py-3.5 px-3 whitespace-nowrap min-w-[85px]">Period</th>
+                  <th className="py-3.5 px-3 whitespace-nowrap min-w-[125px]">Entry Type</th>
+                  <th className="py-3.5 px-4 min-w-[200px]">Description</th>
+                  <th className="py-3.5 px-3 text-right whitespace-nowrap min-w-[110px]">Accrued</th>
+                  <th className="py-3.5 px-3 text-right whitespace-nowrap min-w-[110px]">Payment</th>
+                  <th className="py-3.5 px-3 text-right whitespace-nowrap min-w-[95px]">Bonus</th>
+                  <th className="py-3.5 px-3 text-right whitespace-nowrap min-w-[110px]">Deduction</th>
+                  <th className="py-3.5 px-3 text-right whitespace-nowrap min-w-[120px]">Adjustment</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap min-w-[125px]">Running Balance</th>
+                  <th className="py-3.5 px-3 text-center whitespace-nowrap min-w-[80px]">Reference</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {ledgerData.entries.map((entry) => (
                   <tr key={entry.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="p-3.5 font-medium text-slate-200 whitespace-nowrap">{dateLabel(entry.date)}</td>
-                    <td className="p-3.5 font-mono text-slate-400 whitespace-nowrap">{entry.period}</td>
-                    <td className="p-3.5 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold capitalize ${getBadgeStyle(entry.entry_type)}`}>
+                    <td className="py-2.5 px-3 font-medium text-slate-200 whitespace-nowrap">{dateLabel(entry.date)}</td>
+                    <td className="py-2.5 px-2.5 font-mono text-slate-400 whitespace-nowrap">{entry.period}</td>
+                    <td className="py-2.5 px-2.5 whitespace-nowrap">
+                      <span className={`px-2.5 py-0.5 rounded-md border text-[10px] font-bold uppercase inline-block whitespace-nowrap ${getBadgeStyle(entry.entry_type)}`}>
                         {entry.entry_type.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="p-3.5 text-slate-300 max-w-xs truncate" title={entry.description}>{entry.description}</td>
-                    <td className="p-3.5 text-right font-medium text-blue-400 whitespace-nowrap">
-                      {entry.debit > 0 ? formatCurrency(entry.debit) : '-'}
+                    <td className="py-2.5 px-3 text-slate-300 max-w-[260px] truncate" title={entry.description}>{entry.description}</td>
+                    <td className="py-2.5 px-3 text-right font-mono font-medium text-blue-400 whitespace-nowrap tabular-nums">
+                      {(entry.salary_accrued || entry.debit) > 0 ? formatCurrency(entry.salary_accrued || entry.debit, entry.currency) : '-'}
                     </td>
-                    <td className="p-3.5 text-right font-medium text-emerald-400 whitespace-nowrap">
-                      {entry.credit > 0 ? formatCurrency(entry.credit) : '-'}
+                    <td className="py-2.5 px-3 text-right font-mono font-medium text-emerald-400 whitespace-nowrap tabular-nums">
+                      {(entry.payment || entry.credit) > 0 ? formatCurrency(entry.payment || entry.credit, entry.currency) : '-'}
                     </td>
-                    <td className={`p-3.5 text-right font-bold whitespace-nowrap ${entry.running_balance < 0 ? 'text-amber-400' : 'text-slate-100'}`}>
-                      {formatCurrency(entry.running_balance)} <span className="text-[10px] font-normal text-slate-400">{entry.currency}</span>
+                    <td className="py-2.5 px-2.5 text-right font-mono text-teal-400 whitespace-nowrap tabular-nums">
+                      {entry.bonus ? formatCurrency(entry.bonus, entry.currency) : '-'}
                     </td>
-                    <td className="p-3.5 text-center font-mono text-slate-500 text-[11px]">{entry.reference || '-'}</td>
+                    <td className="py-2.5 px-2.5 text-right font-mono text-rose-400 whitespace-nowrap tabular-nums">
+                      {entry.deduction ? formatCurrency(entry.deduction, entry.currency) : '-'}
+                    </td>
+                    <td className="py-2.5 px-2.5 text-right font-mono text-amber-400 whitespace-nowrap tabular-nums">
+                      {entry.adjustment ? (entry.adjustment > 0 ? `+${formatCurrency(entry.adjustment, entry.currency)}` : formatCurrency(entry.adjustment, entry.currency)) : '-'}
+                    </td>
+                    <td className={`py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap tabular-nums ${entry.running_balance < 0 ? 'text-amber-400' : 'text-slate-100'}`}>
+                      {formatCurrency(entry.running_balance, entry.currency)}
+                    </td>
+                    <td className="py-2.5 px-2.5 text-center font-mono text-slate-500 text-[10px] whitespace-nowrap">{entry.reference || '-'}</td>
                   </tr>
                 ))}
               </tbody>

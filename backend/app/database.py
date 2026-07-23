@@ -203,12 +203,17 @@ def ensure_payroll_schema(bind_engine=None):
                 conn.execute(text("alter table employees add column joining_date DATE"))
             if "employment_end_date" not in employee_columns:
                 conn.execute(text("alter table employees add column employment_end_date DATE"))
-
-        if "salary_payments" in tables:
-            salary_payment_columns = {column["name"] for column in inspector.get_columns("salary_payments")}
-            for name in ["previous_carry_forward_balance", "total_payable_salary", "carry_forward_balance"]:
-                if name not in salary_payment_columns:
-                    conn.execute(text(f"alter table salary_payments add column {name} FLOAT DEFAULT 0"))
+def ensure_company_schema(bind_engine=None):
+    """Ensure company_id column exists on accounts, transactions, employees, and settings tables."""
+    target_engine = bind_engine or engine
+    inspector = inspect(target_engine)
+    tables = set(inspector.get_table_names())
+    with target_engine.begin() as conn:
+        for table in ["accounts", "transactions", "employees", "settings"]:
+            if table in tables:
+                cols = {c["name"] for c in inspector.get_columns(table)}
+                if "company_id" not in cols:
+                    conn.execute(text(f"alter table {table} add column company_id VARCHAR(100) DEFAULT 'bawar-star'"))
 
     Base.metadata.create_all(bind=target_engine)
 

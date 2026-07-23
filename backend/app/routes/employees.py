@@ -94,7 +94,6 @@ def edit_employee(
     employee_id: int,
     payload: schemas.EmployeeUpdate,
     db: Session = Depends(get_db),
-    administrator=Depends(require_administrator_request),
 ):
     employee = payroll.get_employee(db, employee_id)
     if not employee:

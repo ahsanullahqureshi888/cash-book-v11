@@ -50,3 +50,12 @@ export const compactTransactionNo = (value = '') => {
   const text = String(value);
   return text.replace(/^TX-(\d{2})(\d{6})-(\d+)$/i, 'TX-$2-$3');
 };
+
+export const resolveAvatarUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `http://localhost:8000${cleanPath}`;
+};

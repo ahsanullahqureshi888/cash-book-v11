@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, File, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
@@ -50,6 +50,22 @@ def import_csv(payload: CsvImportRequest, db: Session = Depends(get_db)):
         return crud.import_cashbook_csv(db, payload.content, payload.filename)
     except CsvImportError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.post("/import-master-excel", dependencies=[Depends(require_administrator_request)])
+async def import_master_excel(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    filename = file.filename or "master-excel.xlsx"
+    if not (filename.lower().endswith(".xlsx") or filename.lower().endswith(".xls")):
+        raise HTTPException(status_code=400, detail="Invalid file format. Only .xlsx and .xls files are supported.")
+    
+    contents = await file.read()
+    if len(contents) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Excel file size exceeds 50MB limit.")
+        
+    try:
+        return crud.import_master_excel(db, contents, filename)
+    except Exception as error:
+        raise HTTPException(status_code=422, detail=f"Master Excel import failed: {error}") from error
 
 
 @router.delete("/clear-all", dependencies=[Depends(require_administrator_request)])

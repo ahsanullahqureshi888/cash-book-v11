@@ -53,7 +53,7 @@ function RenderCompanyLogo({ company, size = 'md', className = '' }) {
   return (
     <div className={`relative shrink-0 ${className}`}>
       {company?.logo && !imgError ? (
-        <div className="w-full h-full rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-center p-0.5">
+        <div className="w-full h-full rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center justify-center p-1 transition-transform duration-200 hover:scale-105">
           <img 
             src={company.logo} 
             alt={company.name} 
@@ -62,11 +62,11 @@ function RenderCompanyLogo({ company, size = 'md', className = '' }) {
           />
         </div>
       ) : company?.id === 'sky-ariana' ? (
-        <div className="w-full h-full rounded-xl bg-slate-900 border border-blue-500/30 shadow-sm flex items-center justify-center p-1">
+        <div className="w-full h-full rounded-xl bg-gradient-to-br from-slate-900 to-slate-950 border border-blue-500/40 shadow-xs flex items-center justify-center p-1 transition-transform duration-200 hover:scale-105">
           <SkyArianaLogo size={size === 'lg' ? 36 : 28} />
         </div>
       ) : (
-        <div className="w-full h-full rounded-xl bg-amber-500 flex items-center justify-center text-white font-bold text-xs shadow-md">
+        <div className="w-full h-full rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-black text-xs shadow-md border border-amber-400/30 transition-transform duration-200 hover:scale-105">
           {company?.code || company?.name?.slice(0, 2) || 'CO'}
         </div>
       )}
@@ -250,7 +250,7 @@ export default function Sidebar({
         { id: 'dashboard', label: t('Dashboard'), icon: LayoutDashboard, path: '/' },
         { id: 'cashbook', label: t('Cash Book'), icon: BookOpen, path: '/cashbook' },
         { id: 'ledger', label: t('Account Ledger'), icon: ScrollText, path: '/ledger' },
-        { id: 'exports', label: t('Export Accounts'), icon: Ship, path: '/exports' },
+        { id: 'exports', label: t('Export Accounts'), icon: Ship, path: '/exports', companyOnly: 'sky-ariana' },
         { id: 'accounts', label: t('Accounts'), icon: WalletCards, roles: ['Super Administrator', 'Administrator', 'Manager'], path: '/accounts' },
         { id: 'salary', label: t('Employees & Salary'), icon: UsersRound, roles: ['Super Administrator', 'Administrator'], path: '/salary' }
       ]
@@ -286,6 +286,7 @@ export default function Sidebar({
   }
 
   const hasAccess = (item) => {
+    if (item.companyOnly && currentCompany?.id !== item.companyOnly) return false;
     if (!item.roles) return true;
     return item.roles.includes(userRole);
   };
@@ -306,9 +307,20 @@ export default function Sidebar({
       )}
 
       <aside 
-        className={`app-sidebar ${isCollapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'is-open' : ''} print-only-hide print:hidden no-print relative`}
+        className={`app-sidebar ${isCollapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'is-open mobile-open z-50 fixed inset-y-0 left-0 w-[80%] max-w-xs bg-white dark:bg-slate-900 shadow-2xl transform transition-transform duration-300 ease-in-out pt-[calc(1rem+env(safe-area-inset-top))]' : ''} print-only-hide print:hidden no-print relative border-r border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md`}
         aria-label="Main Navigation"
       >
+        {/* Mobile Close Button */}
+        {mobileOpen && (
+          <button
+            type="button"
+            className="absolute top-3 right-3 p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-full bg-slate-100 dark:bg-slate-800 z-50"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        )}
         {/* Loading overlay during multi-tenant database context switch */}
         {isSwitching && (
           <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs z-50 flex flex-col items-center justify-center transition-all duration-200">
@@ -324,9 +336,9 @@ export default function Sidebar({
           <div className="flex items-center justify-between gap-2">
             {/* Primary Company Switcher Trigger Button */}
             <div
-              className={`flex items-center gap-2.5 flex-1 min-w-0 p-2 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer ${
+              className={`flex items-center gap-2.5 flex-1 min-w-0 p-1.5 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer ${
                 companyDropdownOpen ? 'bg-slate-100 dark:bg-slate-800/80 ring-1 ring-blue-500/30' : ''
-              }`}
+              } ${isCollapsed ? 'justify-center' : ''}`}
               onClick={() => setCompanyDropdownOpen(!companyDropdownOpen)}
               role="button"
               tabIndex={0}
@@ -348,7 +360,7 @@ export default function Sidebar({
                       {currentCompany.shortName || currentCompany.name}
                     </span>
                     {currentCompany.id === 'sky-ariana' && (
-                      <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-blue-600 text-white leading-none">
+                      <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-blue-600 text-white leading-none shadow-xs">
                         SKY
                       </span>
                     )}
@@ -368,15 +380,15 @@ export default function Sidebar({
             </div>
 
             {/* Sidebar Collapse Toggle Button */}
-            {!mobileOpen && (
+            {!mobileOpen && !isCollapsed && (
               <button 
                 type="button"
                 className="sidebar-collapse-button p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" 
                 onClick={() => setIsCollapsed(!isCollapsed)} 
-                title={isCollapsed ? t('Expand Sidebar') : t('Collapse Sidebar')}
-                aria-label={isCollapsed ? t('Expand Sidebar') : t('Collapse Sidebar')}
+                title={t('Collapse Sidebar')}
+                aria-label={t('Collapse Sidebar')}
               >
-                {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+                <PanelLeftClose size={18} />
               </button>
             )}
 
@@ -399,7 +411,7 @@ export default function Sidebar({
             type="button"
             className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs font-medium ${
               branchOpen ? 'ring-2 ring-blue-500/20 border-blue-500/40' : ''
-            }`}
+            } ${isCollapsed ? 'justify-center px-2' : ''}`}
             onClick={() => setBranchOpen(!branchOpen)}
             aria-expanded={branchOpen}
             aria-label="Select Active Branch"
@@ -449,14 +461,14 @@ export default function Sidebar({
         </div>
 
         {/* 3. NAVIGATION LINKS SECTIONS */}
-        <nav className="sidebar-navigation flex-1 overflow-y-auto px-3 py-2 space-y-4">
+        <nav className="sidebar-navigation flex-1 overflow-y-auto px-2.5 py-2 space-y-3">
           {navigationSections.map((section) => {
             const accessibleItems = section.items.filter(hasAccess);
             if (!accessibleItems.length) return null;
             return (
               <div key={section.id} className="sidebar-section space-y-1">
                 {!isCollapsed && (
-                  <p className="px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                  <p className="px-3 text-[10px] font-extrabold tracking-wider text-slate-400 dark:text-slate-500 uppercase">
                     {section.label}
                   </p>
                 )}
@@ -476,10 +488,12 @@ export default function Sidebar({
         </nav>
 
         {/* 4. COMPACT USER SECTION CARD */}
-        <div className="sidebar-user-area p-3 border-t border-slate-100 dark:border-slate-800/80">
+        <div className="sidebar-user-area p-2.5 border-t border-slate-100 dark:border-slate-800/80">
           <button 
             type="button"
-            className="sidebar-user-card w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors text-left focus:outline-none"
+            className={`sidebar-user-card w-full flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors text-left focus:outline-none ${
+              isCollapsed ? 'justify-center' : ''
+            }`}
             ref={userCardRef}
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             aria-expanded={userMenuOpen}
@@ -487,16 +501,18 @@ export default function Sidebar({
             data-tooltip={`${currentUser?.full_name || currentUser?.username || 'User'} (${currentUser?.role || 'Viewer'})`}
             title={isCollapsed ? (currentUser?.full_name || currentUser?.username || 'User') : undefined}
           >
-            <div className="sidebar-user-avatar w-8 h-8 rounded-lg bg-amber-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
+            <div className={`sidebar-user-avatar rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs border border-amber-400/30 ${
+              isCollapsed ? 'w-9 h-9' : 'w-8 h-8'
+            }`}>
               {getUserInitials(currentUser)}
             </div>
 
             {!isCollapsed && (
               <div className="sidebar-user-details flex flex-col min-w-0 flex-1">
-                <strong className="sidebar-user-name text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+                <strong className="sidebar-user-name text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                   {currentUser?.full_name || currentUser?.username || t('Guest')}
                 </strong>
-                <small className="sidebar-user-role text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                <small className="sidebar-user-role text-[11px] text-slate-500 dark:text-slate-400 truncate font-medium">
                   {currentUser?.role || 'Viewer'}
                 </small>
               </div>
@@ -512,16 +528,16 @@ export default function Sidebar({
       {/* 5. PORTAL-BASED COMPANY SWITCHER MENU */}
       {companyDropdownOpen && createPortal(
         <div 
-          className="sidebar-company-popover-portal bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-2 space-y-1 z-50 animate-in fade-in zoom-in-95 duration-150" 
+          className="sidebar-company-popover-portal backdrop-blur-xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-2xl p-2.5 space-y-1.5 z-[9999] animate-in fade-in zoom-in-95 duration-150" 
           style={companyDropdownStyle}
           ref={companyMenuPortalRef}
           role="listbox"
           aria-label="Select Accounting Profile / Company"
         >
-          <div className="px-2.5 py-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 mb-1">
+          <div className="px-2.5 py-1.5 text-[10px] font-extrabold tracking-wider text-slate-400 dark:text-slate-400 uppercase flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2 mb-1">
             <span>{t('Select Accounting Profile')}</span>
-            <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-semibold">
-              Multi-Tenant
+            <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full text-[9px] font-black border border-blue-500/20 uppercase tracking-widest">
+              MULTI-TENANT
             </span>
           </div>
 
@@ -530,10 +546,10 @@ export default function Sidebar({
             return (
               <div
                 key={comp.id}
-                className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl text-left transition-all duration-150 cursor-pointer ${
+                className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-150 cursor-pointer ${
                   isSelected 
-                    ? 'bg-blue-50/90 dark:bg-blue-900/30 text-blue-950 dark:text-blue-100 font-medium ring-1 ring-blue-500/30 shadow-xs' 
-                    : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                    ? 'border border-blue-500/80 bg-blue-50/80 dark:bg-blue-950/50 text-slate-900 dark:text-slate-100 ring-1 ring-blue-500/30 shadow-xs' 
+                    : 'border border-transparent hover:bg-slate-100/80 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
                 }`}
                 onClick={() => {
                   switchCompany(comp.id);
@@ -545,20 +561,20 @@ export default function Sidebar({
                 <RenderCompanyLogo 
                   company={comp} 
                   size="md" 
-                  className="w-9 h-9 shrink-0" 
+                  className="w-10 h-10 shrink-0" 
                 />
                 
                 <div className="flex flex-col min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs truncate">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-extrabold text-xs truncate tracking-tight">
                       {comp.name}
                     </span>
-                    {isSelected && <Check size={14} className="text-blue-600 dark:text-blue-400 shrink-0 ml-1" />}
+                    {isSelected && <Check size={16} className="text-blue-600 dark:text-blue-400 shrink-0 ml-1" />}
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                    <span className="truncate font-mono">{comp.dbName}</span>
+                  <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="truncate font-mono text-[11px]">{comp.dbName}</span>
                     <span className="text-slate-300 dark:text-slate-700">•</span>
-                    <span className="text-[10px] px-1 bg-slate-100 dark:bg-slate-800 rounded font-semibold">
+                    <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-extrabold uppercase bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                       {comp.currency}
                     </span>
                   </div>
@@ -568,10 +584,10 @@ export default function Sidebar({
           })}
 
           {/* Add Company Option */}
-          <div className="pt-1 border-t border-slate-100 dark:border-slate-800/80 mt-1">
+          <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800/80 mt-1">
             <button
               type="button"
-              className="w-full flex items-center justify-center gap-2 p-2 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-xl transition-colors"
+              className="w-full flex items-center justify-center gap-2 p-2.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-xl transition-all border border-dashed border-blue-300 dark:border-blue-800/60"
               onClick={() => {
                 setCompanyDropdownOpen(false);
                 if (onAddCompanyClick) onAddCompanyClick();
@@ -656,8 +672,8 @@ function SidebarLink({ to, icon: IconComponent, label, end = false, isCollapsed 
     if (isCollapsed && linkRef.current) {
       const rect = linkRef.current.getBoundingClientRect();
       setTooltipPos({
-        top: rect.top + (rect.height / 2) - 15,
-        left: rect.right + 12
+        top: rect.top + (rect.height / 2) - 14,
+        left: rect.right + 10
       });
       setShowTooltip(true);
     }
@@ -673,10 +689,12 @@ function SidebarLink({ to, icon: IconComponent, label, end = false, isCollapsed 
         ref={linkRef}
         to={to} 
         end={end}
-        className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
+        className={({ isActive }) => `flex items-center gap-3 ${
+          isCollapsed ? 'w-10 h-10 justify-center mx-auto rounded-xl' : 'px-3 py-2.5 rounded-xl'
+        } text-xs font-medium transition-all duration-200 ${
           isActive 
-            ? 'bg-amber-500 text-white font-semibold shadow-sm' 
-            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-blue-500/25 scale-[1.02]' 
+            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/90 dark:hover:bg-slate-800/70'
         }`}
         aria-label={label}
         data-tooltip={label}
@@ -685,15 +703,15 @@ function SidebarLink({ to, icon: IconComponent, label, end = false, isCollapsed 
         onFocus={handleShowTooltip}
         onBlur={handleHideTooltip}
       >
-        <span className="shrink-0" aria-hidden="true">
-          <Icon size={18} strokeWidth={2} />
+        <span className="shrink-0 transition-transform duration-200 group-hover:scale-110" aria-hidden="true">
+          <Icon size={19} strokeWidth={2.2} />
         </span>
-        {!isCollapsed && <span className="truncate">{label}</span>}
+        {!isCollapsed && <span className="truncate tracking-tight font-semibold">{label}</span>}
       </NavLink>
 
       {isCollapsed && showTooltip && createPortal(
         <div 
-          className="sidebar-tooltip-portal bg-slate-900 text-white text-xs font-medium px-2.5 py-1 rounded-lg shadow-lg pointer-events-none z-50 animate-in fade-in duration-100" 
+          className="sidebar-tooltip-portal bg-slate-900 dark:bg-slate-800 text-white text-[11px] font-extrabold px-3 py-1.5 rounded-xl shadow-xl pointer-events-none z-50 animate-in fade-in slide-in-from-left-2 duration-150 border border-slate-700/80" 
           style={{ 
             position: 'fixed',
             top: `${tooltipPos.top}px`, 
@@ -709,3 +727,4 @@ function SidebarLink({ to, icon: IconComponent, label, end = false, isCollapsed 
     </>
   );
 }
+

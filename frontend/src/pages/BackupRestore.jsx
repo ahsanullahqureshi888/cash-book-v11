@@ -1,4 +1,6 @@
-import { DatabaseBackup, Download, FileJson, FileSpreadsheet, HardDriveDownload, Trash2, Upload } from 'lucide-react';
+import React, { useState } from 'react';
+import { DatabaseBackup, Download, FileJson, FileSpreadsheet, HardDriveDownload, Trash2, Upload, Sparkles } from 'lucide-react';
+import ExcelImportModal from '../components/ExcelImportModal';
 
 export default function BackupRestore({
   onBackup,
@@ -7,12 +9,15 @@ export default function BackupRestore({
   onCsvImportClick,
   onCsvImportFile,
   onDownloadCsvTemplate,
+  onExcelSuccess,
   onClear,
   fileRef,
   csvFileRef,
   status,
   lastBackup
 }) {
+  const [showExcelModal, setShowExcelModal] = useState(false);
+
   return (
     <div className="flex flex-col gap-6 w-full pb-8">
       {/* Header */}
@@ -67,6 +72,27 @@ export default function BackupRestore({
           </h3>
           
           <div className="flex flex-col gap-4">
+            {/* Excel Master Import */}
+            <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50/50 dark:from-blue-950/30 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800/60 rounded-xl relative overflow-hidden">
+              <div className="flex items-center justify-between mb-1">
+                <h4 className="text-sm font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                  <FileSpreadsheet size={16} className="text-blue-600 dark:text-blue-400" /> Import Master Excel (.xlsx)
+                </h4>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                  <Sparkles size={10} /> Sky Ariana
+                </span>
+              </div>
+              <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
+                Upload your 40+ sheet Master Ledger spreadsheet. Automatically extracts thousands of historical account ledgers.
+              </p>
+              <button
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2"
+                onClick={() => setShowExcelModal(true)}
+              >
+                <Upload size={15} /> Launch Master Excel Import
+              </button>
+            </div>
+
             {/* JSON Restore */}
             <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-xl">
               <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-1 flex items-center gap-1.5">
@@ -83,7 +109,7 @@ export default function BackupRestore({
               <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-1 flex items-center gap-1.5">
                 <FileSpreadsheet size={16} className="text-zinc-500" /> Bulk Import CSV
               </h4>
-              <p className="text-xs text-zinc-500 mb-3">Import historic cash book records from Excel. Requires date, account_name, detail, and amounts.</p>
+              <p className="text-xs text-zinc-500 mb-3">Import historic cash book records from CSV. Requires date, account_name, detail, and amounts.</p>
               <div className="flex gap-2">
                 <button className="secondary-btn flex-1 flex items-center justify-center gap-2 text-sm" onClick={onCsvImportClick}>
                   <Upload size={16} /> Upload CSV
@@ -118,6 +144,13 @@ export default function BackupRestore({
       {/* Hidden file inputs */}
       <input type="file" ref={fileRef} accept="application/json" hidden onChange={onImportFile} />
       <input type="file" ref={csvFileRef} accept=".csv,text/csv" hidden onChange={onCsvImportFile} />
+
+      {/* Master Excel Import Modal */}
+      <ExcelImportModal
+        isOpen={showExcelModal}
+        onClose={() => setShowExcelModal(false)}
+        onSuccess={onExcelSuccess}
+      />
     </div>
   );
 }

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -64,3 +64,35 @@ def require_administrator_request(user=Depends(require_authenticated_request)):
     if user.role not in ["Administrator", "Super Admin"]:
         raise HTTPException(status_code=403, detail="Administrator access required")
     return user
+
+
+def get_current_tenant(
+    x_tenant_id: str | None = Header(None),
+    x_company_id: str | None = Header(None),
+    company_id: str | None = Query(None)
+) -> str:
+    raw = x_tenant_id or x_company_id or company_id or "cashbook_bawar_prod"
+    raw_lower = raw.lower()
+    if "sky" in raw_lower:
+        return "cashbook_skyariana_prod"
+    if "bawar" in raw_lower:
+        return "cashbook_bawar_prod"
+    return raw
+
+
+class RoleChecker:
+    def __init__(self, allowed_roles: list[str]):
+        self.allowed_roles = [r.upper().replace(" ", "_") for r in allowed_roles]
+
+    def __call__(self, user: models.User = Depends(require_authenticated_request)):
+        user_role = (user.role or "Clerk").upper().replace(" ", "_")
+        # Admin / Administrator is always granted access
+        if user_role in ["ADMIN", "ADMINISTRATOR", "SUPER_ADMIN"]:
+            return user
+        if user_role not in self.allowed_roles:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Operation forbidden for role: {user.role}. Required: {self.allowed_roles}"
+            )
+        return user
+

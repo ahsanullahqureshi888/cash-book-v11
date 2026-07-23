@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -30,6 +30,7 @@ class Account(Base):
     __tablename__ = "accounts"
 
     id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String(100), default="bawar-star", nullable=False, index=True)
     name = Column(String(255), unique=True, nullable=False, index=True)
     account_type = Column(String(30), default="other", nullable=False, index=True)
     phone = Column(String(100), default="", nullable=False)
@@ -48,6 +49,7 @@ class Employee(Base):
     __tablename__ = "employees"
 
     id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String(100), default="bawar-star", nullable=False, index=True)
     employee_code = Column(String(40), unique=True, nullable=False, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), unique=True, nullable=False, index=True)
     full_name = Column(String(255), nullable=False, index=True)
@@ -94,6 +96,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String(100), default="bawar-star", nullable=False, index=True)
     transaction_no = Column(String(40), unique=True, nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
@@ -166,6 +169,7 @@ class Setting(Base):
     __tablename__ = "settings"
 
     id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String(100), default="bawar-star", nullable=False, index=True)
     company_name = Column(String(255), default="Cashbook Of All companies", nullable=False)
     company_phone = Column(String(100), default="", nullable=False)
     company_email = Column(String(180), default="", nullable=False)
@@ -262,12 +266,24 @@ class ExportClient(Base):
     __tablename__ = "export_clients"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), unique=True, nullable=False, index=True)
+    client_name = Column(String(255), unique=True, nullable=False, index=True)
     contact_info = Column(String(255), default="", nullable=False)
     currency = Column(String(10), default="USD", nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
 
-    ledgers = relationship("TransportLedger", back_populates="client", cascade="all, delete-orphan")
+    transactions = relationship("TransportLedger", back_populates="client", cascade="all, delete-orphan")
+
+    @property
+    def name(self) -> str:
+        return self.client_name
+
+    @name.setter
+    def name(self, value: str):
+        self.client_name = value
+
+    @property
+    def ledgers(self):
+        return self.transactions
 
 
 class TransportLedger(Base):
@@ -275,22 +291,56 @@ class TransportLedger(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("export_clients.id"), nullable=False, index=True)
-    transaction_type = Column(String(20), nullable=False) # "shipment" (Credit) | "payment" (Debit)
-    date = Column(String(30), nullable=False)
-    shipper = Column(String(255), default="", nullable=False)
-    consignee = Column(String(255), default="", nullable=False)
-    commodity_description = Column(Text, default="", nullable=False)
-    invoice_no = Column(String(100), default="", nullable=False)
-    bill_of_lading = Column(String(100), default="", nullable=False)
-    container_no = Column(String(100), default="", nullable=False)
+    serial_number = Column(String(50), nullable=True, index=True)
+    date = Column(String(50), nullable=True, index=True)
+    shipper_description = Column(Text, nullable=True)
+    invoice_no = Column(String(100), nullable=True, index=True)
+    bill_of_lading = Column(String(100), nullable=True, index=True)
+    container_no = Column(String(100), nullable=True, index=True)
     container_size = Column(String(50), default="1X40_HC", nullable=False)
-    quantity = Column(Integer, default=1, nullable=False)
+    consignee = Column(String(255), nullable=True, index=True)
+    quantity = Column(String(255), nullable=True)
     price_per_container = Column(Float, default=0.0, nullable=False)
-    credit_usd = Column(Float, default=0.0, nullable=False) # Freight charge owed by client
-    debit_usd = Column(Float, default=0.0, nullable=False) # Cash/Hawala payment received
+    debit = Column(Float, default=0.0, nullable=False)
+    credit = Column(Float, default=0.0, nullable=False)
+    balance = Column(Float, default=0.0, nullable=False)
+    transaction_type = Column(String(20), default="shipment", nullable=False, index=True) # "shipment" (Credit) | "payment" (Debit)
     is_surrendered_bl = Column(Boolean, default=False, nullable=False)
     notes = Column(Text, default="", nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False, index=True)
 
-    client = relationship("ExportClient", back_populates="ledgers")
+    client = relationship("ExportClient", back_populates="transactions")
+
+    @property
+    def shipper(self) -> str:
+        return self.shipper_description or ""
+
+    @shipper.setter
+    def shipper(self, value: str):
+        self.shipper_description = value
+
+    @property
+    def commodity_description(self) -> str:
+        return str(self.quantity or self.shipper_description or "")
+
+    @commodity_description.setter
+    def commodity_description(self, value: str):
+        self.quantity = str(value) if value is not None else ""
+
+    @property
+    def credit_usd(self) -> float:
+        return float(self.credit or 0.0)
+
+    @credit_usd.setter
+    def credit_usd(self, value: float):
+        self.credit = float(value or 0.0)
+
+    @property
+    def debit_usd(self) -> float:
+        return float(self.debit or 0.0)
+
+    @debit_usd.setter
+    def debit_usd(self, value: float):
+        self.debit = float(value or 0.0)
+
 

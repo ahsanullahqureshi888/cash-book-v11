@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, SearchX } from 'lucide-react';
+import TableSkeleton from './TableSkeleton';
 
 function DataTable({
   columns = [],
@@ -19,13 +20,17 @@ function DataTable({
   className = '',
   rowClassName,
   headerContent = null,
-  renderMobileCard = null
+  renderMobileCard = null,
+  minWidthClass = 'min-w-[1000px]'
 }) {
+  if (isLoading && data.length === 0) {
+    return <TableSkeleton rows={loadingRowCount} columns={columns.length || 7} />;
+  }
 
   return (
-    <div className={`glass-card table-card ${className}`}>
+    <div className={`table-card ${className}`}>
       {headerContent && (
-        <div className="card-header border-b border-white/10 dark:border-zinc-800/50 pb-4 mb-4">
+        <div className="card-header border-b border-slate-200/80 dark:border-slate-800 pb-4 mb-4">
           {headerContent}
         </div>
       )}
@@ -35,19 +40,19 @@ function DataTable({
         <div className="mobile-cards-wrapper block md:hidden">
           {isLoading ? (
             Array.from({ length: 3 }).map((_, rIdx) => (
-              <div key={`mob-skel-${rIdx}`} className="mobile-transaction-card glass-card p-4 rounded-xl mb-3 animate-pulse bg-zinc-100/50 dark:bg-zinc-800/20" style={{ border: '1px solid var(--border)' }}>
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-850 rounded w-1/3 mb-2"></div>
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-855 rounded w-full mb-2"></div>
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-860 rounded w-2/3"></div>
+              <div key={`mob-skel-${rIdx}`} className="mobile-transaction-card p-4 rounded-xl mb-3 animate-pulse bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/3 mb-2"></div>
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-full mb-2"></div>
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-2/3"></div>
               </div>
             ))
           ) : data.length === 0 ? (
             <div className="empty-state flex flex-col items-center justify-center py-16 px-4 text-center">
-              <div className="empty-state-illustration mb-4 text-indigo-400/80 dark:text-indigo-500/80 bg-indigo-50/50 dark:bg-indigo-900/10 p-5 rounded-full shadow-inner inline-flex border border-indigo-100 dark:border-indigo-800/30">
+              <div className="empty-state-illustration mb-4 text-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 p-5 rounded-full shadow-inner inline-flex border border-indigo-200 dark:border-indigo-800">
                 <SearchX size={36} />
               </div>
-              <h4 className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">{emptyTitle}</h4>
-              <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-sm mt-2 mx-auto leading-relaxed">
+              <h4 className="text-slate-900 dark:text-slate-100 font-bold text-lg">{emptyTitle}</h4>
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mt-2 mx-auto leading-relaxed font-medium">
                 {emptyDescription}
               </p>
             </div>
@@ -57,8 +62,8 @@ function DataTable({
         </div>
       )}
 
-      <div className={`table-wrapper overflow-x-auto ${renderMobileCard ? 'hidden md:block' : ''}`}>
-        <table className="accounting-table w-full text-left border-collapse table-fixed">
+      <div className={`table-wrapper overflow-x-auto w-full rounded-xl border border-slate-200/80 dark:border-slate-800 ${renderMobileCard ? 'hidden md:block' : ''}`}>
+        <table className={`accounting-table w-full ${minWidthClass} text-left border-collapse`}>
           <thead>
             <tr>
               {columns.map((col, idx) => {
@@ -66,7 +71,7 @@ function DataTable({
                 return (
                   <th
                     key={col.key || idx}
-                    className={`${col.className || ''} ${col.sortable ? 'p-0' : 'py-2 px-2.5 text-[10.5px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 bg-slate-100/90 dark:bg-slate-900/90 border-b-2 border-slate-200 dark:border-zinc-800 whitespace-nowrap'}`}
+                    className={`${col.className || ''} ${col.sortable ? 'p-0' : 'py-2.5 px-3.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200 bg-slate-100/90 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap'}`}
                     style={col.style}
                     aria-sort={col.sortable && isCurrentSort ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : undefined}
                   >
@@ -104,13 +109,13 @@ function DataTable({
               })}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
             {isLoading ? (
               Array.from({ length: loadingRowCount }).map((_, rIdx) => (
-                <tr key={`skeleton-${rIdx}`} className="skeleton-row border-b border-slate-100 dark:border-zinc-800/30">
+                <tr key={`skeleton-${rIdx}`} className="skeleton-row border-b border-slate-100 dark:border-slate-800/40">
                   {columns.map((col, cIdx) => (
                     <td key={`skel-${rIdx}-${cIdx}`} className={col.className} style={{ padding: '8px 12px' }}>
-                      <div className="skeleton-box animate-pulse rounded bg-zinc-200 dark:bg-zinc-800 h-4 w-full opacity-50" style={{ maxWidth: col.skeletonWidth || '100%' }}></div>
+                      <div className="skeleton-box animate-pulse rounded bg-slate-200 dark:bg-slate-800 h-4 w-full opacity-50" style={{ maxWidth: col.skeletonWidth || '100%' }}></div>
                     </td>
                   ))}
                 </tr>
@@ -119,11 +124,11 @@ function DataTable({
               <tr>
                 <td colSpan={columns.length}>
                   <div className="empty-state flex flex-col items-center justify-center py-12 px-4 text-center">
-                    <div className="empty-state-illustration mb-4 text-indigo-400/80 dark:text-indigo-500/80 bg-indigo-50/50 dark:bg-indigo-900/10 p-5 rounded-full shadow-inner inline-flex border border-indigo-100 dark:border-indigo-800/30">
+                    <div className="empty-state-illustration mb-4 text-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 p-5 rounded-full shadow-inner inline-flex border border-indigo-200 dark:border-indigo-800">
                       <SearchX size={36} />
                     </div>
-                    <h4 className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">{emptyTitle}</h4>
-                    <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-sm mt-2 mx-auto leading-relaxed">
+                    <h4 className="text-slate-900 dark:text-slate-100 font-bold text-lg">{emptyTitle}</h4>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mt-2 mx-auto leading-relaxed font-medium">
                       {emptyDescription}
                     </p>
                   </div>
@@ -135,51 +140,52 @@ function DataTable({
                 const stableKey = (keyVal !== undefined && keyVal !== null) ? keyVal : `row-${rowIndex}`;
                 
                 if (row.isOpeningBalance) {
-                  const isLedgerTable = columns.length === 12;
+                  const isLedgerTable = columns.length === 11 || columns.length === 12 || columns.some((c) => c.key === 'balance');
                   const isTxTable = columns.length === 14;
                   
                   if (isTxTable) {
                     return (
                       <tr
                         key={stableKey}
-                        className="opening-balance-row bg-indigo-50/40 dark:bg-indigo-950/20 border-b border-slate-200/50 dark:border-zinc-800/50 font-medium"
-                        style={{ height: '32px' }}
+                        className="opening-balance-row bg-indigo-50/70 dark:bg-indigo-950/40 border-b border-indigo-200/80 dark:border-indigo-900/60 font-bold"
+                        style={{ height: '38px' }}
                       >
-                        <td colSpan={6} className="py-1.5 px-3 text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
+                        <td colSpan={6} className="py-2 px-3 text-xs font-black text-indigo-950 dark:text-indigo-200 uppercase tracking-wider whitespace-nowrap">
                           Previous month closing
                         </td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1.5 px-3 text-xs text-right font-mono font-bold text-zinc-900 dark:text-white">
+                        <td className="py-2 px-3 text-xs text-right text-slate-400 font-mono whitespace-nowrap">-</td>
+                        <td className="py-2 px-3 text-xs text-right text-slate-400 font-mono whitespace-nowrap">-</td>
+                        <td className="py-2 px-3 text-xs text-right font-mono font-black text-slate-900 dark:text-white whitespace-nowrap">
                           {columns[8]?.render ? columns[8].render(row, rowIndex, rowOffset) : '-'}
                         </td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1.5 px-3 text-xs text-zinc-400">-</td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 italic">Opening</td>
+                        <td className="py-2 px-3 text-xs text-right text-slate-400 font-mono whitespace-nowrap">-</td>
+                        <td className="py-2 px-3 text-xs text-right text-slate-400 font-mono whitespace-nowrap">-</td>
+                        <td className="py-2 px-3 text-xs text-right text-slate-400 font-mono whitespace-nowrap">-</td>
+                        <td className="py-2 px-3 text-xs text-slate-400 whitespace-nowrap">-</td>
+                        <td className="py-2 px-3 text-xs text-right text-slate-500 font-bold italic whitespace-nowrap">Opening</td>
                       </tr>
                     );
                   } else if (isLedgerTable) {
+                    const balanceColIdx = columns.findIndex((c) => c.key === 'balance');
+                    const spanBefore = balanceColIdx > 0 ? balanceColIdx : 5;
+                    const spanAfter = Math.max(0, columns.length - spanBefore - 1);
                     return (
                       <tr
                         key={stableKey}
-                        className="opening-balance-row bg-indigo-50/40 dark:bg-indigo-950/20 border-b border-slate-200/50 dark:border-zinc-800/50 font-medium"
-                        style={{ height: '32px' }}
+                        className="opening-balance-row bg-indigo-50/70 dark:bg-indigo-950/40 border-b border-indigo-200/80 dark:border-indigo-900/60 font-bold"
+                        style={{ height: '38px' }}
                       >
-                        <td colSpan={4} className="py-1.5 px-3 text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
-                          Previous month closing
+                        <td colSpan={spanBefore} className="py-2 px-3 text-xs font-black text-indigo-950 dark:text-indigo-200 uppercase tracking-wider whitespace-nowrap">
+                          Previous month closing / Opening Balance
                         </td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1.5 px-3 text-xs text-right font-mono font-bold text-zinc-900 dark:text-white">
-                          {columns[6]?.render ? columns[6].render(row, rowIndex, rowOffset) : '-'}
+                        <td className="py-2 px-3 text-xs text-right font-mono font-black text-slate-900 dark:text-white whitespace-nowrap">
+                          {balanceColIdx !== -1 && columns[balanceColIdx]?.render ? columns[balanceColIdx].render(row, rowIndex, rowOffset) : '-'}
                         </td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 font-mono">-</td>
-                        <td className="py-1.5 px-3 text-xs text-zinc-400">-</td>
-                        <td className="py-1.5 px-3 text-xs text-right text-zinc-400 italic">Opening</td>
+                        {Array.from({ length: spanAfter }).map((_, aIdx) => (
+                          <td key={`op-after-${aIdx}`} className="py-2 px-3 text-xs text-right text-slate-400 font-mono whitespace-nowrap">
+                            {aIdx === spanAfter - 1 ? <span className="italic font-bold">Opening</span> : '-'}
+                          </td>
+                        ))}
                       </tr>
                     );
                   }
@@ -188,11 +194,11 @@ function DataTable({
                 return (
                   <tr
                     key={stableKey}
-                    className={`border-b border-slate-100 dark:border-zinc-800/60 hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors ${typeof rowClassName === 'function' ? rowClassName(row) : rowClassName || ''}`}
+                    className={`even:bg-slate-50/40 dark:even:bg-slate-900/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors border-b border-slate-200/60 dark:border-slate-800/60 ${typeof rowClassName === 'function' ? rowClassName(row) : rowClassName || ''}`}
                     dir={row.dir || 'auto'}
                   >
                     {columns.map((col, colIndex) => (
-                      <td key={col.key || colIndex} className={`${col.className || ''} py-2 px-3 text-xs text-slate-700 dark:text-slate-200 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} style={col.style}>
+                      <td key={col.key || colIndex} className={`${col.className || ''} py-2.5 px-3.5 text-xs text-slate-700 dark:text-slate-200 ${col.align === 'right' ? 'text-right tabular-nums' : ''} whitespace-nowrap`} style={col.style}>
                         {col.render ? col.render(row, rowIndex, rowOffset) : Reflect.get(row, col.key)}
                       </td>
                     ))}
@@ -205,20 +211,20 @@ function DataTable({
       </div>
 
       {totalRows > 0 && !isLoading && onPageChange && (
-        <div className="table-pagination flex items-center justify-between border-t border-white/10 dark:border-zinc-800/50 pt-4 mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-          <span>{'Showing '}{rowOffset + 1} to {Math.min(rowOffset + data.length, totalRows)} of {totalRows.toLocaleString('en-US')} entries</span>
-          <div className="flex items-center gap-3">
+        <div className="table-pagination flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-3 border-t border-slate-200/80 dark:border-slate-800 pt-4 mt-2 text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
+          <span className="whitespace-nowrap font-medium">{'Showing '}{rowOffset + 1} to {Math.min(rowOffset + data.length, totalRows)} of {totalRows.toLocaleString('en-US')} entries</span>
+          <div className="flex items-center justify-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
-              className="ghost-btn flex items-center gap-1 disabled:opacity-50"
+              className="ghost-btn flex items-center gap-1 disabled:opacity-50 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
               type="button"
               disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
             >
               <ChevronLeft size={16} /> Previous
             </button>
-            <strong className="text-zinc-700 dark:text-zinc-300">{'Page '}{page} of {pageCount}</strong>
+            <strong className="text-slate-800 dark:text-slate-200 font-mono text-xs px-2 font-bold">{'Page '}{page} of {pageCount}</strong>
             <button
-              className="ghost-btn flex items-center gap-1 disabled:opacity-50"
+              className="ghost-btn flex items-center gap-1 disabled:opacity-50 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
               type="button"
               disabled={page >= pageCount}
               onClick={() => onPageChange(page + 1)}

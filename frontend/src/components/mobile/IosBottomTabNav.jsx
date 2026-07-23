@@ -8,17 +8,22 @@ import {
   Settings 
 } from 'lucide-react';
 
+import { useCompany } from '../../context/CompanyContext';
+
 export default function IosBottomTabNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentCompany } = useCompany();
 
-  const navItems = [
+  const allNavItems = [
     { path: '/', label: 'Home', icon: LayoutDashboard },
     { path: '/cashbook', label: 'Cash Book', icon: BookOpen },
-    { path: '/exports', label: 'Exports', icon: Ship },
+    { path: '/exports', label: 'Exports', icon: Ship, companyOnly: 'sky-ariana' },
     { path: '/reports', label: 'Reports', icon: BarChart3 },
     { path: '/settings', label: 'Settings', icon: Settings },
   ];
+
+  const navItems = allNavItems.filter(item => !item.companyOnly || currentCompany?.id === item.companyOnly);
 
   return (
     <nav 

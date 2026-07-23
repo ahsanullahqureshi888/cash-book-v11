@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { currency, csvCell, dateLabel } from '../utils/format';
+import { currency, csvCell, dateLabel, resolveAvatarUrl } from '../utils/format';
 import { employeeSalarySnapshot } from '../utils/payroll';
 import BaseModal from '../components/BaseModal';
 import EmployeeLedgerModal from '../components/EmployeeLedgerModal';
@@ -242,6 +242,7 @@ export default function EmployeesSalary({
 
       const updated = await api.updateEmployee(employee.id, { avatar_url: avatarUrl });
       if (onEmployeeAvatarChanged) await onEmployeeAvatarChanged(updated);
+      await loadSalaryReport(filters.month, filters.year);
       showLocalToast('Employee picture updated.');
     } catch (error) {
       showLocalToast(error.message || 'Failed to update employee picture.');
@@ -378,11 +379,11 @@ export default function EmployeesSalary({
             expanded 
             onPay={(row) => { setActiveTab('Reports'); setPayingRow(row); }} 
             onOpenLedger={(emp) => setSelectedLedgerEmployee(emp)}
-            onEditEmployee={currentUser?.role === 'Administrator' ? handleEditEmployee : null} 
-            onAddEmployee={currentUser?.role === 'Administrator' ? () => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees_Add'); } : null}
-            onEditSalary={currentUser?.role === 'Administrator' ? setEditingSalaryRow : null} 
-            onDeleteEmployee={currentUser?.role === 'Administrator' ? deleteEmployee : null} 
-            onChangeAvatar={currentUser?.role === 'Administrator' ? updateEmployeeAvatar : null} 
+            onEditEmployee={handleEditEmployee} 
+            onAddEmployee={() => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees_Add'); }}
+            onEditSalary={setEditingSalaryRow} 
+            onDeleteEmployee={deleteEmployee} 
+            onChangeAvatar={updateEmployeeAvatar} 
             deletingEmployeeId={deletingEmployeeId} 
             uploadingAvatarId={uploadingAvatarId} 
           />
@@ -458,6 +459,45 @@ export default function EmployeesSalary({
                     onChange={(e) => setEmployeeForm({ ...employeeForm, employee_code: e.target.value })} 
                     placeholder="e.g. EMP-001" 
                   />
+                </label>
+                <label className="form-field form-field--full" style={{ gridColumn: 'span 2' }}>
+                  <span className="form-label">Employee Picture / Photo</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '6px' }}>
+                    <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', backgroundColor: '#1e293b', border: '2px solid #3b82f6', display: 'flex', alignItems: 'center', justify: 'center', fontWeight: 'bold', color: '#fff', fontSize: '1.1rem', flexShrink: 0 }}>
+                      {employeeForm.avatar_url ? (
+                        <img src={employeeForm.avatar_url} alt="Profile Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        (employeeForm.full_name || 'E').slice(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="form-control" 
+                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const uploadRes = await api.uploadMedia(file);
+                            if (uploadRes && uploadRes.url) {
+                              setEmployeeForm((prev) => ({ ...prev, avatar_url: uploadRes.url }));
+                            } else {
+                              const dataUrl = await imageFileToDataUrl(file);
+                              setEmployeeForm((prev) => ({ ...prev, avatar_url: dataUrl }));
+                            }
+                          } catch (err) {
+                            const dataUrl = await imageFileToDataUrl(file);
+                            setEmployeeForm((prev) => ({ ...prev, avatar_url: dataUrl }));
+                          }
+                        }}
+                      />
+                      <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', display: 'block' }}>
+                        Select PNG, JPG or WEBP image file.
+                      </span>
+                    </div>
+                  </div>
                 </label>
               </div>
 
@@ -577,9 +617,9 @@ export default function EmployeesSalary({
           onPrint={printReport}
           onPdf={printReport}
           onExcel={exportExcel}
-          onEditSalary={currentUser?.role === 'Administrator' ? setEditingSalaryRow : null}
-          onEditEmployee={currentUser?.role === 'Administrator' ? handleEditEmployee : null}
-          onDeleteEmployee={currentUser?.role === 'Administrator' ? deleteEmployee : null}
+          onEditSalary={setEditingSalaryRow}
+          onEditEmployee={handleEditEmployee}
+          onDeleteEmployee={deleteEmployee}
           deletingEmployeeId={deletingEmployeeId}
           salaryChanges={salaryChanges}
           companyName={companyName}
@@ -1236,10 +1276,17 @@ function SalaryStat({ icon: Icon, label, value, tone }) {
 }
 
 function EmployeeAvatar({ employee, onChangeAvatar, uploading }) {
+  const [imgError, setImgError] = useState(false);
   const initials = String(employee.full_name || 'E').slice(0, 2).toUpperCase();
-  const avatarUrl = employee.avatar_url || employee.avatarUrl || '';
-  const content = avatarUrl
-    ? <img src={avatarUrl} alt={`${employee.full_name} profile`} />
+  const rawUrl = employee.avatar_url || employee.avatarUrl || employee.photo || '';
+  const avatarUrl = resolveAvatarUrl(rawUrl);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [rawUrl]);
+
+  const content = avatarUrl && !imgError
+    ? <img src={avatarUrl} alt={`${employee.full_name} profile`} onError={() => setImgError(true)} />
     : <span>{initials}</span>;
 
   if (!onChangeAvatar) {
@@ -1704,25 +1751,28 @@ function salaryReportHtml({ rows, summary, filters, companyName, companyLogo }) 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 10.5px;
+      font-size: 9.5px;
       text-align: left;
     }
 
     th {
-      background-color: #f3f4f6;
-      color: #1f2937;
+      background-color: #0f172a;
+      color: #ffffff;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.03em;
-      padding: 7px 8px;
-      border: 1px solid #d1d5db;
-      font-size: 9px;
+      letter-spacing: 0.02em;
+      padding: 4px 6px;
+      border: 1px solid #334155;
+      font-size: 8.5px;
+      white-space: nowrap;
+      vertical-align: middle;
     }
 
     td {
-      padding: 6px 8px;
-      border: 1px solid #e5e7eb;
+      padding: 4px 6px;
+      border: 1px solid #e2e8f0;
       vertical-align: middle;
+      font-size: 8.5px;
     }
 
     tbody tr {

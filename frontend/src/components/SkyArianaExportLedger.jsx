@@ -23,6 +23,7 @@ import {
 import { ACCOUNT_PROFILE, SKY_ARIANA_EXPORT_TRANSACTIONS } from '../data/skyArianaExportData';
 import { useCompany } from '../context/CompanyContext';
 import NewExportTransactionModal from './NewExportTransactionModal';
+import { printExportLedgerDocument, generateExportLedgerPrintHtml } from '../utils/exportLedgerPrint';
 
 export default function SkyArianaExportLedger({ account }) {
   const { currentCompany } = useCompany();
@@ -44,8 +45,9 @@ export default function SkyArianaExportLedger({ account }) {
     logo: ACCOUNT_PROFILE.logo
   } : ACCOUNT_PROFILE;
 
-  // Modal State for New / Edit Export Transaction
+  // Modal State for New / Edit Export Transaction & Print Preview
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     type: 'invoice',
@@ -278,7 +280,17 @@ export default function SkyArianaExportLedger({ account }) {
   };
 
   const handlePrint = () => {
-    window.print();
+    setIsPrintPreviewOpen(true);
+  };
+
+  const executePrint = () => {
+    printExportLedgerDocument({
+      account: ACCOUNT_DATA,
+      transactions: filteredTransactions,
+      totals,
+      companyName: currentCompany?.name || 'SKY ARIANA LTD',
+      companyLogo: logoPath
+    });
   };
 
   const logoPath = currentCompany?.id === 'sky-ariana' && currentCompany?.logo
@@ -501,17 +513,17 @@ export default function SkyArianaExportLedger({ account }) {
         <table className="w-full text-left text-xs border-collapse print:w-full print:table-fixed print:border-collapse print:text-xs print:m-0">
           <thead className="print:table-header-group">
             <tr className="sticky top-0 z-20 bg-slate-900 dark:bg-slate-950 text-slate-200 uppercase font-bold tracking-wider text-[10px] border-b border-slate-800 print:bg-white print:text-slate-500 print:border-b-2 print:border-slate-800">
-              <th className="py-2.5 px-2 text-center w-10">S.N</th>
-              <th className="py-2.5 px-2 min-w-[85px]">Date (تاریخ)</th>
-              <th className="py-2.5 px-2 min-w-[130px]">Shipper (ارسال کننده)</th>
-              <th className="py-2.5 px-2 min-w-[130px]">Consignee (گیرنده)</th>
-              <th className="py-2.5 px-2 min-w-[180px]">Commodity & Invoice</th>
-              <th className="py-2.5 px-2 min-w-[210px]">B/L & Container No.</th>
-              <th className="py-2.5 px-2 text-center w-12">Qty</th>
-              <th className="py-2.5 px-2 text-right text-amber-400 print:text-slate-900 min-w-[90px]">Credit ($)</th>
-              <th className="py-2.5 px-2 text-right text-emerald-400 print:text-rose-600 min-w-[90px]">Debit ($)</th>
-              <th className="py-2.5 px-2 text-right print:text-slate-900 min-w-[95px]">Balance ($)</th>
-              <th className="py-2.5 px-2 text-center w-20 no-print">Actions</th>
+              <th className="py-2.5 px-1.5 text-center w-8">S.N</th>
+              <th className="py-2.5 px-2 min-w-[75px]">Date (تاریخ)</th>
+              <th className="py-2.5 px-2 min-w-[110px]">Shipper (ارسال کننده)</th>
+              <th className="py-2.5 px-2 min-w-[110px]">Consignee (گیرنده)</th>
+              <th className="py-2.5 px-2 min-w-[150px]">Commodity & Invoice</th>
+              <th className="py-2.5 px-2 min-w-[170px]">B/L & Container No.</th>
+              <th className="py-2.5 px-1.5 text-center w-9">Qty</th>
+              <th className="py-2.5 px-2 text-right text-amber-400 print:text-slate-900 min-w-[80px]">Credit ($)</th>
+              <th className="py-2.5 px-2 text-right text-emerald-400 print:text-rose-600 min-w-[80px]">Debit ($)</th>
+              <th className="py-2.5 px-2 text-right print:text-slate-900 min-w-[85px]">Balance ($)</th>
+              <th className="py-2.5 px-1.5 text-center w-16 no-print">Actions</th>
             </tr>
           </thead>
 
@@ -703,6 +715,71 @@ export default function SkyArianaExportLedger({ account }) {
         initialData={transactions.find(t => t.id === editingId) || null}
         clientName={ACCOUNT_PROFILE.accountName}
       />
+
+      {/* 5. GLASS PRINT PREVIEW MODAL */}
+      {isPrintPreviewOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-2 sm:p-4 no-print animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-7xl h-[95vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400">
+                  <Printer size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white tracking-tight uppercase">
+                    Export Statement Print Preview
+                  </h3>
+                  <p className="text-xs text-slate-400 font-medium">
+                    {ACCOUNT_DATA.accountName} · A4 Landscape Official Letterhead
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={executePrint}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/20 transition-all hover:scale-[1.02]"
+                >
+                  <Printer size={15} />
+                  <span>Print Document</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportCSV}
+                  className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition-colors"
+                >
+                  <Download size={15} />
+                  <span>Export CSV</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPrintPreviewOpen(false)}
+                  className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+                  title="Close Preview"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: Live Rendered Iframe */}
+            <div className="flex-1 bg-slate-950 p-4 overflow-hidden flex items-center justify-center">
+              <iframe
+                title="Export Ledger Print Preview"
+                srcDoc={generateExportLedgerPrintHtml({
+                  account: ACCOUNT_DATA,
+                  transactions: filteredTransactions,
+                  totals,
+                  companyName: currentCompany?.name || 'SKY ARIANA LTD',
+                  companyLogo: logoPath
+                })}
+                className="w-full h-full rounded-xl bg-white border border-slate-800 shadow-2xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

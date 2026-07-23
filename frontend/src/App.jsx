@@ -20,6 +20,7 @@ import { buildCashBookRows, CASH_BOOK_PAGE_SIZE, currentMonthDateRange, filterCa
 import { employeeSalarySnapshot, salaryMonthStart } from './utils/payroll';
 import useDebouncedValue from './hooks/useDebouncedValue';
 import { transactionSchema } from './utils/validation';
+import { useCompany } from './context/CompanyContext';
 
 const AccountLedger = lazy(() => import('./pages/AccountLedger'));
 const Accounts = lazy(() => import('./pages/Accounts'));
@@ -224,10 +225,20 @@ export default function App() {
     initializeAuth();
   }, []);
 
+  const { currentCompany } = useCompany();
+
+  useEffect(() => {
+    if (currentCompany) {
+      setCompanyName(currentCompany.name);
+      setCurrencyCode(currentCompany.currency || 'AFN');
+      setCompanyLogo(currentCompany.logo || '');
+    }
+  }, [currentCompany]);
+
   useEffect(() => {
     if (currentUser && !passwordChangeRequired) loadAll();
     if (currentUser?.role === 'Administrator' && !passwordChangeRequired) reloadManagedUsers();
-  }, [currentUser, passwordChangeRequired]);
+  }, [currentUser, passwordChangeRequired, currentCompany?.id]);
 
   useEffect(() => {
     if (currentUser && activeView === 'settings') refreshDiagnostics();
@@ -354,8 +365,24 @@ export default function App() {
       setPasswordChangeRequired(false);
       setIsLoading(false);
     };
+
+    const handleCompanySwitched = () => {
+      // Clear frontend cached state before reloading for newly active tenant
+      setSummary({ total_cash_in: 0, total_cash_out: 0, afn_balance: 0 });
+      setTransactions([]);
+      setAccounts([]);
+      setEmployees([]);
+      setSelectedAccount(null);
+      setLedger(null);
+      loadAll();
+    };
+
     window.addEventListener('auth:unauthorized', handleUnauthorized);
-    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    window.addEventListener('company_switched', handleCompanySwitched);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+      window.removeEventListener('company_switched', handleCompanySwitched);
+    };
   }, []);
 
   async function initializeAuth() {
@@ -822,7 +849,159 @@ export default function App() {
     setPrintError('');
     try {
       await waitForPrintReady({ root: printDocumentRef.current, timeoutMs: 4000 });
-      window.print();
+
+      const reportTitle = printReport?.title || 'Cash Book Report';
+      const printWin = window.open('', '_blank', 'width=1100,height=850');
+
+      if (!printWin) {
+        window.print();
+        setPrintStatus('ready');
+        return;
+      }
+
+      const docHtml = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <title>${reportTitle}</title>
+          <style>
+            @page {
+              size: A4 landscape;
+              margin: 8mm 10mm;
+            }
+            *, *:before, *:after {
+              box-sizing: border-box !important;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              background: #ffffff !important;
+              color: #0f172a !important;
+              margin: 0 !important;
+              padding: 10px !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .print-document, .print-container {
+              width: 100% !important;
+              max-width: none !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              box-shadow: none !important;
+              border: none !important;
+              transform: none !important;
+            }
+            img, .company-logo img, .print-document-header img, .print-banner img {
+              max-height: 48px !important;
+              max-width: 140px !important;
+              object-fit: contain !important;
+              display: inline-block !important;
+            }
+            .print-document-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 2px solid #0f172a;
+              padding-bottom: 10px;
+              margin-bottom: 12px;
+            }
+            .print-company-strip {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              background: #f1f5f9;
+              border: 1px solid #cbd5e1;
+              padding: 6px 12px;
+              border-radius: 6px;
+              margin-bottom: 10px;
+              font-size: 10pt;
+            }
+            .print-summary-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 8px;
+              margin: 10px 0 14px 0;
+            }
+            .print-summary-grid > div {
+              background: #f8fafc;
+              border: 1px solid #e2e8f0;
+              border-radius: 6px;
+              padding: 8px 10px;
+              font-size: 9pt;
+            }
+            table.print-data-table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              margin-top: 8px !important;
+              font-size: 8.5pt !important;
+            }
+            table.print-data-table th {
+              background-color: #0f172a !important;
+              color: #ffffff !important;
+              padding: 6px 8px !important;
+              font-size: 8pt !important;
+              text-transform: uppercase !important;
+              border: 1px solid #0f172a !important;
+            }
+            table.print-data-table td {
+              padding: 5px 8px !important;
+              border-bottom: 1px solid #e2e8f0 !important;
+              border-right: 1px solid #f1f5f9 !important;
+            }
+            table.print-data-table tr:nth-child(even) td {
+              background-color: #f8fafc !important;
+            }
+            .print-money {
+              font-family: ui-monospace, monospace !important;
+              text-align: right !important;
+              font-weight: 600 !important;
+            }
+            .income-amount { color: #059669 !important; }
+            .expense-amount { color: #dc2626 !important; }
+            .print-signature-grid {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 20px;
+              text-align: center;
+              margin-top: 25px;
+              padding-top: 10px;
+            }
+            .signature-line-placeholder {
+              border-top: 1px solid #94a3b8;
+              height: 20px;
+            }
+            .signature-label {
+              font-size: 8pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              color: #475467;
+            }
+            .print-document-footer {
+              display: flex;
+              justify-content: space-between;
+              font-size: 8pt;
+              color: #64748b;
+              margin-top: 15px;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 6px;
+            }
+            .no-print { display: none !important; }
+          </style>
+        </head>
+        <body>
+          ${printDocumentRef.current.outerHTML}
+        </body>
+        </html>
+      `;
+
+      printWin.document.write(docHtml);
+      printWin.document.close();
+      printWin.focus();
+      await waitForPrintReady({ root: printWin.document.body, timeoutMs: 3000 });
+      printWin.print();
     } catch (error) {
       setPrintError(error.message || 'The print dialog could not be opened.');
       setPrintStatus('error');
@@ -1105,9 +1284,9 @@ export default function App() {
   const printReceipt = async () => {
     if (!receipt) return;
     const content = 
-      '<html><head><title>Receipt</title><style>' + printStyles() + '</style></head>' +
+      '<!DOCTYPE html><html><head><title>Receipt - ' + (receipt.transaction_no || receipt.id) + '</title><style>' + printStyles() + '</style></head>' +
       '<body>' + receiptHtml(receipt) + '</body></html>';
-    const win = window.open('', '_blank', 'width=900,height=700');
+    const win = window.open('', '_blank', 'width=950,height=800');
     if (!win) {
       showToast('Allow popups to print the receipt.', 'error');
       return;
@@ -1129,19 +1308,108 @@ export default function App() {
   };
 
   const printStyles = () => `
-    @page{size:A5 portrait;margin:12mm}
-    *{box-sizing:border-box}
-    body{font-family:Arial,sans-serif;margin:0;color:#101828;background:#fff;font-size:12px}
-    .receipt-sheet{border:1.5px solid #1d2939;padding:18px;min-height:175mm;position:relative}
-    .receipt-header{display:flex;justify-content:space-between;gap:20px;padding-bottom:14px;border-bottom:2px solid #1d2939}
-    .receipt-header h1{font-size:20px;margin:0 0 5px}.receipt-header p,.receipt-header h2{margin:2px 0}
-    .receipt-meta{text-align:right;line-height:1.6}
-    .type-badge{display:inline-block;margin:16px 0 10px;padding:6px 10px;border:1px solid #101828;font-weight:700;text-transform:uppercase}
-    table{width:100%;border-collapse:collapse}th,td{border:1px solid #98a2b3;padding:9px;text-align:left}
-    th{width:34%;background:#f2f4f7}.amount-row td{font-size:16px;font-weight:700}
-    .signature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:54px;text-align:center}
-    .signature{padding-top:8px;border-top:1px solid #344054}
-    .receipt-footer{position:absolute;bottom:14px;left:18px;right:18px;padding-top:8px;border-top:1px solid #d0d5dd;text-align:center;color:#475467}
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    *, *:before, *:after { box-sizing: border-box !important; margin: 0; padding: 0; }
+    html, body {
+      width: 210mm !important;
+      height: 100% !important;
+      max-height: 297mm !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      background: #fff !important;
+      color: #0f172a !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 9px;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    no-print, nav, sidebar, button, .print-hidden, .no-print { display: none !important; }
+    .payment-voucher-print, .receipt-print-wrapper, .print-wrapper-2up {
+      width: 100% !important;
+      max-width: 200mm !important;
+      height: 268mm !important;
+      max-height: 268mm !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+      margin: 0 auto !important;
+      padding: 3mm 4mm !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      page-break-before: avoid !important;
+      page-break-after: avoid !important;
+      page-break-inside: avoid !important;
+      break-before: avoid !important;
+      break-after: avoid !important;
+      break-inside: avoid !important;
+    }
+    .voucher-card {
+      height: 126mm !important;
+      max-height: 126mm !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+      border: 1.5px solid #0f172a !important;
+      border-radius: 6px !important;
+      padding: 8px 12px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      background: #fff !important;
+      position: relative !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .voucher-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin-bottom: 6px; }
+    .company-brand { display: flex; align-items: center; gap: 8px; }
+    .company-logo-img { height: 32px; max-width: 90px; object-fit: contain; border-radius: 4px; }
+    .company-logo-icon { width: 32px; height: 32px; background: #0f172a; color: #38bdf8; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .company-name { font-size: 13px; font-weight: 900; color: #0f172a; letter-spacing: -0.02em; text-transform: uppercase; }
+    .company-contact { font-size: 8px; color: #475467; font-weight: 600; margin-top: 1px; }
+    .voucher-meta { text-align: right; }
+    .copy-badge { display: inline-block; font-size: 7px; font-weight: 800; color: #1e293b; background: #e2e8f0; border: 1px solid #94a3b8; padding: 1px 5px; border-radius: 3px; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 2px; }
+    .voucher-title { font-size: 11px; font-weight: 900; color: #1e3a8a; text-transform: uppercase; letter-spacing: -0.01em; margin: 1px 0; }
+    .meta-row { font-size: 8.5px; color: #334155; }
+
+    .voucher-body { flex: 1; display: flex; flex-direction: column; gap: 6px; justify-content: space-between; margin-top: 4px; }
+    
+    .info-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; }
+    .grid-pair { display: flex; flex-direction: column; min-width: 0; }
+    .grid-label { font-size: 7px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.04em; margin-bottom: 1px; }
+    .grid-value { font-size: 9.5px; color: #0f172a; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .font-bold { font-weight: 700; }
+    .font-semibold { font-weight: 600; }
+    .uppercase { text-transform: uppercase; }
+    .category-tag { color: #2563eb; text-transform: uppercase; }
+
+    .detail-box { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; flex: 1; min-height: 38px; }
+    .detail-content { font-size: 9.5px; font-weight: 600; color: #1e293b; line-height: 1.35; }
+
+    .amount-highlight-box { display: grid; grid-template-columns: 1fr 1fr 1fr; background: #0f172a; color: #fff; border-radius: 6px; padding: 6px 10px; margin: 2px 0; }
+    .amount-col { display: flex; flex-direction: column; }
+    .border-left { border-left: 1px solid #334155; padding-left: 10px; }
+    .amount-label { font-size: 7px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; }
+    .amount-val { font-size: 12.5px; font-weight: 900; font-family: ui-monospace, monospace; margin-top: 1px; }
+    .amount-subval { font-size: 10px; font-weight: 800; font-family: ui-monospace, monospace; margin-top: 1px; color: #f1f5f9; }
+    .text-emerald { color: #34d399; }
+    .text-blue { color: #60a5fa; }
+
+    .verification-strip { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 5px; padding: 4px 8px; font-size: 7.5px; color: #475467; margin-top: 2px; }
+    .verification-tag { font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .note-box { font-size: 8.5px; background: #fffbebf; border: 1px solid #fde68a; border-radius: 5px; padding: 4px 8px; color: #92400e; }
+    .note-content { font-weight: 600; }
+
+    .signature-section { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #cbd5e1; }
+    .signature-block { display: flex; flex-direction: column; align-items: center; }
+    .sig-line { width: 100%; border-top: 1px solid #64748b; height: 16px; margin-bottom: 2px; }
+    .sig-label { font-size: 8px; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    .cut-divider { height: 5mm !important; max-height: 5mm !important; display: flex !important; align-items: center !important; justify-content: center !important; border-bottom: 1.5px dashed #94a3b8 !important; position: relative !important; margin: 1mm 0 !important; flex-shrink: 0 !important; }
+    .cut-label { font-size: 6.5px; font-weight: 800; color: #64748b; background: #fff; padding: 0 5px; letter-spacing: 0.08em; text-transform: uppercase; }
   `;
 
   const escapeHtml = (value) => String(value ?? '')
@@ -1151,37 +1419,119 @@ export default function App() {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 
-  const receiptHtml = (tx) => 
-    '<main class="receipt-sheet">' +
-      '<header class="receipt-header">' +
-        '<div>' +
-          '<h1>' + escapeHtml(companyName) + '</h1>' +
-          '<p>' + escapeHtml(companyAddress) + '</p>' +
-          '<p>' + escapeHtml(companyPhone) + '</p>' +
-        '</div>' +
-        '<div class="receipt-meta">' +
-          '<h2>RECEIPT / VOUCHER</h2>' +
-          '<div><strong>No:</strong> ' + escapeHtml(tx.transaction_no || String(tx.id).slice(0, 8)) + '</div>' +
-          '<div><strong>Date:</strong> ' + escapeHtml(dateDisplayFormat === 'gregorian' ? dateLabel(tx.date) : dateDisplayFormat === 'persian' ? jalaliDateLabel(tx.date) : `${jalaliDateLabel(tx.date)} | ${dateLabel(tx.date)}`) + '</div>' +
-        '</div>' +
-      '</header>' +
-      '<div class="type-badge">' + (tx.transaction_type === 'cash_in' ? 'Cash Receipt' : 'Payment Voucher') + '</div>' +
-      '<table>' +
-        '<tr><th>Account Name</th><td>' + escapeHtml(tx.account_name) + '</td></tr>' +
-        '<tr><th>Details</th><td>' + escapeHtml(tx.detail) + '</td></tr>' +
-        '<tr class="amount-row"><th>Amount AFN</th><td>' + escapeHtml(tx.transaction_type === 'cash_in' ? currency(tx.cash_in_afn) : currency(tx.cash_out_afn)) + '</td></tr>' +
-        '<tr><th>Amount USD</th><td>' + escapeHtml(tx.transaction_type === 'cash_in' ? currency(tx.usd_in, 'USD') : currency(tx.usd_out, 'USD')) + '</td></tr>' +
-        '<tr><th>Exchange Rate</th><td>' + escapeHtml(tx.exchange_rate) + '</td></tr>' +
-        '<tr><th>Payment Method</th><td>' + escapeHtml(tx.payment_method || 'cash') + '</td></tr>' +
-        '<tr><th>Note</th><td>' + escapeHtml(tx.note || '-') + '</td></tr>' +
-      '</table>' +
-      '<div class="signature-grid">' +
-        '<div class="signature">Prepared By</div>' +
-        '<div class="signature">Received By</div>' +
-        '<div class="signature">Authorized By</div>' +
-      '</div>' +
-      '<footer class="receipt-footer">' + escapeHtml(printFooterText) + '</footer>' +
-    '</main>';
+  const renderSingleVoucher = (tx, copyLabel) => {
+    const isCashIn = tx.transaction_type === 'cash_in';
+    const afnVal = isCashIn ? tx.cash_in_afn : tx.cash_out_afn;
+    const usdVal = isCashIn ? tx.usd_in : tx.usd_out;
+    const formattedDate = dateDisplayFormat === 'gregorian' 
+      ? dateLabel(tx.date) 
+      : dateDisplayFormat === 'persian' 
+        ? jalaliDateLabel(tx.date) 
+        : `${jalaliDateLabel(tx.date)} | ${dateLabel(tx.date)}`;
+
+    const logoHtml = companyLogo 
+      ? `<img src="${escapeHtml(companyLogo)}" alt="Logo" class="company-logo-img" />`
+      : `<div class="company-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+        </div>`;
+
+    return `
+      <div class="voucher-card">
+        <div class="voucher-header">
+          <div class="company-brand">
+            ${logoHtml}
+            <div>
+              <h1 class="company-name">${escapeHtml(companyName || 'BAWAR STAR PLASTIC INDUSTRY')}</h1>
+              <p class="company-contact">${escapeHtml(companyPhone || '+93 700 345 630')} ${companyEmail ? ' | ' + escapeHtml(companyEmail) : ''}</p>
+            </div>
+          </div>
+          <div class="voucher-meta">
+            <div class="copy-badge">${escapeHtml(copyLabel)}</div>
+            <h2 class="voucher-title">${isCashIn ? 'RECEIPT VOUCHER' : 'PAYMENT VOUCHER'}</h2>
+            <div class="meta-row"><strong>Voucher No:</strong> <span class="font-mono">${escapeHtml(tx.transaction_no || String(tx.id).slice(0, 8))}</span></div>
+            <div class="meta-row"><strong>Date:</strong> ${escapeHtml(formattedDate)}</div>
+          </div>
+        </div>
+
+        <div class="voucher-body">
+          <div class="info-grid">
+            <div class="grid-pair">
+              <span class="grid-label">Account Name / Party</span>
+              <span class="grid-value font-bold">${escapeHtml(tx.account_name || 'General Account')}</span>
+            </div>
+            <div class="grid-pair">
+              <span class="grid-label">Category</span>
+              <span class="grid-value font-semibold category-tag">${escapeHtml(String(tx.category || 'General').replaceAll('_', ' '))}</span>
+            </div>
+            <div class="grid-pair">
+              <span class="grid-label">Payment Method</span>
+              <span class="grid-value font-semibold uppercase">${escapeHtml(tx.payment_method || 'CASH')}</span>
+            </div>
+            <div class="grid-pair">
+              <span class="grid-label">Ref / Doc No</span>
+              <span class="grid-value font-mono">${escapeHtml(tx.reference || '-')}</span>
+            </div>
+          </div>
+
+          <div class="detail-box">
+            <span class="grid-label">Details / Particulars Description</span>
+            <div class="detail-content">${escapeHtml(tx.detail || 'Standard cashbook voucher transaction record')}</div>
+          </div>
+
+          <div class="amount-highlight-box">
+            <div class="amount-col">
+              <span class="amount-label">AMOUNT AFN</span>
+              <strong class="amount-val text-emerald">${currency(afnVal, 'AFN')}</strong>
+            </div>
+            <div class="amount-col border-left">
+              <span class="amount-label">AMOUNT USD</span>
+              <strong class="amount-val text-blue">${currency(usdVal, 'USD')}</strong>
+            </div>
+            <div class="amount-col border-left">
+              <span class="amount-label">EXCHANGE RATE</span>
+              <span class="amount-subval">${tx.exchange_rate || '-'}</span>
+            </div>
+          </div>
+
+          ${tx.note ? `<div class="note-box"><span class="grid-label">Remarks / Notes:</span> <span class="note-content">${escapeHtml(tx.note)}</span></div>` : ''}
+
+          <div class="verification-strip">
+            <span><strong>System Record ID:</strong> ${escapeHtml(String(tx.id || '-'))} | <strong>Issuer:</strong> ${escapeHtml(currentUser?.full_name || 'System Accountant')}</span>
+            <span class="verification-tag">✓ AUDITED & VERIFIED</span>
+          </div>
+        </div>
+
+        <div class="signature-section">
+          <div class="signature-block">
+            <div class="sig-line"></div>
+            <span class="sig-label">Prepared By</span>
+          </div>
+          <div class="signature-block">
+            <div class="sig-line"></div>
+            <span class="sig-label">Receiver Signature</span>
+          </div>
+          <div class="signature-block">
+            <div class="sig-line"></div>
+            <span class="sig-label">Authorized Signature</span>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const receiptHtml = (tx) => `
+    <div class="payment-voucher-print print-wrapper-2up receipt-print-wrapper">
+      ${renderSingleVoucher(tx, 'OFFICE COPY')}
+      <div class="cut-divider">
+        <span class="cut-label">✂ CUT ALONG DOTTED LINE FOR CUSTOMER COPY</span>
+      </div>
+      ${renderSingleVoucher(tx, 'CUSTOMER COPY')}
+    </div>
+  `;
 
   function toggleTableFullscreen() {
     const node = tableRef.current;
@@ -1548,6 +1898,7 @@ export default function App() {
                     onCsvImportClick={onCsvImportClick}
                     onCsvImportFile={onCsvImportFile}
                     onDownloadCsvTemplate={onDownloadCsvTemplate}
+                    onExcelSuccess={loadAll}
                     onClear={onClearAll}
                     fileRef={fileRef}
                     csvFileRef={csvFileRef}
@@ -1555,7 +1906,11 @@ export default function App() {
                     lastBackup={lastBackupAt || 'Never'}
                   />
                 } />
-                <Route path="/exports" element={<MultiAccountDashboard />} />
+                <Route path="/exports" element={
+                  currentCompany?.id === 'sky-ariana'
+                    ? <MultiAccountDashboard />
+                    : <Navigate to="/" replace />
+                } />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </>
