@@ -5,29 +5,41 @@ import { BadgeCheck, Building2, Factory, Printer, ShieldCheck } from 'lucide-rea
 
 export default function Settings(props) {
   return (
-    <>
-      <section className="settings-command-center glass-card">
-        <div className="settings-command-copy">
-          <p className="eyebrow">Enterprise Settings</p>
-          <h2>Company Branding & Print Operations</h2>
-          <p>Manage identity, secure preferences, backups, and document output for BAWAR STAR PLASTIC INDUSTRY.</p>
+    <div className="settings-page flex flex-col gap-3 p-1 font-sans" style={{ zoom: 0.88 }}>
+      {/* 1. COMPACT COMMAND CENTER HEADER */}
+      <section className="settings-command-center glass-card flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="settings-command-copy min-w-0">
+          <p className="eyebrow text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">Enterprise Settings</p>
+          <h2 className="text-base font-black tracking-tight text-slate-900 dark:text-slate-100 uppercase">Company Branding & Print Operations</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Manage identity, secure preferences, backups, and document output for {props.companyName || 'BAWAR STAR PLASTIC INDUSTRY'}.</p>
         </div>
-        <button className="primary-btn icon-text-btn" onClick={props.onPrintPreview}><Printer size={18} />Open Print Preview Center</button>
+        <button className="primary-btn icon-text-btn shrink-0 text-xs font-bold py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm flex items-center gap-2" onClick={props.onPrintPreview}>
+          <Printer size={16} />
+          <span>Open Print Preview Center</span>
+        </button>
       </section>
-      <div className="settings-overview-grid">
+
+      {/* 2. STREAMLINED 4-CARD METRICS BAR */}
+      <div className="settings-overview-grid grid grid-cols-2 md:grid-cols-4 gap-2.5">
         {[
-          { icon: Building2, title: 'Company', value: props.companyName || 'BAWAR STAR PLASTIC INDUSTRY' },
-          { icon: Factory, title: 'Industry', value: 'Plastic Manufacturing' },
-          { icon: ShieldCheck, title: 'Administrator', value: props.currentUser?.full_name || 'System User' },
-          { icon: BadgeCheck, title: 'Print Status', value: props.printHeader ? 'Header enabled' : 'Header hidden' }
-        ].map(({ icon: Icon, title, value }) => (
-          <div className="settings-overview-card glass-card" key={title}>
-            <div className="metric-icon"><Icon size={19} /></div>
-            <span>{title}</span>
-            <strong>{value}</strong>
+          { icon: Building2, title: 'Company', value: props.companyName || 'BAWAR STAR PLASTIC INDUSTRY', color: 'blue' },
+          { icon: Factory, title: 'Industry', value: 'Plastic Manufacturing', color: 'violet' },
+          { icon: ShieldCheck, title: 'Administrator', value: props.currentUser?.full_name || 'System User', color: 'emerald' },
+          { icon: BadgeCheck, title: 'Print Status', value: props.printHeader ? 'Header Enabled' : 'Header Hidden', color: 'amber' }
+        ].map(({ icon: Icon, title, value, color }) => (
+          <div className="settings-overview-card glass-card p-3 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex items-center gap-3" key={title}>
+            <div className={`metric-icon p-2 rounded-lg bg-${color}-500/10 text-${color}-600 dark:text-${color}-400 shrink-0`}>
+              <Icon size={18} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block leading-tight">{title}</span>
+              <strong className="text-xs font-black text-slate-900 dark:text-slate-100 truncate block mt-0.5">{value}</strong>
+            </div>
           </div>
         ))}
       </div>
+
+      {/* 3. SIDE-BY-SIDE BRANDING & PREFERENCES GRID */}
       <SettingsCompany
         companyName={props.companyName}
         setCompanyName={props.setCompanyName}
@@ -47,34 +59,61 @@ export default function Settings(props) {
         setCompanyLicense={props.setCompanyLicense}
         onStatus={props.setSettingsStatus}
       />
-      <div className="entry-grid">
-        <div className="glass-card form-card">
-          <div className="card-header"><h3>Preferences</h3></div>
-          <div className="settings-form">
-            <label>Default Currency<input type="text" value={props.currencyCode} onChange={(e) => props.setCurrencyCode(e.target.value)} /></label>
-            <label>Default Exchange Rate<input type="number" value={props.exchangeRate} onChange={(e) => props.setExchangeRate(e.target.value)} step="0.01" /></label>
-            <label>Theme<select value={props.theme} onChange={(e) => props.setTheme(e.target.value)}><option value="dark">Dark</option><option value="light">Light</option></select></label>
-            <label>Language<select value={props.language} onChange={(e) => props.setLanguage(e.target.value)}><option value="English">English</option><option value="Pashto">Pashto</option><option value="Dari">Dari</option></select></label>
-            <label>Date Display Format<select value={props.dateDisplayFormat} onChange={(e) => props.setDateDisplayFormat(e.target.value)}><option value="dual">Persian + Gregorian</option><option value="persian">Persian Only</option><option value="gregorian">Gregorian Only</option></select></label>
-            <label>Print Footer<input type="text" value={props.printFooterText} onChange={(e) => props.setPrintFooterText(e.target.value)} dir="auto" /></label>
-            <label>Auto Logout Minutes<input type="number" min="1" value={props.autoLogoutMinutes} onChange={(e) => props.setAutoLogoutMinutes(e.target.value)} /></label>
-            <label className="checkbox-row"><input type="checkbox" checked={props.printHeader} onChange={(e) => props.setPrintHeader(e.target.checked)} /><span>Show company header in print</span></label>
-            <button className="primary-btn full-width" onClick={props.onSave}>Save Settings</button>
+
+      <div className="entry-grid grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="glass-card form-card p-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800">
+          <div className="card-header pb-2 mb-3 border-b border-slate-200 dark:border-slate-800">
+            <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">Preferences & Display</h3>
+          </div>
+          <div className="settings-form grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Default Currency
+              <input className="form-control text-xs mt-1" type="text" value={props.currencyCode} onChange={(e) => props.setCurrencyCode(e.target.value)} />
+            </label>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Exchange Rate
+              <input className="form-control text-xs mt-1" type="number" value={props.exchangeRate} onChange={(e) => props.setExchangeRate(e.target.value)} step="0.01" />
+            </label>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Theme
+              <select className="form-select text-xs mt-1" value={props.theme} onChange={(e) => props.setTheme(e.target.value)}><option value="dark">Dark</option><option value="light">Light</option></select>
+            </label>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Language
+              <select className="form-select text-xs mt-1" value={props.language} onChange={(e) => props.setLanguage(e.target.value)}><option value="English">English</option><option value="Pashto">Pashto</option><option value="Dari">Dari</option></select>
+            </label>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 sm:col-span-2">Date Display Format
+              <select className="form-select text-xs mt-1" value={props.dateDisplayFormat} onChange={(e) => props.setDateDisplayFormat(e.target.value)}><option value="dual">Persian + Gregorian (Dual Date)</option><option value="persian">Persian Only</option><option value="gregorian">Gregorian Only</option></select>
+            </label>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 sm:col-span-2">Print Footer Text
+              <input className="form-control text-xs mt-1" type="text" value={props.printFooterText} onChange={(e) => props.setPrintFooterText(e.target.value)} dir="auto" />
+            </label>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Auto Logout (Mins)
+              <input className="form-control text-xs mt-1" type="number" min="1" value={props.autoLogoutMinutes} onChange={(e) => props.setAutoLogoutMinutes(e.target.value)} />
+            </label>
+            <label className="checkbox-row flex items-center gap-2 mt-5 sm:col-span-2">
+              <input type="checkbox" checked={props.printHeader} onChange={(e) => props.setPrintHeader(e.target.checked)} />
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Show company header in print</span>
+            </label>
+            <button className="primary-btn full-width sm:col-span-2 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl mt-2" onClick={props.onSave}>Save Settings</button>
           </div>
         </div>
-        <div className="glass-card form-card">
-          <div className="card-header"><h3>Backup and Restore</h3></div>
-          <div className="backup-actions">
-            <button className="primary-btn full-width" onClick={props.onBackup}>Export JSON Backup</button>
-            <button className="ghost-btn full-width" onClick={props.onImportClick}>Import Backup</button>
-            <button className="danger-btn full-width" onClick={props.onClear}>Clear All Data</button>
+
+        <div className="glass-card form-card p-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+          <div>
+            <div className="card-header pb-2 mb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">Backup & System Recovery</h3>
+            </div>
+            <div className="backup-actions flex flex-col gap-2.5">
+              <button className="primary-btn full-width py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl" onClick={props.onBackup}>Export JSON Backup</button>
+              <button className="ghost-btn full-width py-2 text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl" onClick={props.onImportClick}>Import Backup</button>
+              <button className="danger-btn full-width py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl" onClick={props.onClear}>Clear All Data</button>
+            </div>
+            <input type="file" ref={props.fileRef} accept="application/json" hidden onChange={props.onImportFile} />
+            {props.status && <div className="backup-status text-xs font-semibold text-blue-600 mt-2">{props.status}</div>}
           </div>
-          <input type="file" ref={props.fileRef} accept="application/json" hidden onChange={props.onImportFile} />
-          <div className="backup-status">{props.status}</div>
-          <p className="muted">Last backup: {props.lastBackup || 'Never'}</p>
+          <p className="muted text-xs text-slate-500 mt-3 pt-2 border-t border-slate-200/60 dark:border-slate-800">Last backup: {props.lastBackup || 'Never'}</p>
         </div>
       </div>
+
       <SystemDiagnostics diagnostics={props.diagnostics} currentUser={props.currentUser} onRefresh={props.onRefreshDiagnostics} />
+      
       <UserAccounts
         currentUser={props.currentUser}
         users={props.users || []}
@@ -84,6 +123,6 @@ export default function Settings(props) {
         onDelete={props.onDeleteUser}
         onResetPassword={props.onResetUserPassword}
       />
-    </>
+    </div>
   );
 }

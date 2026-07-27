@@ -1,4 +1,4 @@
-import { Banknote, BookOpenText, Building2, Camera, CircleDollarSign, Clock3, Download, Edit, FileSpreadsheet, MoreVertical, Printer, Search, Trash2, UsersRound } from 'lucide-react';
+import { Banknote, BookOpenText, Briefcase, Building2, Camera, CircleDollarSign, Clock3, Download, Edit, FileSpreadsheet, MoreVertical, Printer, Search, Trash2, UsersRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -7,11 +7,17 @@ import { currency, csvCell, dateLabel, resolveAvatarUrl } from '../utils/format'
 import { employeeSalarySnapshot } from '../utils/payroll';
 import BaseModal from '../components/BaseModal';
 import EmployeeLedgerModal from '../components/EmployeeLedgerModal';
+import EditableCombobox from '../components/EditableCombobox';
+import { DEFAULT_POSITIONS, DEFAULT_DEPARTMENTS } from '../data/employeeOptions';
+import { useCompany } from '../context/CompanyContext';
 
 function unescapeText(str) {
   if (typeof str !== 'string') return String(str ?? '');
-  return str
-    .replace(/&amp;/g, '&')
+  let text = str;
+  while (text.includes('&amp;')) {
+    text = text.replace(/&amp;/g, '&');
+  }
+  return text
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
@@ -42,6 +48,7 @@ const emptyEmployee = {
   phone: '',
   position: '',
   department: '',
+  company_id: 'all',
   joining_date: '',
   monthly_salary: '',
   currency: 'AFN',
@@ -79,6 +86,7 @@ export default function EmployeesSalary({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { companies = [] } = useCompany();
   const [activeTab, setActiveTab] = useState('Overview');
   const [employeeForm, setEmployeeForm] = useState(emptyEmployee);
   const [editingEmployeeId, setEditingEmployeeId] = useState(null);
@@ -103,6 +111,29 @@ export default function EmployeesSalary({
     .filter((transaction) => String(transaction.salary_month || transaction.date || '').startsWith(`${filters.year}-${String(filters.month).padStart(2, '0')}`))
     .reduce((total, transaction) => total + Number(transaction.cash_out_afn || 0), 0);
   const departments = useMemo(() => [...new Set(employees.map((employee) => employee.department).filter(Boolean))].sort(), [employees]);
+  const existingPositions = useMemo(() => [...new Set(employees.map((employee) => employee.position).filter(Boolean))].sort(), [employees]);
+
+  const positionOptions = useMemo(() => {
+    const customList = existingPositions.map((pos) => ({
+      value: pos,
+      detail: 'Existing employee position in system',
+      category: 'System'
+    }));
+    const defaultVals = new Set(DEFAULT_POSITIONS.map((p) => p.value.toLowerCase()));
+    const uniqueCustom = customList.filter((c) => !defaultVals.has(c.value.toLowerCase()));
+    return [...uniqueCustom, ...DEFAULT_POSITIONS];
+  }, [existingPositions]);
+
+  const departmentOptions = useMemo(() => {
+    const customList = departments.map((dept) => ({
+      value: dept,
+      detail: 'Existing department in system',
+      category: 'System'
+    }));
+    const defaultVals = new Set(DEFAULT_DEPARTMENTS.map((d) => d.value.toLowerCase()));
+    const uniqueCustom = customList.filter((c) => !defaultVals.has(c.value.toLowerCase()));
+    return [...uniqueCustom, ...DEFAULT_DEPARTMENTS];
+  }, [departments]);
   const pending = report?.summary?.total_remaining_salary ?? employees.reduce((total, employee) => total + Math.max(employeeSalarySnapshot(employee, transactions)?.remaining_salary || 0, 0), 0);
 
   useEffect(() => {
@@ -139,16 +170,17 @@ export default function EmployeesSalary({
     if (!employee) return;
 
     setEmployeeForm({
-      full_name: employee.full_name || '',
-      father_name: employee.father_name || '',
-      phone: employee.phone || '',
-      position: employee.position || '',
-      department: employee.department || '',
+      full_name: unescapeText(employee.full_name || ''),
+      father_name: unescapeText(employee.father_name || ''),
+      phone: unescapeText(employee.phone || ''),
+      position: unescapeText(employee.position || ''),
+      department: unescapeText(employee.department || ''),
+      company_id: employee.company_id || 'all',
       joining_date: employee.joining_date || new Date().toISOString().slice(0, 10),
       monthly_salary: String(employee.monthly_salary || ''),
       currency: employee.currency || 'AFN',
       status: employee.status || 'active',
-      notes: employee.notes || ''
+      notes: unescapeText(employee.notes || '')
     });
     setEditingEmployeeId(employee.id);
     setActiveTab('Employees');
@@ -258,9 +290,10 @@ export default function EmployeesSalary({
       const matchesSearch = !search || [row.employee_name, row.employee_code, row.department, row.position].some((value) => String(value || '').toLowerCase().includes(search));
       const matchesDepartment = !filters.department || row.department === filters.department;
       const matchesStatus = !filters.status || row.payment_status === filters.status;
-      return matchesSearch && matchesDepartment && matchesStatus;
+      const matchesCompany = !filters.company_id || filters.company_id === 'all' || (row.company_id || 'all') === 'all' || row.company_id === filters.company_id;
+      return matchesSearch && matchesDepartment && matchesStatus && matchesCompany;
     });
-  }, [report, filters.search, filters.department, filters.status]);
+  }, [report, filters.search, filters.department, filters.status, filters.company_id]);
 
   const summary = report?.summary || {
     total_employees: employees.length,
@@ -390,8 +423,8 @@ export default function EmployeesSalary({
           <BaseModal 
             isOpen={editingEmployeeId !== null || activeTab === 'Employees_Add'} 
             onClose={() => { setEmployeeForm(emptyEmployee); setEditingEmployeeId(null); setActiveTab('Employees'); }}
-            title={editingEmployeeId ? t('payroll.edit') : t('payroll.addEmployee')}
-            maxWidth="820px"
+            title={editingEmployeeId ? `Edit Employee Profile` : 'Add New Employee'}
+            maxWidth="840px"
             panelClass="employee-create-modal"
             footer={
               <>
@@ -414,183 +447,216 @@ export default function EmployeesSalary({
               </>
             }
           >
-            <form id="employeeForm" className="modal-form" onSubmit={submitEmployee}>
-              <p className="modal-section-title">Personal Information</p>
-              <div className="employee-form-grid">
-                <label className="form-field">
-                  <span className="form-label">Full Name *</span>
-                  <input 
-                    className="form-control" 
-                    name="fullName" 
-                    value={employeeForm.full_name} 
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, full_name: e.target.value })} 
-                    placeholder="Full Name" 
-                    required 
-                    autoComplete="name"
-                  />
-                </label>
-                <label className="form-field">
-                  <span className="form-label">Father Name</span>
-                  <input 
-                    className="form-control" 
-                    name="fatherName" 
-                    value={employeeForm.father_name} 
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, father_name: e.target.value })} 
-                    placeholder="Father Name" 
-                  />
-                </label>
-                <label className="form-field">
-                  <span className="form-label">Phone Number</span>
-                  <input 
-                    className="form-control" 
-                    name="phoneNumber" 
-                    value={employeeForm.phone} 
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })} 
-                    placeholder="Phone Number" 
-                    autoComplete="tel"
-                  />
-                </label>
-                <label className="form-field">
-                  <span className="form-label">Employee ID</span>
-                  <input 
-                    className="form-control" 
-                    name="employeeCode" 
-                    value={employeeForm.employee_code || ''} 
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, employee_code: e.target.value })} 
-                    placeholder="e.g. EMP-001" 
-                  />
-                </label>
-                <label className="form-field form-field--full" style={{ gridColumn: 'span 2' }}>
-                  <span className="form-label">Employee Picture / Photo</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '6px' }}>
-                    <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', backgroundColor: '#1e293b', border: '2px solid #3b82f6', display: 'flex', alignItems: 'center', justify: 'center', fontWeight: 'bold', color: '#fff', fontSize: '1.1rem', flexShrink: 0 }}>
-                      {employeeForm.avatar_url ? (
-                        <img src={employeeForm.avatar_url} alt="Profile Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        (employeeForm.full_name || 'E').slice(0, 2).toUpperCase()
-                      )}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="form-control" 
-                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          try {
-                            const uploadRes = await api.uploadMedia(file);
-                            if (uploadRes && uploadRes.url) {
-                              setEmployeeForm((prev) => ({ ...prev, avatar_url: uploadRes.url }));
-                            } else {
+            <form id="employeeForm" className="modal-form flex flex-col gap-4" onSubmit={submitEmployee}>
+              {/* 1. PERSONAL INFORMATION CARD */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                <h4 className="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">1. Personal Information</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="form-field">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Full Name *</span>
+                    <input 
+                      className="form-control text-xs" 
+                      name="fullName" 
+                      value={employeeForm.full_name} 
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, full_name: e.target.value })} 
+                      placeholder="e.g. Ahmad Shah" 
+                      required 
+                      autoComplete="name"
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Father Name</span>
+                    <input 
+                      className="form-control text-xs" 
+                      name="fatherName" 
+                      value={employeeForm.father_name} 
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, father_name: e.target.value })} 
+                      placeholder="e.g. Mohammad" 
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Phone Number</span>
+                    <input 
+                      className="form-control text-xs" 
+                      name="phoneNumber" 
+                      value={employeeForm.phone} 
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })} 
+                      placeholder="e.g. +93 700 123 456" 
+                      autoComplete="tel"
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Employee ID / Code</span>
+                    <input 
+                      className="form-control text-xs" 
+                      name="employeeCode" 
+                      value={employeeForm.employee_code || ''} 
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, employee_code: e.target.value })} 
+                      placeholder="e.g. EMP-001" 
+                    />
+                  </label>
+
+                  <label className="form-field sm:col-span-2">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Employee Profile Photo</span>
+                    <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div className="w-10 h-10 rounded-full bg-slate-900 border border-blue-500 text-white font-bold text-sm flex items-center justify-center shrink-0 overflow-hidden">
+                        {employeeForm.avatar_url ? (
+                          <img src={employeeForm.avatar_url} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          (employeeForm.full_name || 'E').slice(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="form-control text-xs py-1 px-2" 
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            try {
+                              const uploadRes = await api.uploadMedia(file);
+                              if (uploadRes && uploadRes.url) {
+                                setEmployeeForm((prev) => ({ ...prev, avatar_url: uploadRes.url }));
+                              } else {
+                                const dataUrl = await imageFileToDataUrl(file);
+                                setEmployeeForm((prev) => ({ ...prev, avatar_url: dataUrl }));
+                              }
+                            } catch (err) {
                               const dataUrl = await imageFileToDataUrl(file);
                               setEmployeeForm((prev) => ({ ...prev, avatar_url: dataUrl }));
                             }
-                          } catch (err) {
-                            const dataUrl = await imageFileToDataUrl(file);
-                            setEmployeeForm((prev) => ({ ...prev, avatar_url: dataUrl }));
-                          }
-                        }}
-                      />
-                      <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', display: 'block' }}>
-                        Select PNG, JPG or WEBP image file.
-                      </span>
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </label>
+                  </label>
+                </div>
               </div>
 
-              <p className="modal-section-title">Employment Details</p>
-              <div className="employee-form-grid">
-                <label className="form-field">
-                  <span className="form-label">Position / Job Title *</span>
-                  <input 
-                    className="form-control" 
-                    name="position" 
-                    value={employeeForm.position} 
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, position: e.target.value })} 
-                    placeholder="Position / Job Title" 
-                    required 
-                  />
-                </label>
-                <label className="form-field">
-                  <span className="form-label">Department</span>
-                  <input 
-                    className="form-control" 
-                    name="department" 
-                    value={employeeForm.department} 
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })} 
-                    placeholder="Department" 
-                  />
-                </label>
-                <label className="form-field">
-                  <span className="form-label">Joining Date (Optional)</span>
-                  <input 
-                    className="form-control" 
-                    name="joiningDate" 
-                    type="date" 
-                    value={employeeForm.joining_date || ''} 
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, joining_date: e.target.value })} 
-                  />
-                  <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', display: 'block' }}>
-                    Salary carry forward begins from this date. Leave empty to disable historical carry forward.
-                  </span>
-                </label>
-                <label className="form-field">
-                  <span className="form-label">Employment Status</span>
-                  <select 
-                    className="form-select" 
-                    name="status" 
-                    value={employeeForm.status} 
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, status: e.target.value })}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="on_leave">On Leave</option>
-                  </select>
-                </label>
+              {/* 2. EMPLOYMENT DETAILS CARD */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                <h4 className="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">2. Employment Details</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="form-field">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Position / Job Title *</span>
+                    <EditableCombobox
+                      name="position"
+                      value={employeeForm.position}
+                      onChange={(val) => setEmployeeForm({ ...employeeForm, position: val })}
+                      options={positionOptions}
+                      placeholder="Select option or type position..."
+                      icon={Briefcase}
+                      required
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Department</span>
+                    <EditableCombobox
+                      name="department"
+                      value={employeeForm.department}
+                      onChange={(val) => setEmployeeForm({ ...employeeForm, department: val })}
+                      options={departmentOptions}
+                      placeholder="Select option or type department..."
+                      icon={Building2}
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Assigned Company / Organization *</span>
+                    <select 
+                      className="form-select text-xs font-bold" 
+                      name="company_id" 
+                      value={employeeForm.company_id || 'all'} 
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, company_id: e.target.value })}
+                    >
+                      <option value="all">🌐 All Companies (Shared Employee)</option>
+                      {companies.map((comp) => (
+                        <option key={comp.id} value={comp.id}>
+                          🏬 {comp.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="form-field">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Employment Status</span>
+                    <select 
+                      className="form-select text-xs" 
+                      name="status" 
+                      value={employeeForm.status} 
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, status: e.target.value })}
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="on_leave">On Leave</option>
+                    </select>
+                  </label>
+
+                  <label className="form-field sm:col-span-2">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Joining Date (Carry Forward Benchmark)</span>
+                    <input 
+                      className="form-control text-xs" 
+                      name="joiningDate" 
+                      type="date" 
+                      value={employeeForm.joining_date || ''} 
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, joining_date: e.target.value })} 
+                    />
+                    <span className="text-[10px] text-slate-500 mt-0.5 block">
+                      Salary carry forward calculates starting from this date.
+                    </span>
+                  </label>
+                </div>
               </div>
 
-              <p className="modal-section-title">Salary Information</p>
-              <div className="employee-form-grid">
-                <label className="form-field">
-                  <span className="form-label">Monthly Salary *</span>
-                  <input 
-                    className="form-control" 
-                    name="monthlySalary" 
-                    type="number" 
-                    min="0" 
-                    step="0.01" 
-                    value={employeeForm.monthly_salary} 
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, monthly_salary: e.target.value })} 
-                    placeholder="0.00" 
-                    required 
-                  />
-                </label>
-                <label className="form-field">
-                  <span className="form-label">Currency *</span>
-                  <select 
-                    className="form-select" 
-                    name="currency" 
-                    value={employeeForm.currency} 
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, currency: e.target.value })}
-                  >
-                    <option value="AFN">{t('payroll.afn')}</option>
-                    <option value="USD">{t('payroll.usd')}</option>
-                  </select>
-                </label>
-                <label className="form-field form-field--full">
-                  <span className="form-label">Notes & Remarks</span>
-                  <textarea 
-                    className="form-textarea" 
-                    name="notes" 
-                    value={employeeForm.notes} 
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, notes: e.target.value })} 
-                    placeholder="Optional employee notes..." 
-                    rows={3} 
-                  />
-                </label>
+              {/* 3. SALARY & REMARKS CARD */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                <h4 className="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">3. Salary Information & Remarks</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="form-field">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Monthly Base Salary *</span>
+                    <input 
+                      className="form-control text-xs font-mono font-bold" 
+                      name="monthlySalary" 
+                      type="number" 
+                      min="0" 
+                      step="0.01" 
+                      value={employeeForm.monthly_salary} 
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, monthly_salary: e.target.value })} 
+                      placeholder="0.00" 
+                      required 
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Currency *</span>
+                    <select 
+                      className="form-select text-xs font-bold" 
+                      name="currency" 
+                      value={employeeForm.currency} 
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, currency: e.target.value })}
+                    >
+                      <option value="AFN">{t('payroll.afn')}</option>
+                      <option value="USD">{t('payroll.usd')}</option>
+                    </select>
+                  </label>
+
+                  <label className="form-field sm:col-span-2">
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1 block">Notes & Remarks</span>
+                    <textarea 
+                      className="form-textarea text-xs" 
+                      name="notes" 
+                      value={employeeForm.notes} 
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, notes: e.target.value })} 
+                      placeholder="Optional employee notes..." 
+                      rows={2} 
+                    />
+                  </label>
+                </div>
               </div>
             </form>
           </BaseModal>
@@ -693,6 +759,11 @@ function EmployeesSalaryReport({ rows, summary, filters, setFilters, departments
       </div>
       <div className="salary-report-filters">
         <label><Search size={16} /><input value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Search employee name" /></label>
+        <select value={filters.company_id || 'all'} onChange={(event) => setFilters({ ...filters, company_id: event.target.value })}>
+          <option value="all">🏢 All Companies (All Employees)</option>
+          <option value="bawar-star">🏬 Bawar Star Plastic Industry</option>
+          <option value="sky-ariana">✈️ Sky Ariana Ltd</option>
+        </select>
         <select value={filters.department} onChange={(event) => setFilters({ ...filters, department: event.target.value })}><option value="">{t('payroll.allDepartments')}</option>{departments.map((department) => <option key={department} value={department}>{department}</option>)}</select>
         <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}><option value="">{t('payroll.allStatus')}</option><option value="Paid">{t('payroll.paid')}</option><option value="Partial Paid">{t('payroll.partialPaid')}</option><option value="Unpaid">{t('payroll.unpaidStatus')}</option><option value="Advance">{t('payroll.advance')}</option></select>
         <select value={filters.month} onChange={(event) => setFilters({ ...filters, month: Number(event.target.value) })}>{monthNames.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select>
@@ -1327,6 +1398,17 @@ function EmployeeCardRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const hasJoiningDate = Boolean(employee.joining_date);
 
+  const getCompanyBadge = () => {
+    const comp = employee.company_id || 'all';
+    if (comp === 'bawar-star') {
+      return <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">BAWAR STAR PLASTIC</span>;
+    }
+    if (comp === 'sky-ariana') {
+      return <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">SKY ARIANA LTD</span>;
+    }
+    return <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">All Companies (Shared)</span>;
+  };
+
   const getStatusBadge = () => {
     const status = row.payment_status || 'Unpaid';
     if (status === 'Paid') return <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Fully Paid</span>;
@@ -1350,6 +1432,7 @@ function EmployeeCardRow({
       <div className="salary-employee-info">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <strong style={{ fontSize: '1.05rem', fontWeight: 700 }}>{employee.full_name}</strong>
+          {getCompanyBadge()}
           {hasJoiningDate ? (
             <span className="badge-carry-status badge-carry-enabled" title={`Carry forward since ${employee.joining_date}`}>
               Carry Forward Enabled
@@ -1490,16 +1573,61 @@ function EmployeeCardRow({
 function EmployeeList({ employees, transactions, reportRows = [], expanded = false, onPay, onOpenLedger, onEditSalary, onEditEmployee, onAddEmployee, onDeleteEmployee, onChangeAvatar, deletingEmployeeId, uploadingAvatarId }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [selectedCompanyFilter, setSelectedCompanyFilter] = useState('all');
   const rowByEmployee = new Map((reportRows || []).map((row) => [Number(row.employee_id), row]));
+
+  const filteredEmployees = useMemo(() => {
+    if (selectedCompanyFilter === 'all') return employees;
+    return employees.filter((emp) => {
+      const empComp = emp.company_id || 'all';
+      return empComp === 'all' || empComp === selectedCompanyFilter;
+    });
+  }, [employees, selectedCompanyFilter]);
+
+  const bawarCount = employees.filter((e) => (e.company_id || 'all') === 'bawar-star' || (e.company_id || 'all') === 'all').length;
+  const skyCount = employees.filter((e) => (e.company_id || 'all') === 'sky-ariana' || (e.company_id || 'all') === 'all').length;
+
   return (
     <article className={`glass-card salary-panel ${expanded ? 'salary-panel-wide' : ''}`}>
       <div className="salary-panel-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div><p className="eyebrow">{t('payroll.employeeDirectory')}</p><h3>{t('payroll.salaryBalances')}</h3></div>
         {onAddEmployee && <button className="primary-btn" type="button" onClick={onAddEmployee} style={{ padding: '8px 16px', fontSize: '0.9rem' }}>{t('payroll.addEmployee')}</button>}
       </div>
-      {employees.length ? (
+
+      {/* Company Filter Tabs / Pills */}
+      <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 my-3">
+        <button
+          type="button"
+          onClick={() => setSelectedCompanyFilter('all')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            selectedCompanyFilter === 'all' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          🌐 All Companies ({employees.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedCompanyFilter('bawar-star')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            selectedCompanyFilter === 'bawar-star' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          🏬 BAWAR STAR PLASTIC ({bawarCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedCompanyFilter('sky-ariana')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            selectedCompanyFilter === 'sky-ariana' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          ✈️ SKY ARIANA LTD ({skyCount})
+        </button>
+      </div>
+
+      {filteredEmployees.length ? (
         <div className="salary-employee-list">
-          {employees.map((employee) => {
+          {filteredEmployees.map((employee) => {
             const fallback = employeeSalarySnapshot(employee, transactions);
             const row = rowByEmployee.get(Number(employee.id)) || {
               employee_id: employee.id,

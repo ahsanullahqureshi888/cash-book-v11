@@ -33,6 +33,7 @@ from .routes import (
     accounts,
     auth,
     backup,
+    bawar_star,
     employees,
     neon_auth,
     reports,
@@ -290,7 +291,13 @@ app.include_router(backup.router)
 app.include_router(reports.router)
 app.include_router(auth.router)
 app.include_router(neon_auth.router)
+app.include_router(bawar_star.router)
 app.include_router(transport.router)
+
+from .routes import plastic_erp, iot_telemetry
+app.include_router(plastic_erp.router)
+app.include_router(iot_telemetry.router)
+
 
 
 from fastapi import Depends, File, HTTPException, UploadFile

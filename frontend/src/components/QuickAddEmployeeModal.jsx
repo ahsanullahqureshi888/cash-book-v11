@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import BaseModal from './BaseModal';
 import { useTranslation } from 'react-i18next';
+import { Briefcase, Building2 } from 'lucide-react';
+import EditableCombobox from './EditableCombobox';
+import { DEFAULT_POSITIONS, DEFAULT_DEPARTMENTS } from '../data/employeeOptions';
 
 const initialEmployee = (name) => ({
   full_name: name || '',
@@ -8,6 +11,7 @@ const initialEmployee = (name) => ({
   phone: '',
   position: '',
   department: '',
+  company_id: 'all',
   joining_date: new Date().toLocaleDateString('en-CA'),
   monthly_salary: '',
   currency: 'AFN',
@@ -77,11 +81,26 @@ export default function QuickAddEmployeeModal({ initialName, onClose, onSave }) 
           </label>
           <label className="form-field">
             <span className="form-label">Position / Job Title *</span>
-            <input className="form-control" value={form.position} onChange={(event) => update('position', event.target.value)} placeholder="e.g. Operator" required />
+            <EditableCombobox
+              name="position"
+              value={form.position}
+              onChange={(val) => update('position', val)}
+              options={DEFAULT_POSITIONS}
+              placeholder="Select option or type position..."
+              icon={Briefcase}
+              required
+            />
           </label>
           <label className="form-field">
             <span className="form-label">Department</span>
-            <input className="form-control" value={form.department} onChange={(event) => update('department', event.target.value)} placeholder="e.g. Production" />
+            <EditableCombobox
+              name="department"
+              value={form.department}
+              onChange={(val) => update('department', val)}
+              options={DEFAULT_DEPARTMENTS}
+              placeholder="Select option or type department..."
+              icon={Building2}
+            />
           </label>
           <label className="form-field">
             <span className="form-label">Joining Date *</span>

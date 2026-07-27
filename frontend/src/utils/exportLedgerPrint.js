@@ -86,11 +86,21 @@ export function generateExportLedgerPrintHtml({
   <style>
     @page {
       size: A4 landscape;
-      margin: 6mm 8mm 6mm 8mm;
+      margin: 4mm 6mm;
     }
     @media print {
-      html, body { width: 100%; height: 100%; background: #ffffff !important; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body {
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
+      }
+      body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
       .no-print { display: none !important; }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -98,19 +108,24 @@ export function generateExportLedgerPrintHtml({
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       color: #0f172a;
       background: #ffffff;
-      font-size: 11px;
-      line-height: 1.35;
+      font-size: 10px;
+      line-height: 1.3;
       width: 100%;
     }
     .sheet {
       width: 100%;
-      max-width: 100%;
+      height: 100vh;
+      max-height: 100vh;
       margin: 0 auto;
-      padding: 4px 0;
+      padding: 0;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      min-height: 98vh;
+      overflow: hidden;
+      box-sizing: border-box;
+      page-break-after: avoid;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     /* EXECUTIVE HEADER */
@@ -118,9 +133,9 @@ export function generateExportLedgerPrintHtml({
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 3px solid #0f172a;
-      padding-bottom: 10px;
-      margin-bottom: 12px;
+      border-bottom: 2.5px solid #0f172a;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
     }
     .brand-box {
       display: flex;
@@ -308,18 +323,19 @@ export function generateExportLedgerPrintHtml({
     .signatures {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 40px;
-      margin-top: 30px;
-      margin-bottom: 16px;
+      gap: 24px;
+      margin-top: 10px;
+      margin-bottom: 8px;
       page-break-inside: avoid;
+      break-inside: avoid;
     }
     .sig-block {
       border-top: 1.5px solid #334155;
-      padding-top: 6px;
+      padding-top: 4px;
       text-align: center;
     }
     .sig-label {
-      font-size: 9.5px;
+      font-size: 9px;
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.05em;

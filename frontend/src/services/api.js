@@ -102,6 +102,10 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  get: (path) => request(path),
+  post: (path, payload) => request(path, { method: 'POST', body: JSON.stringify(payload) }),
+  put: (path, payload) => request(path, { method: 'PUT', body: JSON.stringify(payload) }),
+  delete: (path) => request(path, { method: 'DELETE' }),
   health: () => request('/api/health'),
   status: () => request('/api/status'),
   healthDatabase: () => request('/health/database'),
@@ -194,5 +198,15 @@ export const api = {
   neonAuthLogin: (jwtToken) => request('/api/auth/neon-login', {
     method: 'POST',
     headers: { Authorization: `Bearer ${jwtToken}` },
+  }),
+  // Bawar Star Manufacturing Ledger API Methods
+  getBawarStarSummary: (partnerId) => request(`/api/tenants/bawar-star/ledger-summary/${partnerId}`),
+  getBawarStarTransactions: (partnerId) => request(`/api/tenants/bawar-star/transactions/${partnerId}`),
+  createBawarStarTransaction: (payload) => request('/api/tenants/bawar-star/transactions', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
+  deleteBawarStarTransaction: (id) => request(`/api/tenants/bawar-star/transactions/${id}`, {
+    method: 'DELETE'
   }),
 };

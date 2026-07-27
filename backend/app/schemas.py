@@ -244,6 +244,7 @@ class EmployeeCreate(BaseModel):
     phone: str = ""
     position: str = Field(min_length=1, max_length=180)
     department: str = ""
+    company_id: str = Field(default="all", max_length=100)
     joining_date: Optional[DateType] = None
     employment_end_date: Optional[DateType] = None
     monthly_salary: float = Field(ge=0)
@@ -252,7 +253,7 @@ class EmployeeCreate(BaseModel):
     status: Literal["active", "inactive"] = "active"
     notes: str = ""
 
-    @field_validator("full_name", "father_name", "phone", "position", "department", "notes", mode="before")
+    @field_validator("full_name", "father_name", "phone", "position", "department", "company_id", "notes", mode="before")
     @classmethod
     def sanitize_employee_fields(cls, v):
         if isinstance(v, str):
@@ -268,6 +269,7 @@ class EmployeeUpdate(BaseModel):
     phone: Optional[str] = None
     position: Optional[str] = Field(default=None, min_length=1, max_length=180)
     department: Optional[str] = None
+    company_id: Optional[str] = Field(default=None, max_length=100)
     joining_date: Optional[DateType] = None
     employment_end_date: Optional[DateType] = None
     monthly_salary: Optional[float] = Field(default=None, ge=0)
@@ -276,7 +278,7 @@ class EmployeeUpdate(BaseModel):
     status: Optional[Literal["active", "inactive"]] = None
     notes: Optional[str] = None
 
-    @field_validator("full_name", "father_name", "phone", "position", "department", "notes", mode="before")
+    @field_validator("full_name", "father_name", "phone", "position", "department", "company_id", "notes", mode="before")
     @classmethod
     def sanitize_employee_fields(cls, v):
         if isinstance(v, str):
@@ -331,6 +333,7 @@ class EmployeeLedgerEmployeeInfo(BaseModel):
     id: int
     employee_code: str
     full_name: str
+    company_id: str = "all"
     joining_date: Optional[DateType] = None
     employment_end_date: Optional[DateType] = None
     current_salary: float
@@ -650,5 +653,80 @@ class GrandSummaryResponse(BaseModel):
     total_containers: int
     surrendered_bl_count: int
     clients: List[ExportClientResponse]
+
+
+# ---------------------------------------------------------------------------
+# Bawar Star Plastic Industry Schemas
+# ---------------------------------------------------------------------------
+class BawarStarTransactionCreate(BaseModel):
+    partner_company_id: int
+    transaction_date: DateType
+    transaction_type: Literal[
+        "SELL_PRODUCT",
+        "PASS_THROUGH_FREIGHT",
+        "PASS_THROUGH_PKG",
+        "PAYMENT_RECEIVED",
+        "BUY_RAW_MATERIAL",
+        "OPERATIONAL_EXPENSE"
+    ]
+    description_en: str = ""
+    description_ps: str = ""
+    quantity: float = Field(default=0.0, ge=0.0)
+    unit_price: float = Field(default=0.0, ge=0.0)
+    unit_manufacturing_cost: Optional[float] = Field(default=None, ge=0.0)
+    total_amount: Optional[float] = None
+    currency: Literal["AFN", "USD"] = "AFN"
+    exchange_rate: float = Field(default=1.0, ge=0.0)
+
+    @field_validator("description_en", "description_ps", mode="before")
+    @classmethod
+    def sanitize_descriptions(cls, v):
+        if isinstance(v, str):
+            return sanitize_xss(v)
+        return v
+
+
+class BawarStarTransactionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    tenant_id: str
+    partner_company_id: int
+    partner_company_name: Optional[str] = ""
+    transaction_date: DateType
+    transaction_type: str
+    description_en: str
+    description_ps: str
+    quantity: float
+    unit_price: float
+    unit_manufacturing_cost: Optional[float] = None
+    total_amount: float
+    currency: str
+    exchange_rate: float
+    billed_amount: float = 0.0
+    paid_amount: float = 0.0
+    running_balance: float = 0.0
+    created_at: datetime
+    updated_at: datetime
+
+
+class BawarStarRevenueSplit(BaseModel):
+    product_revenue: float = 0.0
+    freight_billed: float = 0.0
+    packaging_billed: float = 0.0
+    total_pass_through: float = 0.0
+
+
+class BawarStarLedgerSummary(BaseModel):
+    partner_company_id: int
+    partner_company_name: str = ""
+    total_billed_amount: float = 0.0
+    total_payments_received: float = 0.0
+    net_outstanding_balance: float = 0.0
+    revenue_split: BawarStarRevenueSplit
+    estimated_gross_profit: float = 0.0
+    profit_margin_percentage: float = 0.0
+    total_transactions: int = 0
+
 
 

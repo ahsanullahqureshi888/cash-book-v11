@@ -298,7 +298,7 @@ export default function SkyArianaExportLedger({ account }) {
     : ACCOUNT_DATA.logo;
 
   return (
-    <div className="sky-ariana-export-page h-[calc(100vh-68px)] flex flex-col gap-2 p-3 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans overflow-hidden print:fixed print:top-0 print:left-0 print:right-0 print:bottom-0 print:inset-0 print:z-[99999] print:bg-white print:w-screen print:h-auto print:p-6 print:m-0 print:block">
+    <div className="sky-ariana-export-page h-full flex flex-col gap-2 p-2 sm:p-3 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans overflow-hidden print:fixed print:top-0 print:left-0 print:right-0 print:bottom-0 print:inset-0 print:z-[99999] print:bg-white print:w-screen print:h-auto print:p-6 print:m-0 print:block">
       
       {/* PRINT-ONLY CORPORATE EXECUTIVE LETTERHEAD HEADER */}
       <div className="hidden print:flex flex-col gap-3 mb-4 pb-3 border-b-2 border-slate-900 text-slate-900">
@@ -510,20 +510,20 @@ export default function SkyArianaExportLedger({ account }) {
 
       {/* 3. ONE-SCREEN FIT EXPORT TABLE WITH STICKY HEADER */}
       <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-auto relative print:border-none print:shadow-none print:overflow-visible print:w-full print:block print:p-0 print:m-0">
-        <table className="w-full text-left text-xs border-collapse print:w-full print:table-fixed print:border-collapse print:text-xs print:m-0">
+        <table className="w-full text-left text-xs border-collapse min-w-[1050px] print:w-full print:border-collapse print:text-xs print:m-0">
           <thead className="print:table-header-group">
             <tr className="sticky top-0 z-20 bg-slate-900 dark:bg-slate-950 text-slate-200 uppercase font-bold tracking-wider text-[10px] border-b border-slate-800 print:bg-white print:text-slate-500 print:border-b-2 print:border-slate-800">
-              <th className="py-2.5 px-1.5 text-center w-8">S.N</th>
-              <th className="py-2.5 px-2 min-w-[75px]">Date (تاریخ)</th>
-              <th className="py-2.5 px-2 min-w-[110px]">Shipper (ارسال کننده)</th>
-              <th className="py-2.5 px-2 min-w-[110px]">Consignee (گیرنده)</th>
-              <th className="py-2.5 px-2 min-w-[150px]">Commodity & Invoice</th>
-              <th className="py-2.5 px-2 min-w-[170px]">B/L & Container No.</th>
-              <th className="py-2.5 px-1.5 text-center w-9">Qty</th>
-              <th className="py-2.5 px-2 text-right text-amber-400 print:text-slate-900 min-w-[80px]">Credit ($)</th>
-              <th className="py-2.5 px-2 text-right text-emerald-400 print:text-rose-600 min-w-[80px]">Debit ($)</th>
-              <th className="py-2.5 px-2 text-right print:text-slate-900 min-w-[85px]">Balance ($)</th>
-              <th className="py-2.5 px-1.5 text-center w-16 no-print">Actions</th>
+              <th className="py-2.5 px-2 text-center w-12">S.N</th>
+              <th className="py-2.5 px-2 w-24">DATE (تاریخ)</th>
+              <th className="py-2.5 px-2.5 min-w-[120px]">SHIPPER (ارسال کننده)</th>
+              <th className="py-2.5 px-2.5 min-w-[120px]">CONSIGNEE (گیرنده)</th>
+              <th className="py-2.5 px-2.5 min-w-[180px]">COMMODITY & INVOICE</th>
+              <th className="py-2.5 px-2.5 min-w-[180px]">B/L & CONTAINER NO.</th>
+              <th className="py-2.5 px-2 text-center w-14">QTY</th>
+              <th className="py-2.5 px-2.5 text-right text-amber-400 print:text-slate-900 w-28">CREDIT ($)</th>
+              <th className="py-2.5 px-2.5 text-right text-emerald-400 print:text-rose-600 w-28">DEBIT ($)</th>
+              <th className="py-2.5 px-2.5 text-right print:text-slate-900 w-32">BALANCE ($)</th>
+              <th className="py-2.5 px-2 text-center w-20 no-print">ACTIONS</th>
             </tr>
           </thead>
 
@@ -545,28 +545,28 @@ export default function SkyArianaExportLedger({ account }) {
                     }`}
                   >
                     {/* S.N */}
-                    <td className="py-2 px-2 text-center text-slate-400 font-bold font-mono">
+                    <td className="py-2 px-1 text-center text-slate-400 font-bold font-mono">
                       {tx.sn}
                     </td>
 
                     {/* Date */}
-                    <td className="py-2 px-2 font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                    <td className="py-2 px-1.5 font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap text-[10.5px]">
                       {tx.date}
                     </td>
 
                     {/* Shipper */}
-                    <td className="py-2 px-2 font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[140px]" title={tx.shipper}>
+                    <td className="py-2 px-1.5 font-semibold text-slate-900 dark:text-slate-100 truncate" title={tx.shipper}>
                       {tx.shipper || 'N/A'}
                     </td>
 
                     {/* Consignee */}
-                    <td className="py-2 px-2 text-slate-700 dark:text-slate-300 truncate max-w-[140px]" title={tx.consignee}>
+                    <td className="py-2 px-1.5 text-slate-700 dark:text-slate-300 truncate" title={tx.consignee}>
                       {tx.consignee || 'N/A'}
                     </td>
 
                     {/* Commodity & Invoice */}
-                    <td className="py-2 px-2">
-                      <div className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px]" title={tx.commodityInvoice}>
+                    <td className="py-2 px-1.5">
+                      <div className="font-bold text-slate-900 dark:text-slate-100 truncate" title={tx.commodityInvoice}>
                         {tx.commodityInvoice}
                       </div>
                       {tx.notes && (
@@ -577,7 +577,7 @@ export default function SkyArianaExportLedger({ account }) {
                     </td>
 
                     {/* B/L & Container + SURRENDERED BADGE */}
-                    <td className="py-2 px-2">
+                    <td className="py-2 px-1.5">
                       <div className="font-mono text-slate-700 dark:text-slate-300 text-[11px] truncate" title={tx.blContainer}>
                         {tx.blContainer || '-'}
                       </div>
@@ -590,7 +590,7 @@ export default function SkyArianaExportLedger({ account }) {
                     </td>
 
                     {/* Qty */}
-                    <td className="py-2 px-2 text-center font-bold">
+                    <td className="py-2 px-1 text-center font-bold">
                       {tx.quantity > 0 ? (
                         <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-300 font-mono text-[10px] tabular-nums">
                           {tx.quantity}
@@ -599,24 +599,24 @@ export default function SkyArianaExportLedger({ account }) {
                     </td>
 
                     {/* Credit (USD) */}
-                    <td className="py-2 px-2 text-right font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                    <td className="py-2 px-1.5 text-right font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
                       {tx.creditUSD > 0 ? formatUSD(tx.creditUSD) : '-'}
                     </td>
 
                     {/* Debit (USD) */}
-                    <td className="py-2 px-2 text-right font-mono tabular-nums font-semibold text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                    <td className="py-2 px-1.5 text-right font-mono tabular-nums font-semibold text-rose-600 dark:text-rose-400 whitespace-nowrap">
                       {tx.debitUSD > 0 ? formatUSD(tx.debitUSD) : '-'}
                     </td>
 
                     {/* Running Balance (USD) */}
-                    <td className={`py-2 px-2 text-right font-mono tabular-nums font-black text-xs whitespace-nowrap ${
+                    <td className={`py-2 px-1.5 text-right font-mono tabular-nums font-black text-xs whitespace-nowrap ${
                       tx.balanceUSD <= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'
                     }`}>
                       {formatUSD(tx.balanceUSD)}
                     </td>
 
                     {/* Actions Column (Edit / Delete) */}
-                    <td className="py-2 px-2 text-center whitespace-nowrap no-print">
+                    <td className="py-2 px-1 text-center whitespace-nowrap no-print">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           type="button"
@@ -645,24 +645,24 @@ export default function SkyArianaExportLedger({ account }) {
           {/* Sticky Table Footer Summary */}
           <tfoot className="sticky bottom-0 z-20 bg-slate-900 text-slate-100 font-bold border-t-2 border-slate-700 text-xs">
             <tr>
-              <td colSpan={6} className="py-2 px-2 text-right uppercase text-[10px] tracking-wider text-slate-300">
+              <td colSpan={6} className="py-2 px-1.5 text-right uppercase text-[10px] tracking-wider text-slate-300">
                 Totals ({filteredTransactions.length} items):
               </td>
-              <td className="py-2 px-2 text-center font-mono text-blue-400">
+              <td className="py-2 px-1 text-center font-mono text-blue-400">
                 {totals.totalContainers}
               </td>
-              <td className="py-2 px-2 text-right font-mono text-amber-400">
+              <td className="py-2 px-1.5 text-right font-mono text-amber-400">
                 {formatUSD(totals.totalCredit)}
               </td>
-              <td className="py-2 px-2 text-right font-mono text-emerald-400">
+              <td className="py-2 px-1.5 text-right font-mono text-emerald-400">
                 {formatUSD(totals.totalDebit)}
               </td>
-              <td className={`py-2 px-2 text-right font-mono ${
+              <td className={`py-2 px-1.5 text-right font-mono ${
                 totals.netBalance <= 0 ? 'text-emerald-400' : 'text-rose-400'
               }`}>
                 {formatUSD(totals.netBalance)}
               </td>
-              <td className="py-2 px-2 text-center no-print">-</td>
+              <td className="py-2 px-1 text-center no-print">-</td>
             </tr>
           </tfoot>
 
@@ -670,26 +670,26 @@ export default function SkyArianaExportLedger({ account }) {
       </div>
 
       {/* PRINT-ONLY EXECUTIVE SIGNATURE & STAMP FOOTER */}
-      <div className="hidden print:flex flex-col gap-3 mt-4 pt-3 border-t-2 border-slate-900 text-xs font-sans">
-        <div className="grid grid-cols-3 gap-6 text-center">
+      <div className="hidden print:flex flex-col gap-2 mt-2 pt-2 border-t border-slate-900 text-xs font-sans break-inside-avoid page-break-inside-avoid">
+        <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <div className="h-10 border-b border-slate-400"></div>
-            <span className="text-[10px] font-bold uppercase text-slate-800 block mt-1">Prepared By (ترتيب کننده)</span>
-            <span className="text-[9px] text-slate-500">Logistics & Accounting Dept</span>
+            <div className="h-7 border-b border-slate-400"></div>
+            <span className="text-[9.5px] font-bold uppercase text-slate-800 block mt-0.5">Prepared By (ترتيب کننده)</span>
+            <span className="text-[8.5px] text-slate-500">Logistics & Accounting Dept</span>
           </div>
           <div>
-            <div className="h-10 border-b border-slate-400"></div>
-            <span className="text-[10px] font-bold uppercase text-slate-800 block mt-1">Approved Manager (منظوری اداره)</span>
-            <span className="text-[9px] text-slate-500">SKY ARIANA LTD Authority</span>
+            <div className="h-7 border-b border-slate-400"></div>
+            <span className="text-[9.5px] font-bold uppercase text-slate-800 block mt-0.5">Approved Manager (منظوری اداره)</span>
+            <span className="text-[8.5px] text-slate-500">SKY ARIANA LTD Authority</span>
           </div>
           <div>
-            <div className="h-10 border-b border-slate-400"></div>
-            <span className="text-[10px] font-bold uppercase text-slate-800 block mt-1">Client Confirmation (تائیدی مشتری)</span>
-            <span className="text-[9px] text-slate-500">{ACCOUNT_PROFILE.accountName}</span>
+            <div className="h-7 border-b border-slate-400"></div>
+            <span className="text-[9.5px] font-bold uppercase text-slate-800 block mt-0.5">Client Confirmation (تائیدی مشتری)</span>
+            <span className="text-[8.5px] text-slate-500">{ACCOUNT_PROFILE.accountName}</span>
           </div>
         </div>
 
-        <div className="text-center text-[8.5px] text-slate-500 font-sans border-t border-slate-200 pt-1.5">
+        <div className="text-center text-[8px] text-slate-500 font-sans border-t border-slate-200 pt-1">
           <p>Official Statement of Account issued by SKY ARIANA LTD. All freight charges, container surrendered B/Ls, and Hawala payments recorded herein are verified against shipping manifests.</p>
         </div>
       </div>

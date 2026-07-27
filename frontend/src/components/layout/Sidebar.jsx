@@ -26,9 +26,12 @@ import {
   Check,
   PlusCircle,
   Database,
-  Ship
+  Ship,
+  Factory,
+  Printer
 } from 'lucide-react';
 import { useCompany } from '../../context/CompanyContext';
+import AddCompanyModal from '../AddCompanyModal';
 import SkyArianaLogo from '../SkyArianaLogo';
 
 function getUserInitials(user) {
@@ -107,6 +110,7 @@ export default function Sidebar({
   const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
   const [branchOpen, setBranchOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [addCompanyModalOpen, setAddCompanyModalOpen] = useState(false);
 
   // Refs & Positions for Portal Menus
   const companySwitcherRef = useRef(null);
@@ -250,7 +254,10 @@ export default function Sidebar({
         { id: 'dashboard', label: t('Dashboard'), icon: LayoutDashboard, path: '/' },
         { id: 'cashbook', label: t('Cash Book'), icon: BookOpen, path: '/cashbook' },
         { id: 'ledger', label: t('Account Ledger'), icon: ScrollText, path: '/ledger' },
+        { id: 'bawar-star', label: t('Bawar Star Ledger'), icon: Factory, path: '/bawar-star' },
+        { id: 'plastic-erp', label: 'PlastiCorp ERP', icon: Factory, path: '/plastic-erp' },
         { id: 'exports', label: t('Export Accounts'), icon: Ship, path: '/exports', companyOnly: 'sky-ariana' },
+
         { id: 'accounts', label: t('Accounts'), icon: WalletCards, roles: ['Super Administrator', 'Administrator', 'Manager'], path: '/accounts' },
         { id: 'salary', label: t('Employees & Salary'), icon: UsersRound, roles: ['Super Administrator', 'Administrator'], path: '/salary' }
       ]
@@ -590,6 +597,7 @@ export default function Sidebar({
               className="w-full flex items-center justify-center gap-2 p-2.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-xl transition-all border border-dashed border-blue-300 dark:border-blue-800/60"
               onClick={() => {
                 setCompanyDropdownOpen(false);
+                setAddCompanyModalOpen(true);
                 if (onAddCompanyClick) onAddCompanyClick();
               }}
             >
@@ -618,33 +626,37 @@ export default function Sidebar({
               {currentUser?.role || 'Viewer'}
             </small>
           </div>
-          <NavLink 
-            to="/settings" 
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" 
+          
+          <button 
+            type="button"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left" 
             role="menuitem"
-            onClick={() => setUserMenuOpen(false)}
+            onClick={() => { setUserMenuOpen(false); if (onPrint) onPrint(); }}
           >
-            <User size={15} />
-            <span>{t('Profile')}</span>
-          </NavLink>
-          <NavLink 
-            to="/settings" 
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" 
+            <Printer size={15} />
+            <span>{t('Print Statement')}</span>
+          </button>
+          
+          <button 
+            type="button"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left" 
             role="menuitem"
-            onClick={() => setUserMenuOpen(false)}
+            onClick={() => { setUserMenuOpen(false); if (onBackup) onBackup(); }}
           >
-            <Sliders size={15} />
-            <span>{t('Account settings')}</span>
-          </NavLink>
-          <NavLink 
-            to="/settings" 
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" 
+            <Database size={15} />
+            <span>{t('Backup Database')}</span>
+          </button>
+          
+          <button 
+            type="button"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left" 
             role="menuitem"
-            onClick={() => setUserMenuOpen(false)}
+            onClick={() => { setUserMenuOpen(false); if (onRestore) onRestore(); }}
           >
-            <KeyRound size={15} />
-            <span>{t('Change password')}</span>
-          </NavLink>
+            <DatabaseBackup size={15} />
+            <span>{t('Restore Backup')}</span>
+          </button>
+          
           <div className="border-t border-slate-100 dark:border-slate-800 my-1" />
           <button 
             type="button"
@@ -658,6 +670,12 @@ export default function Sidebar({
         </div>,
         document.body
       )}
+
+      {/* 7. ADD NEW COMPANY MODAL */}
+      <AddCompanyModal 
+        isOpen={addCompanyModalOpen} 
+        onClose={() => setAddCompanyModalOpen(false)} 
+      />
     </>
   );
 }

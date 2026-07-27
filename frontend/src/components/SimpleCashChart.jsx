@@ -50,9 +50,9 @@ export default function SimpleCashChart({ transactions }) {
   }
 
   return (
-    <div className="w-full h-80 mt-4 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/20 border border-zinc-100 dark:border-zinc-800">
-      <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
-        Monthly Cash Flow Trends (AFN)
+    <div className="w-full h-80 mt-4 p-4 rounded-2xl bg-slate-100/60 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-md shadow-inner transition-all">
+      <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
+        <span>Monthly Cash Flow Trends (AFN)</span>
       </h4>
       <ResponsiveContainer width="100%" height="88%">
         <AreaChart

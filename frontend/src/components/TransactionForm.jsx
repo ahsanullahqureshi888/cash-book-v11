@@ -149,9 +149,9 @@ function TransactionForm({
 
         {type === 'cash_out' && form.employee_id && (
           <>
-            <div className="employee-info-preview bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800/80">
-              <header className="employee-info-header flex items-center gap-3 pb-3 mb-3 border-b border-zinc-100 dark:border-zinc-800">
-                <span className="employee-info-avatar flex items-center justify-center w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300" aria-hidden="true">
+            <div className="employee-info-preview bg-slate-100/60 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-md">
+              <header className="employee-info-header flex items-center gap-3 pb-3 mb-3 border-b border-slate-200/60 dark:border-slate-800/60">
+                <span className="employee-info-avatar flex items-center justify-center w-9 h-9 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300" aria-hidden="true">
                   <UserRound size={20} />
                 </span>
                 <div className="employee-info-copy flex flex-col">

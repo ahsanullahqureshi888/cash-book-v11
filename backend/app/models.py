@@ -344,3 +344,50 @@ class TransportLedger(Base):
         self.debit = float(value or 0.0)
 
 
+# ---------------------------------------------------------------------------
+# Bawar Star Plastic Industry Manufacturing Ledger & Profitability Models
+# ---------------------------------------------------------------------------
+class BawarStarTransaction(Base):
+    __tablename__ = "bawar_star_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(100), default="bawar-star", nullable=False, index=True)
+    partner_company_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    transaction_date = Column(Date, nullable=False, index=True)
+    transaction_type = Column(String(50), nullable=False, index=True)  # SELL_PRODUCT, PASS_THROUGH_FREIGHT, PASS_THROUGH_PKG, PAYMENT_RECEIVED, BUY_RAW_MATERIAL, OPERATIONAL_EXPENSE
+    description_en = Column(Text, default="", nullable=False)
+    description_ps = Column(Text, default="", nullable=False)
+    quantity = Column(Float, default=0.0, nullable=False)
+    unit_price = Column(Float, default=0.0, nullable=False)
+    unit_manufacturing_cost = Column(Float, nullable=True)
+    total_amount = Column(Float, default=0.0, nullable=False)
+    currency = Column(String(10), default="AFN", nullable=False)
+    exchange_rate = Column(Float, default=1.0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    partner_company = relationship("Account")
+
+
+# ---------------------------------------------------------------------------
+# PlastiCorp Enterprise Manufacturing ERP Models Import
+# ---------------------------------------------------------------------------
+from .models_plastic import (
+    PlasticCompany,
+    PlasticBranch,
+    PlasticRawMaterial,
+    PlasticFinishedGood,
+    PlasticMachine,
+    PlasticBOM,
+    PlasticBOMItem,
+    PlasticProductionRun,
+    PlasticScrapLog,
+    PlasticCashbookLedger,
+    PlasticPurchaseOrder,
+    PlasticTelemetryPing,
+    PlasticAuditLog
+)
+
+
+
+

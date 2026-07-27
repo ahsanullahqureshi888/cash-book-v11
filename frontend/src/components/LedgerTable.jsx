@@ -3,6 +3,19 @@ import { currency } from '../utils/format';
 import DateDisplay from './DateDisplay';
 import DataTable from './DataTable';
 
+function unescapeText(str) {
+  if (!str || typeof str !== 'string') return String(str ?? '');
+  let text = str;
+  while (text.includes('&amp;')) {
+    text = text.replace(/&amp;/g, '&');
+  }
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'");
+}
+
 const LEDGER_PAGE_SIZE = 50;
 
 export default function LedgerTable({ rows, dateDisplayFormat, onReceipt }) {
@@ -31,8 +44,8 @@ export default function LedgerTable({ rows, dateDisplayFormat, onReceipt }) {
           <span title={row.transaction_no} className="text-[10px] font-bold font-mono text-indigo-600 dark:text-indigo-400 tracking-tight whitespace-nowrap truncate block">
             {row.transaction_no || '-'}
           </span>
-          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[240px] block" title={row.detail}>
-            {row.detail || '-'}
+          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[240px] block" title={unescapeText(row.detail)}>
+            {unescapeText(row.detail) || '-'}
           </span>
         </div>
       ), 
@@ -44,7 +57,7 @@ export default function LedgerTable({ rows, dateDisplayFormat, onReceipt }) {
     { key: 'usd_in', label: 'USD In', align: 'right', render: (row) => <span className="font-mono text-slate-700 dark:text-slate-300 text-xs whitespace-nowrap tabular-nums">{row.usd_in ? currency(row.usd_in, 'USD') : '-'}</span>, className: 'col-usd-in text-right whitespace-nowrap w-[8%] min-w-[100px] px-3' },
     { key: 'usd_out', label: 'USD Out', align: 'right', render: (row) => <span className="font-mono text-slate-700 dark:text-slate-300 text-xs whitespace-nowrap tabular-nums">{row.usd_out ? currency(row.usd_out, 'USD') : '-'}</span>, className: 'col-usd-out text-right whitespace-nowrap w-[8%] min-w-[100px] px-3' },
     { key: 'exchange_rate', label: 'Rate', align: 'right', render: (row) => <span className="text-xs font-mono text-slate-500 whitespace-nowrap">{row.exchange_rate || '-'}</span>, className: 'col-rate text-right whitespace-nowrap w-[5%] min-w-[65px] px-2' },
-    { key: 'note', label: 'Note', align: 'left', render: (row) => <span className="text-xs text-slate-500 truncate max-w-[110px] block" title={row.note}>{row.note || '-'}</span>, className: 'col-note w-[9%] min-w-[110px] px-3' },
+    { key: 'note', label: 'Note', align: 'left', render: (row) => <span className="text-xs text-slate-500 truncate max-w-[110px] block" title={unescapeText(row.note)}>{unescapeText(row.note) || '-'}</span>, className: 'col-note w-[9%] min-w-[110px] px-3' },
     { 
       key: 'actions', 
       label: 'Actions', 

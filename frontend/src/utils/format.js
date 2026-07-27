@@ -57,5 +57,8 @@ export const resolveAvatarUrl = (url) => {
     return url;
   }
   const cleanPath = url.startsWith('/') ? url : `/${url}`;
-  return `http://localhost:8000${cleanPath}`;
+  if (cleanPath.startsWith('/uploads/')) {
+    return `http://localhost:8000${cleanPath}`;
+  }
+  return `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}${cleanPath}`;
 };

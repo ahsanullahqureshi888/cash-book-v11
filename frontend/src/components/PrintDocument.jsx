@@ -69,10 +69,10 @@ function SummaryCards({ report }) {
   return (
     <section className={`print-summary-grid print-summary-${cards.length}`}>
       {cards.map(([label, value, detail, tone]) => (
-        <div key={label} className={tone ? `print-metric-${tone}` : undefined}>
-          <span>{label}</span>
-          <strong>{value}</strong>
-          {detail ? <small>{detail}</small> : null}
+        <div key={label} className={`print-metric-card ${tone ? `print-metric-${tone}` : ''}`}>
+          <span className="print-metric-label block text-[9.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">{label}</span>
+          <strong className="print-metric-value block text-[15px] font-black font-mono tracking-tight text-slate-900">{value}</strong>
+          {detail ? <small className="print-metric-detail block text-[8.5px] text-slate-500 font-semibold mt-0.5">{detail}</small> : null}
         </div>
       ))}
     </section>
@@ -113,30 +113,27 @@ function CashBookTable({ rows, dateDisplayFormat }) {
     <table className="print-data-table print-table-cashbook">
       <thead>
         <tr>
-          <th className="col-index">{t('print.sNo')}</th>
-          <th className="col-date">{t('print.date')}</th>
-          <th className="col-account">{t('print.accountPersonCompany')}</th>
-          <th className="col-detail">{t('print.detail')}</th>
-          <th className="col-amount col-afn-in">{t('print.cashInAfn')}</th>
-          <th className="col-amount col-afn-out">{t('print.cashOutAfn')}</th>
-          <th className="col-amount col-balance">{t('print.balance')}</th>
-          <th className="col-type">{t('print.type')}</th>
+          <th className="col-index text-center" style={{ width: '4.5%' }}>{t('print.sNo')}</th>
+          <th className="col-date text-center" style={{ width: '14%' }}>{t('print.date')}</th>
+          <th className="col-account text-left" style={{ width: '21%' }}>{t('print.accountPersonCompany')}</th>
+          <th className="col-detail text-left" style={{ width: '25%' }}>{t('print.detail')}</th>
+          <th className="col-amount col-afn-in text-right" style={{ width: '11.5%' }}>{t('print.cashInAfn')}</th>
+          <th className="col-amount col-afn-out text-right" style={{ width: '11.5%' }}>{t('print.cashOutAfn')}</th>
+          <th className="col-amount col-balance text-right" style={{ width: '12.5%' }}>{t('print.balance')}</th>
+          <th className="col-type text-center" style={{ width: '0%', display: 'none' }}>{t('print.type')}</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row, index) => (
           <tr key={row.id || index} className={row.isOpeningBalance ? 'opening-balance-row' : undefined}>
-            <td className="col-index">{row.isOpeningBalance ? 'BF' : index + 1}</td>
-            <td className="col-date"><DateDisplay value={row.date} format={dateDisplayFormat} /></td>
-            <td className="col-account" dir="auto"><strong>{row.account_name}</strong></td>
-            <td className="col-detail" dir="auto">{row.detail}</td>
-            <td className="print-money col-amount col-afn-in income-amount">{amount(row.cash_in_afn)}</td>
-            <td className="print-money col-amount col-afn-out expense-amount">{amount(row.cash_out_afn)}</td>
-            <td className="print-money col-amount col-balance"><strong>{currency(row.runningBalance !== undefined ? row.runningBalance : row.balance)}</strong></td>
-            <td className="col-type">
-              <span className={`print-type-badge ${row.isOpeningBalance ? 'badge-bf' : row.transaction_type === 'cash_in' ? 'badge-in' : 'badge-out'}`}>
-                {row.isOpeningBalance ? 'BF' : row.transaction_type === 'cash_in' ? 'CASH IN' : 'CASH OUT'}
-              </span>
+            <td className="col-index text-center font-bold text-[9.5px]">{row.isOpeningBalance ? 'BF' : index + 1}</td>
+            <td className="col-date text-center"><DateDisplay value={row.date} format={dateDisplayFormat} /></td>
+            <td className="col-account text-left text-[10px]" dir="auto"><strong className="font-extrabold text-slate-900">{row.account_name}</strong></td>
+            <td className="col-detail text-left text-[9.5px]" dir="auto">{row.detail}</td>
+            <td className="print-money col-amount col-afn-in income-amount text-right font-mono font-bold text-[10px] text-emerald-700">{amount(row.cash_in_afn)}</td>
+            <td className="print-money col-amount col-afn-out expense-amount text-right font-mono font-bold text-[10px] text-rose-700">{amount(row.cash_out_afn)}</td>
+            <td className="print-money col-amount col-balance text-right font-mono font-bold text-[10px] whitespace-nowrap">
+              <strong className="text-slate-900">{currency(row.runningBalance !== undefined ? row.runningBalance : row.balance)}</strong>
             </td>
           </tr>
         ))}

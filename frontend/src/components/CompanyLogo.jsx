@@ -1,4 +1,5 @@
 import { memo, useState } from 'react';
+import { resolveAvatarUrl } from '../utils/format';
 
 function CompanyLogo({ logo, name, size = 'md', className = '' }) {
   const [hasError, setHasError] = useState(false);
@@ -11,11 +12,13 @@ function CompanyLogo({ logo, name, size = 'md', className = '' }) {
     xl: 'max-h-16 max-w-[180px]'
   };
 
+  const logoSrc = resolveAvatarUrl(logo);
+
   return (
     <div className={`company-logo company-logo-${size} inline-flex items-center justify-center ${className}`}>
-      {logo && !hasError ? (
+      {logoSrc && !hasError ? (
         <img 
-          src={logo} 
+          src={logoSrc} 
           alt={`${name || 'Company'} logo`} 
           decoding="async"
           className={`${sizeStyles[size] || sizeStyles.md} object-contain rounded-md shrink-0`}

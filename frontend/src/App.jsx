@@ -23,6 +23,7 @@ import { transactionSchema } from './utils/validation';
 import { useCompany } from './context/CompanyContext';
 
 const AccountLedger = lazy(() => import('./pages/AccountLedger'));
+const BawarStarLedger = lazy(() => import('./pages/BawarStarLedger'));
 const Accounts = lazy(() => import('./pages/Accounts'));
 const Reports = lazy(() => import('./pages/Reports'));
 const BackupRestore = lazy(() => import('./pages/BackupRestore'));
@@ -30,7 +31,9 @@ const CurrencyConverter = lazy(() => import('./pages/CurrencyConverter'));
 const Settings = lazy(() => import('./pages/Settings'));
 const EmployeesSalary = lazy(() => import('./pages/EmployeesSalary'));
 const EmployeeLedgerPage = lazy(() => import('./pages/EmployeeLedgerPage'));
+const PlasticErpDashboard = lazy(() => import('./pages/PlasticErpDashboard'));
 const GlassPrintPreview = lazy(() => import('./components/GlassPrintPreview'));
+
 
 const appTranslations = {
   English: {
@@ -115,6 +118,7 @@ export default function App() {
     if (path === '/cashbook') return 'Cash Book';
     if (path === '/salary') return 'Employees & Salary';
     if (path === '/ledger') return 'Ledger';
+    if (path === '/bawar-star') return 'Bawar Star Ledger';
     if (path === '/accounts') return 'Accounts';
     if (path === '/reports') return 'Reports';
     if (path === '/settings') return 'Settings';
@@ -213,7 +217,12 @@ export default function App() {
   const printContextRef = useRef(null);
 
   useEffect(() => {
-    document.body.classList.toggle('light', theme === 'light');
+    const isDark = theme === 'dark';
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.classList.toggle('light', !isDark);
+    document.documentElement.setAttribute('data-theme', theme);
+    document.body.classList.toggle('dark', isDark);
+    document.body.classList.toggle('light', !isDark);
     localStorage.setItem('cashbook-theme', theme);
   }, [theme]);
 
@@ -1748,6 +1757,9 @@ export default function App() {
                     onExport={onExportLedger}
                   />
                 } />
+                <Route path="/bawar-star" element={
+                  <BawarStarLedger />
+                } />
                 <Route path="/accounts" element={
                   <Accounts
                     accounts={accounts}
@@ -1911,8 +1923,10 @@ export default function App() {
                     ? <MultiAccountDashboard />
                     : <Navigate to="/" replace />
                 } />
+                <Route path="/plastic-erp" element={<PlasticErpDashboard />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+
             </>
           </Suspense>
         </AppShell>

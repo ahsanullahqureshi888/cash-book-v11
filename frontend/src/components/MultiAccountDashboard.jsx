@@ -84,53 +84,62 @@ export default function MultiAccountDashboard() {
 
   return (
     <div 
-      className="multi-account-dashboard flex flex-col md:flex-row h-[calc(100vh-64px)] bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden"
-      style={{ zoom: 0.90 }}
+      className="multi-account-dashboard -m-5 md:-m-6 h-[calc(100vh-64px)] w-[calc(100%+40px)] md:w-[calc(100%+48px)] flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans no-print"
     >
-      
-      {/* 1. LEFT SIDEBAR: CLIENT ACCOUNTS LIST */}
-      <aside className="w-full md:w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 no-print">
-        
-        {/* Sidebar Header & Search */}
-        <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-2 bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-xs">
-                <FileSpreadsheet size={16} />
-              </div>
-              <div>
-                <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100 leading-tight">
-                  Export Clients
-                </h2>
-                <p className="text-[10px] text-slate-500 font-semibold">
-                  {accounts.length} Master Ledgers
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsAddClientOpen(true)}
-              className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors shadow-xs"
-              title="Add New Export Client"
-            >
-              <Plus size={14} />
-              <span>Add Client</span>
-            </button>
+      {/* TOP CORPORATE HEADER BAR (MATCHING SCREENSHOT AESTHETIC) */}
+      <div className="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400">
+            <FileSpreadsheet size={20} />
           </div>
-
-          {/* Client Search Bar */}
-          <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search export client..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500"
-            />
+          <div>
+            <h1 className="text-base font-black text-white tracking-tight uppercase flex items-center gap-2">
+              <span>BOL Account Ledger</span>
+            </h1>
+            <p className="text-xs text-slate-400 font-medium">
+              Manage company accounts, track ledger rows, and review BOL financial summaries.
+            </p>
           </div>
         </div>
+
+        {/* Quick Add Company Inline Bar */}
+        <form onSubmit={handleAddClientSubmit} className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Add company name..."
+            value={newClientForm.clientName}
+            onChange={(e) => setNewClientForm(prev => ({ ...prev, clientName: e.target.value }))}
+            className="px-3 py-1.5 text-xs rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 w-48 sm:w-64"
+          />
+          <button
+            type="submit"
+            className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
+          >
+            <Plus size={14} />
+            <span>Add Company</span>
+          </button>
+        </form>
+      </div>
+
+      {/* TWO-COLUMN FULL HEIGHT WORKSPACE */}
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
+        
+        {/* 1. LEFT SIDEBAR: CLIENT ACCOUNTS LIST */}
+        <aside className="w-full md:w-64 xl:w-72 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
+          
+          {/* Sidebar Search Bar */}
+          <div className="p-2.5 border-b border-slate-800 bg-slate-900/80">
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search company..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
 
         {/* Scrollable Account Cards List */}
         <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1.5">
@@ -318,7 +327,7 @@ export default function MultiAccountDashboard() {
           </div>
         </div>
       )}
-
+      </div>
     </div>
   );
 }

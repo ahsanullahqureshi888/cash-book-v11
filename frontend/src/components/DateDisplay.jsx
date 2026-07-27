@@ -23,12 +23,20 @@ export default function DateDisplay({ value, format = DATE_DISPLAY_FORMATS.DUAL,
   const showGregorian = format !== DATE_DISPLAY_FORMATS.PERSIAN;
 
   return (
-    <span
+    <div
       className={`dual-date dual-date-${format}${compact ? ' dual-date-compact' : ''}`}
       aria-label={[showPersian && persian, showGregorian && gregorian].filter(Boolean).join(', ')}
     >
-      {showPersian ? <strong className="date-primary" dir="ltr">{persian}</strong> : null}
-      {showGregorian ? <small className={showPersian ? 'date-secondary' : 'date-primary date-gregorian-primary'}>{gregorian}</small> : null}
-    </span>
+      {showPersian && (
+        <div className="date-primary font-mono text-[10.5px] font-bold text-slate-900 leading-tight" dir="ltr">
+          {persian}
+        </div>
+      )}
+      {showGregorian && (
+        <div className={`date-secondary font-mono text-[8.5px] font-semibold leading-tight ${showPersian ? 'text-slate-500 mt-0.5' : 'text-slate-900 font-bold'}`}>
+          {gregorian}
+        </div>
+      )}
+    </div>
   );
 }

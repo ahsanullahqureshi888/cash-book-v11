@@ -6368,7 +6368,7 @@ body:not(.light) .sidebar-collapse-toggle {
 @media print {
   @page {
     size: A4 landscape;
-    margin: 8mm;
+    margin: 4mm 6mm !important;
   }
 
   /* 1. Global Reset */
@@ -6655,6 +6655,50 @@ body:not(.light) .sidebar-collapse-toggle {
   .print-money.expense-amount {
     color: #be123c !important;
     font-weight: 700 !important;
+  }
+
+  /* Dual Date & Balance formatting in print */
+  .col-date {
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: 3px 4px !important;
+  }
+
+  .print-money, .col-amount, .col-balance, .col-balance * {
+    white-space: nowrap !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  }
+
+  .dual-date {
+    display: block !important;
+    text-align: center !important;
+    margin: 0 auto !important;
+    line-height: 1.2 !important;
+    clear: both !important;
+  }
+
+  .dual-date .date-primary {
+    display: block !important;
+    clear: both !important;
+    font-size: 8.5pt !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    white-space: nowrap !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    line-height: 1.15 !important;
+  }
+
+  .dual-date .date-secondary {
+    display: block !important;
+    clear: both !important;
+    font-size: 7.5pt !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    margin-top: 2px !important;
+    white-space: nowrap !important;
+    padding: 0 !important;
+    line-height: 1.15 !important;
   }
 
   /* 3-Column Signature Block */

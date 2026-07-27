@@ -139,6 +139,7 @@ def create_employee(db: Session, payload: schemas.EmployeeCreate) -> models.Empl
         phone=_text(payload.phone),
         position=_text(payload.position),
         department=_text(payload.department),
+        company_id=_text(payload.company_id) or "all",
         joining_date=payload.joining_date,
         employment_end_date=payload.employment_end_date,
         monthly_salary=_money(payload.monthly_salary),
@@ -163,7 +164,7 @@ def get_employee(db: Session, employee_id: int) -> models.Employee | None:
 
 def update_employee(db: Session, employee: models.Employee, payload: schemas.EmployeeUpdate) -> models.Employee:
     data = payload.model_dump(exclude_unset=True)
-    text_fields = ["full_name", "father_name", "phone", "position", "department", "avatar_url", "status", "notes"]
+    text_fields = ["full_name", "father_name", "phone", "position", "department", "company_id", "avatar_url", "status", "notes"]
     for field in text_fields:
         if field in data and data[field] is not None:
             setattr(employee, field, _text(data[field]))
@@ -318,6 +319,7 @@ def _salary_rows_for_month(db: Session, month: int, year: int) -> tuple[list[dic
             "employee_id": employee.id,
             "employee_code": employee.employee_code,
             "employee_name": employee.full_name,
+            "company_id": employee.company_id or "all",
             "department": employee.department or "",
             "position": employee.position or "",
             "joining_date": employee.joining_date.isoformat() if employee.joining_date else None,

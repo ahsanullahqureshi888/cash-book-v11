@@ -435,3 +435,72 @@ body.light .badge-other { background: #f9fafb !important; color: #4b5563 !import
   font-family: monospace;
 }
 
+/* ==========================================================================
+   ULTRA-PREMIUM OBSIDIAN DARK GLASS POLISH (WOW FACTOR)
+   ========================================================================== */
+html.dark, body.dark, :root.dark, [data-theme="dark"], .app-root.dark {
+  --bg: #090e1a !important;
+  --surface: rgba(15, 23, 42, 0.75) !important;
+  --surface-strong: rgba(30, 41, 59, 0.85) !important;
+  --text: #f8fafc !important;
+  --text-soft: #94a3b8 !important;
+  --border: rgba(255, 255, 255, 0.08) !important;
+  --border-muted: rgba(255, 255, 255, 0.05) !important;
+  background-color: #090e1a !important;
+  color: #f8fafc !important;
+}
+
+/* Ensure Sidebar turns sleek dark obsidian in all dark modes */
+html.dark .app-sidebar, body.dark .app-sidebar, :root.dark .app-sidebar, [data-theme="dark"] .app-sidebar, .app-root.dark .app-sidebar {
+  background: linear-gradient(180deg, rgba(9, 14, 28, 0.96), rgba(15, 23, 42, 0.94)) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Ensure TopHeader turns sleek dark in all dark modes */
+html.dark .app-topbar, body.dark .app-topbar, :root.dark .app-topbar, [data-theme="dark"] .app-topbar, .app-root.dark .app-topbar {
+  background: rgba(9, 14, 28, 0.88) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Ensure Cards have rich dark glass look */
+html.dark .glass-card, body.dark .glass-card, :root.dark .glass-card, [data-theme="dark"] .glass-card, .app-root.dark .glass-card {
+  background: rgba(15, 23, 42, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+/* Ensure tables in dark mode have dark headers and sleek row hover */
+html.dark .accounting-table th, body.dark .accounting-table th, :root.dark .accounting-table th, [data-theme="dark"] .accounting-table th, .app-root.dark .accounting-table th {
+  background: rgba(30, 41, 59, 0.6) !important;
+  color: #94a3b8 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+html.dark .accounting-table td, body.dark .accounting-table td, :root.dark .accounting-table td, [data-theme="dark"] .accounting-table td, .app-root.dark .accounting-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  color: #f8fafc !important;
+}
+html.dark .accounting-table tbody tr:hover, body.dark .accounting-table tbody tr:hover, :root.dark .accounting-table tbody tr:hover, [data-theme="dark"] .accounting-table tbody tr:hover, .app-root.dark .accounting-table tbody tr:hover {
+  background: rgba(56, 189, 248, 0.05) !important;
+}
+
+/* Ensure User Profile area in sidebar turns sleek dark */
+html.dark .sidebar-user-card, body.dark .sidebar-user-card, :root.dark .sidebar-user-card, [data-theme="dark"] .sidebar-user-card, .app-root.dark .sidebar-user-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+html.dark .sidebar-user-card:hover, body.dark .sidebar-user-card:hover, :root.dark .sidebar-user-card:hover, [data-theme="dark"] .sidebar-user-card:hover, .app-root.dark .sidebar-user-card:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Fix chart tooltips */
+html.dark .recharts-default-tooltip, body.dark .recharts-default-tooltip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+  border-radius: 10px !important;
+}
+

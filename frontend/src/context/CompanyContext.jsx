@@ -47,21 +47,29 @@ const STORAGE_KEY_BRANCH = 'cashbook_active_branch_name';
 const STORAGE_KEY_CUSTOM_LOGOS = 'cashbook_custom_company_logos';
 
 export function CompanyProvider({ children, onCompanyChange }) {
-  // Load custom logos from localStorage if available
+  // Load companies and custom logos from localStorage if available
   const [companies, setCompanies] = useState(() => {
     try {
+      const storedCompanies = localStorage.getItem('cashbook_user_added_companies');
       const storedLogos = localStorage.getItem(STORAGE_KEY_CUSTOM_LOGOS);
-      if (storedLogos) {
-        const logoMap = JSON.parse(storedLogos);
-        return INITIAL_COMPANIES.map(c => ({
-          ...c,
-          logo: logoMap[c.id] || c.logo
-        }));
+      const logoMap = storedLogos ? JSON.parse(storedLogos) : {};
+
+      let baseList = INITIAL_COMPANIES;
+      if (storedCompanies) {
+        const parsed = JSON.parse(storedCompanies);
+        const initialIds = new Set(INITIAL_COMPANIES.map(c => c.id));
+        const customAdded = parsed.filter(c => !initialIds.has(c.id));
+        baseList = [...INITIAL_COMPANIES, ...customAdded];
       }
+
+      return baseList.map(c => ({
+        ...c,
+        logo: logoMap[c.id] || c.logo
+      }));
     } catch (e) {
       console.warn('Unable to parse saved company logos:', e);
+      return INITIAL_COMPANIES;
     }
-    return INITIAL_COMPANIES;
   });
 
   // Initialize selected company from URL query param or localStorage
@@ -213,23 +221,39 @@ export function CompanyProvider({ children, onCompanyChange }) {
 
   // Add new tenant company dynamically
   const addCompany = useCallback((newCompanyData) => {
+    const companyId = newCompanyData.id || `company-${Date.now()}`;
+    const slug = (newCompanyData.name || 'Company').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const dbName = `cashbook_${slug}_prod`;
+
     const newCompany = {
-      id: newCompanyData.id || `company-${Date.now()}`,
+      id: companyId,
       name: newCompanyData.name || 'New Company Ltd',
       shortName: newCompanyData.shortName || newCompanyData.name || 'NEW CO',
-      code: newCompanyData.code || 'CO',
+      code: newCompanyData.code || newCompanyData.shortName?.slice(0, 4).toUpperCase() || 'CO',
       tagline: newCompanyData.tagline || 'Accounting Profile',
       logo: newCompanyData.logo || '/logo192.png',
-      dbName: newCompanyData.dbName || `cashbook_${Date.now()}_prod`,
-      apiEndpoint: newCompanyData.apiEndpoint || `/api/v1/tenants/${Date.now()}`,
-      branches: newCompanyData.branches?.length ? newCompanyData.branches : ['Main Branch'],
-      defaultBranch: newCompanyData.defaultBranch || newCompanyData.branches?.[0] || 'Main Branch',
-      themeColor: newCompanyData.themeColor || 'indigo',
-      currency: newCompanyData.currency || 'USD',
+      dbName: dbName,
+      apiEndpoint: `/api/v1/tenants/${companyId}`,
+      branches: newCompanyData.branches?.length ? newCompanyData.branches : [newCompanyData.defaultBranch || 'Main Branch'],
+      defaultBranch: newCompanyData.defaultBranch || 'Main Branch',
+      themeColor: newCompanyData.themeColor || 'blue',
+      currency: newCompanyData.currency || 'AFN',
+      badgeBg: 'bg-blue-600',
+      badgeText: 'text-white',
+      accentBorder: 'border-blue-500',
       taxId: newCompanyData.taxId || 'N/A'
     };
 
-    setCompanies(prev => [...prev, newCompany]);
+    setCompanies(prev => {
+      const updated = [...prev, newCompany];
+      try {
+        localStorage.setItem('cashbook_user_added_companies', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Failed to save company to localStorage:', e);
+      }
+      return updated;
+    });
+
     return newCompany;
   }, []);
 
