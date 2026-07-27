@@ -434,6 +434,7 @@ def create_transaction(db: Session, payload: schemas.TransactionCreate) -> model
         date=payload.date,
         account_id=account.id,
         employee_id=employee.id if employee else None,
+        company_id=(employee.company_id or "all") if employee else (getattr(payload, "company_id", None) or "bawar-star"),
         salary_month=(payload.salary_month or payload.date).replace(day=1) if employee else None,
         payroll_kind=(payload.payroll_kind or "salary") if employee else None,
         account_name=account.name,

@@ -44,9 +44,55 @@ function firstDayOfMonth() {
   return date.toISOString().slice(0, 10);
 }
 
+function getTransactionEmployeeCompany(tx, employeesList) {
+  if (!tx) return null;
+
+  // 1. Match by explicit employee_id
+  let emp = null;
+  if (tx.employee_id) {
+    emp = (employeesList || []).find((e) => Number(e.id) === Number(tx.employee_id) || String(e.id) === String(tx.employee_id));
+  }
+  
+  // 2. Match by account_name or detail matching employee full_name
+  if (!emp && tx.account_name) {
+    const cleanAcc = unescapeText(tx.account_name).toLowerCase().trim();
+    emp = (employeesList || []).find((e) => {
+      const eName = unescapeText(e.full_name || '').toLowerCase().trim();
+      return eName && (eName === cleanAcc || cleanAcc.includes(eName) || eName.includes(cleanAcc));
+    });
+  }
+  
+  if (emp) {
+    const cid = emp.company_id || 'all';
+    if (cid === 'sky-ariana') return 'sky-ariana';
+    if (cid === 'bawar-star') return 'bawar-star';
+    return 'all_employees';
+  }
+
+  // 3. If it's a salary category or employee-related transaction without explicit employee link
+  const cat = unescapeText(tx.category || '').toLowerCase();
+  const isSalary = cat === 'salary' || tx.payroll_kind === 'salary' || cat.includes('employee') || cat.includes('salary');
+  if (isSalary) {
+    if (tx.company_id === 'sky-ariana') return 'sky-ariana';
+    if (tx.company_id === 'bawar-star') return 'bawar-star';
+    
+    const textStr = `${tx.account_name || ''} ${tx.detail || ''} ${tx.note || ''} ${tx.reference || ''}`.toLowerCase();
+    if (textStr.includes('sky ariana') || textStr.includes('skyariana') || textStr.includes('ariana') || textStr.includes('✈️')) {
+      return 'sky-ariana';
+    }
+    if (textStr.includes('bawar star') || textStr.includes('bawar') || textStr.includes('plastic') || textStr.includes('🏬')) {
+      return 'bawar-star';
+    }
+    return 'all_employees';
+  }
+
+  return null;
+}
+
 export default function Reports({
   transactions = [],
   accounts = [],
+  employees = [],
   companyName = 'CASHBOOK SYSTEM',
   companyLogo = '',
   companyAddress = '',
@@ -119,8 +165,20 @@ export default function Reports({
       );
     }
 
-    // Filter by Category
-    if (selectedCategory !== 'ALL') {
+    // Filter by Category or Employee Report
+    if (selectedCategory === 'EMP_ALL') {
+      list = list.filter((tx) => getTransactionEmployeeCompany(tx, employees) !== null);
+    } else if (selectedCategory === 'EMP_SKY_ARIANA') {
+      list = list.filter((tx) => {
+        const comp = getTransactionEmployeeCompany(tx, employees);
+        return comp === 'sky-ariana' || (comp === 'all_employees' && (tx.company_id === 'sky-ariana' || !tx.company_id || tx.company_id === 'all'));
+      });
+    } else if (selectedCategory === 'EMP_BAWAR_STAR') {
+      list = list.filter((tx) => {
+        const comp = getTransactionEmployeeCompany(tx, employees);
+        return comp === 'bawar-star' || (comp === 'all_employees' && (tx.company_id === 'bawar-star' || !tx.company_id || tx.company_id === 'all'));
+      });
+    } else if (selectedCategory !== 'ALL') {
       list = list.filter((tx) => unescapeText(tx.category) === unescapeText(selectedCategory));
     }
 
@@ -146,7 +204,7 @@ export default function Reports({
     }
 
     return list;
-  }, [transactions, reportType, startDate, endDate, selectedAccount, selectedCategory, selectedPayment, search, sortOrder]);
+  }, [transactions, employees, reportType, startDate, endDate, selectedAccount, selectedCategory, selectedPayment, search, sortOrder]);
 
   // Compute summary totals
   const summary = useMemo(() => {
@@ -190,22 +248,26 @@ export default function Reports({
   function exportCsv() {
     if (!filteredRows.length) return;
     const headers = ['S.No', 'Date', 'TX No', 'Account Name', 'Transaction Type', 'Category', 'Payment Method', 'Detail', 'Cash In (AFN)', 'Cash Out (AFN)', 'USD In', 'USD Out', 'Rate', 'Reference'];
-    const body = filteredRows.map((tx, idx) => [
-      idx + 1,
-      csvCell(tx.date),
-      csvCell(tx.transaction_no),
-      csvCell(unescapeText(tx.account_name)),
-      csvCell(tx.transaction_type),
-      csvCell(unescapeText(tx.category || '-')),
-      csvCell(tx.payment_method || 'cash'),
-      csvCell(unescapeText(tx.detail)),
-      csvCell(tx.cash_in_afn || 0),
-      csvCell(tx.cash_out_afn || 0),
-      csvCell(tx.usd_in || 0),
-      csvCell(tx.usd_out || 0),
-      csvCell(tx.exchange_rate || '-'),
-      csvCell(tx.reference || '-')
-    ]);
+    const body = filteredRows.map((tx, idx) => {
+      const comp = getTransactionEmployeeCompany(tx, employees);
+      const catText = comp === 'sky-ariana' ? 'Sky Ariana Employee Salary' : comp === 'bawar-star' ? 'Bawar Star Employee Salary' : comp === 'all_employees' ? 'Employee Salary' : unescapeText(tx.category || '-');
+      return [
+        idx + 1,
+        csvCell(tx.date),
+        csvCell(tx.transaction_no),
+        csvCell(unescapeText(tx.account_name)),
+        csvCell(tx.transaction_type),
+        csvCell(catText),
+        csvCell(tx.payment_method || 'cash'),
+        csvCell(unescapeText(tx.detail)),
+        csvCell(tx.cash_in_afn || 0),
+        csvCell(tx.cash_out_afn || 0),
+        csvCell(tx.usd_in || 0),
+        csvCell(tx.usd_out || 0),
+        csvCell(tx.exchange_rate || '-'),
+        csvCell(tx.reference || '-')
+      ];
+    });
 
     const csvContent = [headers.join(','), ...body.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -219,12 +281,16 @@ export default function Reports({
 
   function exportJson() {
     if (!filteredRows.length) return;
-    const cleanedRows = filteredRows.map((tx) => ({
-      ...tx,
-      account_name: unescapeText(tx.account_name),
-      detail: unescapeText(tx.detail),
-      category: unescapeText(tx.category)
-    }));
+    const cleanedRows = filteredRows.map((tx) => {
+      const comp = getTransactionEmployeeCompany(tx, employees);
+      const catText = comp === 'sky-ariana' ? 'Sky Ariana Employee Salary' : comp === 'bawar-star' ? 'Bawar Star Employee Salary' : comp === 'all_employees' ? 'Employee Salary' : unescapeText(tx.category);
+      return {
+        ...tx,
+        account_name: unescapeText(tx.account_name),
+        detail: unescapeText(tx.detail),
+        category: catText
+      };
+    });
     const blob = new Blob([JSON.stringify({ summary, reportType, filters: { startDate, endDate, account: selectedAccount }, transactions: cleanedRows }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -238,19 +304,23 @@ export default function Reports({
     const printWin = window.open('', '_blank', 'width=1200,height=800');
     if (!printWin) return;
 
-    const rowsHtml = filteredRows.map((tx, idx) => `
+    const rowsHtml = filteredRows.map((tx, idx) => {
+      const comp = getTransactionEmployeeCompany(tx, employees);
+      const catText = comp === 'sky-ariana' ? '✈️ Sky Ariana Salary' : comp === 'bawar-star' ? '🏬 Bawar Star Salary' : comp === 'all_employees' ? '👥 Employee Salary' : unescapeText(tx.category || '-');
+      return `
       <tr>
         <td style="text-align:center;">${idx + 1}</td>
         <td>${dateLabel(tx.date)}</td>
         <td style="font-family:monospace;">${tx.transaction_no || '-'}</td>
         <td><strong>${unescapeText(tx.account_name)}</strong></td>
-        <td>${unescapeText(tx.category || '-')}</td>
+        <td>${catText}</td>
         <td>${unescapeText(tx.detail || '-')}</td>
         <td style="text-align:right;color:#059669;font-weight:bold;">${Number(tx.cash_in_afn || 0) > 0 ? currency(tx.cash_in_afn, 'AFN') : '-'}</td>
         <td style="text-align:right;color:#e11d48;font-weight:bold;">${Number(tx.cash_out_afn || 0) > 0 ? currency(tx.cash_out_afn, 'AFN') : '-'}</td>
         <td style="text-align:right;color:#2563eb;font-weight:bold;">${Number(tx.usd_in || 0) > 0 ? currency(tx.usd_in, 'USD') : Number(tx.usd_out || 0) > 0 ? `-${currency(tx.usd_out, 'USD')}` : '-'}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
     const html = `
       <!doctype html>
@@ -467,10 +537,17 @@ export default function Reports({
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50/90 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-inner"
             >
-              <option value="ALL" className="bg-white dark:bg-slate-900">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat} className="bg-white dark:bg-slate-900">{cat.replace('_', ' ')}</option>
-              ))}
+              <option value="ALL" className="bg-white dark:bg-slate-900 font-bold">All Categories</option>
+              <optgroup label="── EMPLOYEES REPORT ──" className="bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold">
+                <option value="EMP_ALL" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">👥 All Employees (Salaries)</option>
+                <option value="EMP_SKY_ARIANA" className="bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 font-bold">✈️ Sky Ariana Employees</option>
+                <option value="EMP_BAWAR_STAR" className="bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-bold">🏬 Bawar Star Employees</option>
+              </optgroup>
+              <optgroup label="── TRANSACTION CATEGORIES ──" className="bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 font-bold">
+                {categories.map((cat) => (
+                  <option key={cat} value={cat} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-normal">{cat.replace('_', ' ')}</option>
+                ))}
+              </optgroup>
             </select>
           </div>
 
@@ -653,9 +730,35 @@ export default function Reports({
                         <span className="truncate block text-[11.5px]">{cleanAccountName}</span>
                       </td>
                       <td className={fitToScreen ? "py-2.5 px-2 truncate" : "py-2.5 px-3"}>
-                        <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 inline-block truncate max-w-full shadow-2xs">
-                          {cleanCategory ? cleanCategory.replace('_', ' ') : 'General'}
-                        </span>
+                        {(() => {
+                          const comp = getTransactionEmployeeCompany(tx, employees);
+                          if (comp === 'sky-ariana') {
+                            return (
+                              <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-700 inline-flex items-center gap-1 max-w-full shadow-2xs">
+                                <span>✈️</span> <span className="truncate">Sky Ariana Emp</span>
+                              </span>
+                            );
+                          }
+                          if (comp === 'bawar-star') {
+                            return (
+                              <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700 inline-flex items-center gap-1 max-w-full shadow-2xs">
+                                <span>🏬</span> <span className="truncate">Bawar Star Emp</span>
+                              </span>
+                            );
+                          }
+                          if (comp === 'all_employees') {
+                            return (
+                              <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 inline-flex items-center gap-1 max-w-full shadow-2xs">
+                                <span>👥</span> <span className="truncate">Employee Salary</span>
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 inline-block truncate max-w-full shadow-2xs">
+                              {cleanCategory ? cleanCategory.replace('_', ' ') : 'General'}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className={fitToScreen ? "py-2.5 px-2 text-slate-700 dark:text-slate-300 font-medium text-[11px] truncate" : "py-2.5 px-4 text-slate-700 dark:text-slate-300 font-medium max-w-xl text-[11px]"} title={cleanDetail}>
                         <span className="truncate block">{cleanDetail || '-'}</span>

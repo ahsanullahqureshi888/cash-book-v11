@@ -1800,6 +1800,7 @@ export default function App() {
                   <Reports
                     transactions={transactions}
                     accounts={accounts}
+                    employees={employees}
                     companyName={companyName}
                     companyLogo={companyLogo}
                     companyAddress={companyAddress}

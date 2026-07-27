@@ -510,6 +510,7 @@ class TransactionRead(TransactionBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    company_id: Optional[str] = None
     transaction_no: str
     created_at: datetime
     updated_at: datetime
