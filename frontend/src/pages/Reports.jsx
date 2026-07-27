@@ -341,44 +341,48 @@ export default function Reports({
 
   return (
     <div 
-      className="w-full space-y-3.5 text-slate-900 dark:text-slate-100 transition-all origin-top"
+      className="w-full space-y-4 text-slate-900 dark:text-slate-100 transition-all origin-top"
       style={{ zoom: zoomScale }}
     >
       {/* 1. Header with Controls & Zoom Level Controls */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
-        <div>
-          <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" /> 
-            <span>Reports & Financial Analytics</span>
-          </h1>
-          <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-            Real-time daily, monthly, and custom date range financial summaries
-          </p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white/85 dark:bg-[#0f172a]/85 backdrop-blur-md p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 dark:from-blue-500/30 dark:to-indigo-500/30 text-blue-600 dark:text-blue-400 border border-blue-500/30 shrink-0 shadow-inner">
+            <BarChart3 className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+              <span>Reports & Financial Analytics</span>
+            </h1>
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+              Real-time daily, monthly, and custom date range financial summaries
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Zoom Selector */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-            <ZoomOut className="w-3.5 h-3.5 text-slate-500 ml-1.5" />
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/90 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
+            <ZoomOut className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 ml-1" />
             <select
               value={zoomScale}
               onChange={(e) => setZoomScale(e.target.value)}
               className="bg-transparent text-xs font-extrabold text-slate-800 dark:text-slate-200 outline-none cursor-pointer pr-1"
               aria-label="Screen Zoom Level"
             >
-              <option value="85%">85% (Ultra Fit)</option>
-              <option value="88%">88% (Compact Fit)</option>
-              <option value="95%">95% (Standard Fit)</option>
-              <option value="100%">100% (Full Size)</option>
+              <option value="85%" className="bg-white dark:bg-slate-900">85% (Ultra Fit)</option>
+              <option value="88%" className="bg-white dark:bg-slate-900">88% (Compact Fit)</option>
+              <option value="95%" className="bg-white dark:bg-slate-900">95% (Standard Fit)</option>
+              <option value="100%" className="bg-white dark:bg-slate-900">100% (Full Size)</option>
             </select>
           </div>
 
           {/* Fit to Screen Toggle */}
           <button
             onClick={() => setFitToScreen(!fitToScreen)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-xs ${
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-xs ${
               fitToScreen
-                ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                ? 'bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700/80 shadow-blue-500/10'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
             }`}
             title={fitToScreen ? 'Switch to Scroll View' : 'Fit Table to Screen Width'}
@@ -389,126 +393,126 @@ export default function Reports({
 
           <button
             onClick={handlePrint}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 shadow-xs transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 shadow-xs transition-all"
           >
-            <Printer className="w-3.5 h-3.5 text-blue-500" /> Print
+            <Printer className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" /> Print
           </button>
           <button
             onClick={exportCsv}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 shadow-xs transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 shadow-xs transition-all"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" /> CSV
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" /> CSV
           </button>
           <button
             onClick={exportJson}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 shadow-xs transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 shadow-xs transition-all"
           >
-            <Download className="w-3.5 h-3.5 text-indigo-500" /> JSON
+            <Download className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" /> JSON
           </button>
         </div>
       </header>
 
       {/* 2. Control Panel Filter Workspace */}
-      <div className="w-full bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-2.5">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
+      <div className="w-full bg-gradient-to-br from-white via-slate-50/50 to-white dark:from-[#0f172a]/90 dark:via-[#0f172a]/70 dark:to-[#0f172a]/90 backdrop-blur-md p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-sm space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
           <div className="flex items-center gap-2 text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-            <Filter className="w-3.5 h-3.5 text-blue-500" /> Report Criteria & Filtering
+            <Filter className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" /> Report Criteria & Filtering
           </div>
           <button
             onClick={handleResetFilters}
-            className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+            className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             <RefreshCw className="w-3 h-3" /> Reset Filters
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Report Type */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-0.5">Report Type</label>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Report Type</label>
             <select
               value={reportType}
               onChange={(e) => setReportType(e.target.value)}
-              className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-3 py-2 bg-slate-50/90 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-inner"
             >
-              <option value="monthly">Monthly Report (This Month)</option>
-              <option value="daily">Daily Report (Today)</option>
-              <option value="dateRange">Custom Date Range</option>
-              <option value="all">All Transactions (Full Ledger)</option>
-              <option value="expenses">Expense Report (Cash Out)</option>
-              <option value="cash_in">Income Report (Cash In)</option>
+              <option value="monthly" className="bg-white dark:bg-slate-900">Monthly Report (This Month)</option>
+              <option value="daily" className="bg-white dark:bg-slate-900">Daily Report (Today)</option>
+              <option value="dateRange" className="bg-white dark:bg-slate-900">Custom Date Range</option>
+              <option value="all" className="bg-white dark:bg-slate-900">All Transactions (Full Ledger)</option>
+              <option value="expenses" className="bg-white dark:bg-slate-900">Expense Report (Cash Out)</option>
+              <option value="cash_in" className="bg-white dark:bg-slate-900">Income Report (Cash In)</option>
             </select>
           </div>
 
           {/* Account Filter */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-0.5">Account Scoping</label>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Account Scoping</label>
             <select
               value={selectedAccount}
               onChange={(e) => setSelectedAccount(e.target.value)}
-              className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-3 py-2 bg-slate-50/90 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-inner"
             >
-              <option value="ALL">All Accounts (Consolidated)</option>
+              <option value="ALL" className="bg-white dark:bg-slate-900">All Accounts (Consolidated)</option>
               {accountOptions.map((acc) => (
-                <option key={acc.value} value={acc.value}>{acc.label}</option>
+                <option key={acc.value} value={acc.value} className="bg-white dark:bg-slate-900">{acc.label}</option>
               ))}
             </select>
           </div>
 
           {/* Category Filter */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-0.5">Category</label>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Category</label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-3 py-2 bg-slate-50/90 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-inner"
             >
-              <option value="ALL">All Categories</option>
+              <option value="ALL" className="bg-white dark:bg-slate-900">All Categories</option>
               {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+                <option key={cat} value={cat} className="bg-white dark:bg-slate-900">{cat.replace('_', ' ')}</option>
               ))}
             </select>
           </div>
 
           {/* Keyword Search */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-0.5">Search Keywords</label>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Search Keywords</label>
             <div className="relative">
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search account, detail, TX..."
-                className="w-full pl-7 pr-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full pl-8 pr-3 py-2 bg-slate-50/90 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-inner"
               />
-              <Search className="w-3 h-3 text-slate-400 absolute left-2 top-2" />
+              <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-2.5 top-2.5" />
             </div>
           </div>
 
           {/* Sort Order */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-0.5">Sort Sequence</label>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Sort Sequence</label>
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-3 py-2 bg-slate-50/90 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-inner"
             >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
+              <option value="newest" className="bg-white dark:bg-slate-900">Newest First</option>
+              <option value="oldest" className="bg-white dark:bg-slate-900">Oldest First</option>
             </select>
           </div>
         </div>
 
         {/* Date Pickers for Custom Date Range */}
         {reportType === 'dateRange' && (
-          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex flex-wrap items-center gap-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <label className="text-xs font-bold text-slate-600 dark:text-slate-400">From Date:</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -517,7 +521,7 @@ export default function Reports({
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
           </div>
@@ -525,21 +529,21 @@ export default function Reports({
       </div>
 
       {/* 3. Stats Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
         {/* Total Cash In */}
-        <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-white via-emerald-50/20 to-white dark:from-[#0f172a]/90 dark:via-emerald-950/20 dark:to-[#0f172a]/90 backdrop-blur-md p-4 rounded-2xl border border-emerald-200/60 dark:border-emerald-500/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Cash In</span>
-            <div className="p-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-              <TrendingUp className="w-3.5 h-3.5" />
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80 shadow-inner">
+              <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums font-mono">
+          <div className="mt-2.5">
+            <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums font-mono tracking-tight">
               {currency(summary.cashInAfn, 'AFN')}
             </div>
             {summary.usdIn > 0 && (
-              <div className="text-[11px] font-bold text-emerald-600/80 dark:text-emerald-400/80 font-mono mt-0.5">
+              <div className="text-xs font-bold text-emerald-600/80 dark:text-emerald-400/80 font-mono mt-0.5">
                 + {currency(summary.usdIn, 'USD')}
               </div>
             )}
@@ -547,19 +551,19 @@ export default function Reports({
         </div>
 
         {/* Total Cash Out */}
-        <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-white via-rose-50/20 to-white dark:from-[#0f172a]/90 dark:via-rose-950/20 dark:to-[#0f172a]/90 backdrop-blur-md p-4 rounded-2xl border border-rose-200/60 dark:border-rose-500/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Cash Out</span>
-            <div className="p-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
-              <TrendingDown className="w-3.5 h-3.5" />
+            <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/80 shadow-inner">
+              <TrendingDown className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-lg sm:text-xl font-black text-rose-600 dark:text-rose-400 tabular-nums font-mono">
+          <div className="mt-2.5">
+            <div className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 tabular-nums font-mono tracking-tight">
               {currency(summary.cashOutAfn, 'AFN')}
             </div>
             {summary.usdOut > 0 && (
-              <div className="text-[11px] font-bold text-rose-600/80 dark:text-rose-400/80 font-mono mt-0.5">
+              <div className="text-xs font-bold text-rose-600/80 dark:text-rose-400/80 font-mono mt-0.5">
                 + {currency(summary.usdOut, 'USD')}
               </div>
             )}
@@ -567,36 +571,36 @@ export default function Reports({
         </div>
 
         {/* Net AFN Balance */}
-        <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-white via-blue-50/20 to-white dark:from-[#0f172a]/90 dark:via-blue-950/20 dark:to-[#0f172a]/90 backdrop-blur-md p-4 rounded-2xl border border-blue-200/60 dark:border-blue-500/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Net AFN Balance</span>
-            <div className="p-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-              <DollarSign className="w-3.5 h-3.5" />
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/80 shadow-inner">
+              <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2">
-            <div className={`text-lg sm:text-xl font-black tabular-nums font-mono ${summary.afnBalance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'}`}>
+          <div className="mt-2.5">
+            <div className={`text-xl sm:text-2xl font-black tabular-nums font-mono tracking-tight ${summary.afnBalance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'}`}>
               {currency(summary.afnBalance, 'AFN')}
             </div>
-            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
               Net operating income
             </div>
           </div>
         </div>
 
         {/* Net USD Balance / Count */}
-        <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-white via-indigo-50/20 to-white dark:from-[#0f172a]/90 dark:via-indigo-950/20 dark:to-[#0f172a]/90 backdrop-blur-md p-4 rounded-2xl border border-indigo-200/60 dark:border-indigo-500/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Net USD / Transactions</span>
-            <div className="p-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-              <CheckCircle2 className="w-3.5 h-3.5" />
+            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/80 shadow-inner">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-lg sm:text-xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums font-mono">
+          <div className="mt-2.5">
+            <div className="text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums font-mono tracking-tight">
               {currency(summary.usdBalance, 'USD')}
             </div>
-            <div className="text-[11px] font-bold text-slate-600 dark:text-slate-300 mt-0.5">
+            <div className="text-xs font-bold text-slate-600 dark:text-slate-300 mt-0.5">
               {summary.count} transactions matched
             </div>
           </div>
@@ -604,27 +608,27 @@ export default function Reports({
       </div>
 
       {/* 4. Main Report Table with Screen-Height Sticky Scroll */}
-      <div className="w-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-        <div className={`w-full max-h-[calc(100vh-320px)] min-h-[320px] overflow-y-auto ${fitToScreen ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
+      <div className="w-full bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800/80 overflow-hidden shadow-md">
+        <div className={`w-full max-h-[68vh] min-h-[360px] overflow-y-auto ${fitToScreen ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
           <table className={fitToScreen ? "w-full table-fixed text-left border-collapse" : "w-full min-w-[1050px] text-left border-collapse"}>
-            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-xs">
-              <tr className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                <th className={fitToScreen ? "py-2 px-2 text-center w-[3.5%]" : "py-2.5 px-3 text-center min-w-[40px]"}>#</th>
-                <th className={fitToScreen ? "py-2 px-2 w-[10%]" : "py-2.5 px-3 min-w-[100px]"}>Date</th>
-                <th className={fitToScreen ? "py-2 px-2 w-[12%]" : "py-2.5 px-3 min-w-[110px]"}>TX No</th>
-                <th className={fitToScreen ? "py-2 px-2 w-[18%]" : "py-2.5 px-4 min-w-[180px]"}>Account Name</th>
-                <th className={fitToScreen ? "py-2 px-2 w-[10%]" : "py-2.5 px-3 min-w-[100px]"}>Category</th>
-                <th className={fitToScreen ? "py-2 px-2 w-[21.5%]" : "py-2.5 px-4 min-w-[200px]"}>Particulars Detail</th>
-                <th className={fitToScreen ? "py-2 px-2 text-right w-[9.5%]" : "py-2.5 px-3 text-right min-w-[110px]"}>Cash In</th>
-                <th className={fitToScreen ? "py-2 px-2 text-right w-[9.5%]" : "py-2.5 px-3 text-right min-w-[110px]"}>Cash Out</th>
-                <th className={fitToScreen ? "py-2 px-2 text-right w-[9%]" : "py-2.5 px-3 text-right min-w-[100px]"}>USD</th>
-                <th className={fitToScreen ? "py-2 px-1.5 text-center w-[6%]" : "py-2.5 px-2 text-center min-w-[70px]"}>Method</th>
+            <thead className="sticky top-0 z-20 bg-slate-100/95 dark:bg-[#1e293b]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-700/80 shadow-xs">
+              <tr className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                <th className={fitToScreen ? "py-3 px-2 text-center w-[3.5%]" : "py-3 px-3 text-center min-w-[40px]"}>#</th>
+                <th className={fitToScreen ? "py-3 px-2 w-[10%]" : "py-3 px-3 min-w-[100px]"}>Date</th>
+                <th className={fitToScreen ? "py-3 px-2 w-[12%]" : "py-3 px-3 min-w-[110px]"}>TX No</th>
+                <th className={fitToScreen ? "py-3 px-2 w-[18%]" : "py-3 px-4 min-w-[180px]"}>Account Name</th>
+                <th className={fitToScreen ? "py-3 px-2 w-[10%]" : "py-3 px-3 min-w-[100px]"}>Category</th>
+                <th className={fitToScreen ? "py-3 px-2 w-[21.5%]" : "py-3 px-4 min-w-[200px]"}>Particulars Detail</th>
+                <th className={fitToScreen ? "py-3 px-2 text-right w-[9.5%]" : "py-3 px-3 text-right min-w-[110px]"}>Cash In</th>
+                <th className={fitToScreen ? "py-3 px-2 text-right w-[9.5%]" : "py-3 px-3 text-right min-w-[110px]"}>Cash Out</th>
+                <th className={fitToScreen ? "py-3 px-2 text-right w-[9%]" : "py-3 px-3 text-right min-w-[100px]"}>USD</th>
+                <th className={fitToScreen ? "py-3 px-1.5 text-center w-[6%]" : "py-3 px-2 text-center min-w-[70px]"}>Method</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="py-12 text-center text-slate-500 font-medium">
+                  <td colSpan="10" className="py-16 text-center text-slate-500 dark:text-slate-400 font-medium text-sm">
                     No transactions found matching the report criteria.
                   </td>
                 </tr>
@@ -635,37 +639,37 @@ export default function Reports({
                   const cleanCategory = unescapeText(tx.category);
 
                   return (
-                    <tr key={tx.id || idx} className="even:bg-slate-50/40 dark:even:bg-slate-900/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors border-b border-slate-200/50 dark:border-slate-800/50">
-                      <td className={fitToScreen ? "py-1.5 px-2 text-center font-mono text-slate-400 text-[10.5px] font-medium" : "py-2 px-3 text-center font-mono text-slate-400 font-medium"}>
+                    <tr key={tx.id || idx} className="odd:bg-white dark:odd:bg-[#0f172a]/60 even:bg-slate-50/60 dark:even:bg-[#1e293b]/40 hover:bg-blue-50/60 dark:hover:bg-blue-950/50 transition-colors border-b border-slate-200/50 dark:border-slate-800/60">
+                      <td className={fitToScreen ? "py-2.5 px-2 text-center font-mono text-slate-400 dark:text-slate-500 text-[10.5px] font-medium" : "py-2.5 px-3 text-center font-mono text-slate-400 dark:text-slate-500 font-medium"}>
                         {idx + 1}
                       </td>
-                      <td className={fitToScreen ? "py-1.5 px-2 font-bold text-slate-900 dark:text-slate-100 text-[10.5px] truncate" : "py-2 px-3 font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap"}>
+                      <td className={fitToScreen ? "py-2.5 px-2 font-bold text-slate-900 dark:text-slate-100 text-[11px] truncate" : "py-2.5 px-3 font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap text-[11px]"}>
                         <DateDisplay value={tx.date} format={dateDisplayFormat} />
                       </td>
-                      <td className={fitToScreen ? "py-1.5 px-2 font-mono text-slate-500 dark:text-slate-400 text-[10.5px] font-medium truncate" : "py-2 px-3 font-mono text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap"}>
+                      <td className={fitToScreen ? "py-2.5 px-2 font-mono text-slate-500 dark:text-slate-400 text-[10.5px] font-medium truncate" : "py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap"}>
                         {tx.transaction_no || '-'}
                       </td>
-                      <td className={fitToScreen ? "py-1.5 px-2 font-extrabold text-slate-900 dark:text-white truncate" : "py-2 px-4 font-bold text-slate-900 dark:text-white"} title={cleanAccountName}>
-                        <span className="truncate block text-[11px]">{cleanAccountName}</span>
+                      <td className={fitToScreen ? "py-2.5 px-2 font-extrabold text-slate-900 dark:text-white truncate" : "py-2.5 px-4 font-extrabold text-slate-900 dark:text-white"} title={cleanAccountName}>
+                        <span className="truncate block text-[11.5px]">{cleanAccountName}</span>
                       </td>
-                      <td className={fitToScreen ? "py-1.5 px-2 truncate" : "py-2 px-3"}>
-                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 inline-block truncate max-w-full">
+                      <td className={fitToScreen ? "py-2.5 px-2 truncate" : "py-2.5 px-3"}>
+                        <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 inline-block truncate max-w-full shadow-2xs">
                           {cleanCategory ? cleanCategory.replace('_', ' ') : 'General'}
                         </span>
                       </td>
-                      <td className={fitToScreen ? "py-1.5 px-2 text-slate-700 dark:text-slate-300 font-medium text-[10.5px] truncate" : "py-2 px-4 text-slate-700 dark:text-slate-300 font-medium max-w-xl"} title={cleanDetail}>
+                      <td className={fitToScreen ? "py-2.5 px-2 text-slate-700 dark:text-slate-300 font-medium text-[11px] truncate" : "py-2.5 px-4 text-slate-700 dark:text-slate-300 font-medium max-w-xl text-[11px]"} title={cleanDetail}>
                         <span className="truncate block">{cleanDetail || '-'}</span>
                       </td>
-                      <td className={fitToScreen ? "py-1.5 px-2 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-[10.5px] tabular-nums truncate" : "py-2 px-3 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap tabular-nums"}>
+                      <td className={fitToScreen ? "py-2.5 px-2 text-right font-mono font-black text-emerald-600 dark:text-emerald-400 text-[11px] tabular-nums truncate" : "py-2.5 px-3 text-right font-mono font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap tabular-nums text-[11px]"}>
                         {Number(tx.cash_in_afn || 0) > 0 ? currency(tx.cash_in_afn, 'AFN') : '-'}
                       </td>
-                      <td className={fitToScreen ? "py-1.5 px-2 text-right font-mono font-extrabold text-rose-600 dark:text-rose-400 text-[10.5px] tabular-nums truncate" : "py-2 px-3 text-right font-mono font-extrabold text-rose-600 dark:text-rose-400 whitespace-nowrap tabular-nums"}>
+                      <td className={fitToScreen ? "py-2.5 px-2 text-right font-mono font-black text-rose-600 dark:text-rose-400 text-[11px] tabular-nums truncate" : "py-2.5 px-3 text-right font-mono font-black text-rose-600 dark:text-rose-400 whitespace-nowrap tabular-nums text-[11px]"}>
                         {Number(tx.cash_out_afn || 0) > 0 ? currency(tx.cash_out_afn, 'AFN') : '-'}
                       </td>
-                      <td className={fitToScreen ? "py-1.5 px-2 text-right font-mono font-extrabold text-indigo-600 dark:text-indigo-400 text-[10.5px] tabular-nums truncate" : "py-2 px-3 text-right font-mono font-extrabold text-indigo-600 dark:text-indigo-400 whitespace-nowrap tabular-nums"}>
+                      <td className={fitToScreen ? "py-2.5 px-2 text-right font-mono font-black text-indigo-600 dark:text-indigo-400 text-[11px] tabular-nums truncate" : "py-2.5 px-3 text-right font-mono font-black text-indigo-600 dark:text-indigo-400 whitespace-nowrap tabular-nums text-[11px]"}>
                         {Number(tx.usd_in || 0) > 0 ? currency(tx.usd_in, 'USD') : Number(tx.usd_out || 0) > 0 ? `-${currency(tx.usd_out, 'USD')}` : '-'}
                       </td>
-                      <td className={fitToScreen ? "py-1.5 px-1.5 text-center uppercase font-mono text-[9px] font-bold text-slate-500 dark:text-slate-400 truncate" : "py-2 px-2 text-center uppercase font-mono text-[10px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap"}>
+                      <td className={fitToScreen ? "py-2.5 px-1.5 text-center uppercase font-mono text-[9.5px] font-extrabold text-slate-500 dark:text-slate-400 truncate" : "py-2.5 px-2 text-center uppercase font-mono text-[10px] font-extrabold text-slate-500 dark:text-slate-400 whitespace-nowrap"}>
                         {tx.payment_method || 'cash'}
                       </td>
                     </tr>
