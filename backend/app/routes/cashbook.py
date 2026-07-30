@@ -11,29 +11,43 @@ from ..database import get_db
 
 router = APIRouter(prefix="/api/v1/cashbook", tags=["Enterprise Ledgers"])
 
+
 class PaymentCollectionInput(BaseModel):
     company_id: str = Field(..., example="CUST-BAWAR-01")
     branch_id: str = Field(default="KABUL-PLANT-01")
-    amount_afn: float = Field(..., gt=0, example=25000.00, description="Amount paid in Afghanis")
-    payment_method: str = Field(default="CASH", example="CASH", description="CASH, PREFORM_TRADE, or BANK_TRANSFER")
+    amount_afn: float = Field(
+        ..., gt=0, example=25000.00, description="Amount paid in Afghanis"
+    )
+    payment_method: str = Field(
+        default="CASH",
+        example="CASH",
+        description="CASH, PREFORM_TRADE, or BANK_TRANSFER",
+    )
     courier_note: str = Field(..., example="Hand delivered by Aziz Ahmad")
 
+
 @router.post("/record-payment")
-def record_incoming_customer_payment(payload: PaymentCollectionInput, db: Session = Depends(get_db)):
+def record_incoming_customer_payment(
+    payload: PaymentCollectionInput, db: Session = Depends(get_db)
+):
     """
-    Records incoming customer settlements, credits Accounts Receivable, 
+    Records incoming customer settlements, credits Accounts Receivable,
     debits Cash Assets, and lifts dispatch locks if debt falls below limits.
     """
     txn_ref = f"PAY-{datetime.datetime.now().strftime('%Y%m%d%H%M')}-{payload.company_id[-2:]}"
-    
+
     # Identify customer and default starting balances from ODS import
-    customer_name = "Yusuf Ahmad & Aziz Ahmad (Bawar Star)" if "BAWAR" in payload.company_id.upper() else "Shahab Water Production Company"
+    customer_name = (
+        "Yusuf Ahmad & Aziz Ahmad (Bawar Star)"
+        if "BAWAR" in payload.company_id.upper()
+        else "Shahab Water Production Company"
+    )
     if "SHAHAB" in payload.company_id.upper():
         customer_name = "Shahab Water Production Company"
         base_balance = 200.00
     else:
         base_balance = 111300.00
-        
+
     try:
         # 1. Ensure companies table exists
         db.execute(text("""
@@ -44,20 +58,26 @@ def record_incoming_customer_payment(payload: PaymentCollectionInput, db: Sessio
                 account_type VARCHAR(50)
             )
         """))
-        
-        result = db.execute(text("SELECT name FROM companies WHERE company_id = :cid"), {"cid": payload.company_id}).fetchone()
+
+        result = db.execute(
+            text("SELECT name FROM companies WHERE company_id = :cid"),
+            {"cid": payload.company_id},
+        ).fetchone()
         if result:
             customer_name = result[0]
         else:
             # Register customer if not found yet
             try:
-                db.execute(text("""
+                db.execute(
+                    text("""
                     INSERT INTO companies (company_id, name, tax_id, account_type)
                     VALUES (:cid, :name, 'TAX-AFG-001', 'CUSTOMER_AR')
-                """), {"cid": payload.company_id, "name": customer_name})
+                """),
+                    {"cid": payload.company_id, "name": customer_name},
+                )
             except Exception:
                 pass
-            
+
         # 2. Ensure cashbook_ledger table exists and insert double-entry accounting records
         db.execute(text("""
             CREATE TABLE IF NOT EXISTS cashbook_ledger (
@@ -71,36 +91,44 @@ def record_incoming_customer_payment(payload: PaymentCollectionInput, db: Sessio
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
-        
-        db.execute(text("""
+
+        db.execute(
+            text("""
             INSERT INTO cashbook_ledger 
             (company_id, branch_id, account_type, amount, transaction_type, description, reference_id)
             VALUES (:cid, :bid, 'Cash_Asset', :amt, 'DEBIT', :desc1, :ref),
                    (:cid, :bid, 'Accounts_Receivable', :amt, 'CREDIT', :desc2, :ref)
-        """), {
-            "cid": payload.company_id,
-            "bid": payload.branch_id,
-            "amt": payload.amount_afn,
-            "desc1": f"Payment received: {payload.courier_note}",
-            "desc2": f"Receivables offset: {payload.courier_note}",
-            "ref": txn_ref
-        })
-        
+        """),
+            {
+                "cid": payload.company_id,
+                "bid": payload.branch_id,
+                "amt": payload.amount_afn,
+                "desc1": f"Payment received: {payload.courier_note}",
+                "desc2": f"Receivables offset: {payload.courier_note}",
+                "ref": txn_ref,
+            },
+        )
+
         # 3. Calculate new running balance
-        bal_res = db.execute(text("""
+        bal_res = db.execute(
+            text("""
             SELECT 
                 COALESCE(SUM(CASE WHEN transaction_type = 'DEBIT' THEN amount ELSE 0 END), 0) -
                 COALESCE(SUM(CASE WHEN transaction_type = 'CREDIT' THEN amount ELSE 0 END), 0)
             FROM cashbook_ledger 
             WHERE company_id = :cid AND account_type = 'Accounts_Receivable'
-        """), {"cid": payload.company_id}).fetchone()
-        
+        """),
+            {"cid": payload.company_id},
+        ).fetchone()
+
         if bal_res and float(bal_res[0]) != 0:
             computed = float(bal_res[0])
-            new_balance_due = computed if computed > 0 else (base_balance - payload.amount_afn)
+            new_balance_due = (
+                computed if computed > 0 else (base_balance - payload.amount_afn)
+            )
         else:
             new_balance_due = base_balance - payload.amount_afn
-            
+
         db.commit()
     except Exception as e:
         db.rollback()
@@ -113,5 +141,5 @@ def record_incoming_customer_payment(payload: PaymentCollectionInput, db: Sessio
         "customer_name": customer_name,
         "amount_credited_afn": payload.amount_afn,
         "new_balance_due_afn": round(new_balance_due, 2),
-        "dispatch_lock_active": new_balance_due > 40000.00
+        "dispatch_lock_active": new_balance_due > 40000.00,
     }

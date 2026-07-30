@@ -12,7 +12,9 @@ from .. import crud
 from ..auth_dependencies import require_authenticated_request
 from ..database import SessionLocal
 
-router = APIRouter(tags=["reports"], dependencies=[Depends(require_authenticated_request)])
+router = APIRouter(
+    tags=["reports"], dependencies=[Depends(require_authenticated_request)]
+)
 
 
 def get_db():
@@ -46,14 +48,18 @@ def all_summary(db: Session = Depends(get_db)):
 
 @router.get("/api/summary/daily")
 def daily_summary(db: Session = Depends(get_db)):
-    rows = crud.filtered_transactions(db, start_date=date.today(), end_date=date.today())
+    rows = crud.filtered_transactions(
+        db, start_date=date.today(), end_date=date.today()
+    )
     return report_summary(rows)
 
 
 @router.get("/api/summary/monthly")
 def monthly_summary(db: Session = Depends(get_db)):
     today = date.today()
-    rows = crud.filtered_transactions(db, start_date=today.replace(day=1), end_date=today)
+    rows = crud.filtered_transactions(
+        db, start_date=today.replace(day=1), end_date=today
+    )
     return report_summary(rows)
 
 
@@ -104,17 +110,41 @@ def date_range_report(
 def csv_response(rows, filename):
     stream = io.StringIO()
     writer = csv.writer(stream)
-    writer.writerow([
-        "Transaction No", "Date", "Name", "Detail", "Type", "Category",
-        "Cash In AFN", "Cash Out AFN", "USD In", "USD Out", "Exchange Rate",
-        "Payment Method", "Note",
-    ])
+    writer.writerow(
+        [
+            "Transaction No",
+            "Date",
+            "Name",
+            "Detail",
+            "Type",
+            "Category",
+            "Cash In AFN",
+            "Cash Out AFN",
+            "USD In",
+            "USD Out",
+            "Exchange Rate",
+            "Payment Method",
+            "Note",
+        ]
+    )
     for row in rows:
-        writer.writerow([
-            row.transaction_no, row.date, row.account_name, row.detail,
-            row.transaction_type, row.category, row.cash_in_afn, row.cash_out_afn,
-            row.usd_in, row.usd_out, row.exchange_rate, row.payment_method, row.note,
-        ])
+        writer.writerow(
+            [
+                row.transaction_no,
+                row.date,
+                row.account_name,
+                row.detail,
+                row.transaction_type,
+                row.category,
+                row.cash_in_afn,
+                row.cash_out_afn,
+                row.usd_in,
+                row.usd_out,
+                row.exchange_rate,
+                row.payment_method,
+                row.note,
+            ]
+        )
     return StreamingResponse(
         iter([stream.getvalue()]),
         media_type="text/csv",

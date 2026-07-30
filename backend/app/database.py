@@ -13,12 +13,12 @@ def normalize_database_url(url: str) -> str:
         url = url.replace("postgres://", "postgresql+pg8000://", 1)
     elif url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+pg8000://", 1)
-    
+
     # pg8000 does not accept standard libpq query params like sslmode, channel_binding, etc.
     # We strip query params for pg8000 and pass SSL context via connect_args.
     if url.startswith("postgresql+pg8000://") and "?" in url:
         url = url.split("?")[0]
-        
+
     return url
 
 
@@ -37,6 +37,7 @@ def resolve_database_url() -> str:
     database_url = normalize_database_url(raw_url)
     if is_production and database_url.startswith("sqlite"):
         import logging
+
         logging.getLogger("cashbook").warning(
             "DATABASE_URL is not set or points to SQLite on Vercel production. "
             "Configure a Neon/Postgres connection string."
@@ -53,7 +54,10 @@ engine_options = {"pool_pre_ping": True, "pool_recycle": 240}
 if IS_SQLITE:
     engine_options["connect_args"] = {"check_same_thread": False}
 elif IS_PG8000:
-    engine_options["connect_args"] = {"ssl_context": ssl.create_default_context(), "timeout": 30}
+    engine_options["connect_args"] = {
+        "ssl_context": ssl.create_default_context(),
+        "timeout": 30,
+    }
 
 engine = create_engine(DATABASE_URL, **engine_options)
 
@@ -72,7 +76,12 @@ def ensure_sqlite_schema(bind_engine=None):
 
     target_engine = bind_engine or engine
     with target_engine.begin() as conn:
-        tables = {row[0] for row in conn.execute(text("select name from sqlite_master where type='table'"))}
+        tables = {
+            row[0]
+            for row in conn.execute(
+                text("select name from sqlite_master where type='table'")
+            )
+        }
 
         def columns(table):
             if table not in tables:
@@ -105,10 +114,26 @@ def ensure_sqlite_schema(bind_engine=None):
         transaction_cols = columns("transactions")
         if "transactions" in tables:
             if "type" in transaction_cols:
-                conn.execute(text("update transactions set transaction_type = type where transaction_type is null or transaction_type = ''"))
-            conn.execute(text("update transactions set converted_afn = coalesce(nullif(cash_in_afn, 0), cash_out_afn, 0) where converted_afn is null or converted_afn = 0"))
-            conn.execute(text("update transactions set transaction_no = 'TX-' || replace(date, '-', '') || '-' || printf('%04d', id) where transaction_no is null or transaction_no = ''"))
-            conn.execute(text("update transactions set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"))
+                conn.execute(
+                    text(
+                        "update transactions set transaction_type = type where transaction_type is null or transaction_type = ''"
+                    )
+                )
+            conn.execute(
+                text(
+                    "update transactions set converted_afn = coalesce(nullif(cash_in_afn, 0), cash_out_afn, 0) where converted_afn is null or converted_afn = 0"
+                )
+            )
+            conn.execute(
+                text(
+                    "update transactions set transaction_no = 'TX-' || replace(date, '-', '') || '-' || printf('%04d', id) where transaction_no is null or transaction_no = ''"
+                )
+            )
+            conn.execute(
+                text(
+                    "update transactions set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"
+                )
+            )
 
         for column_sql in [
             "company_phone VARCHAR(100) DEFAULT ''",
@@ -137,14 +162,30 @@ def ensure_sqlite_schema(bind_engine=None):
         if "users" in tables:
             user_cols = columns("users")
             if "created_at" in user_cols:
-                conn.execute(text("update users set created_at = coalesce(created_at, created_date, CURRENT_TIMESTAMP)"))
+                conn.execute(
+                    text(
+                        "update users set created_at = coalesce(created_at, created_date, CURRENT_TIMESTAMP)"
+                    )
+                )
             if "updated_at" in user_cols:
-                conn.execute(text("update users set updated_at = coalesce(updated_at, created_at, created_date, CURRENT_TIMESTAMP)"))
+                conn.execute(
+                    text(
+                        "update users set updated_at = coalesce(updated_at, created_at, created_date, CURRENT_TIMESTAMP)"
+                    )
+                )
 
         if "accounts" in tables:
-            conn.execute(text("update accounts set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"))
+            conn.execute(
+                text(
+                    "update accounts set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"
+                )
+            )
         if "settings" in tables:
-            conn.execute(text("update settings set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"))
+            conn.execute(
+                text(
+                    "update settings set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"
+                )
+            )
 
 
 def ensure_user_schema(bind_engine=None):
@@ -172,11 +213,21 @@ def ensure_user_schema(bind_engine=None):
                 conn.execute(text(f"alter table users add column {name} {sql_type}"))
                 user_columns.add(name)
 
-        created_source = "created_date" if "created_date" in user_columns else "CURRENT_TIMESTAMP"
+        created_source = (
+            "created_date" if "created_date" in user_columns else "CURRENT_TIMESTAMP"
+        )
         if "created_at" in user_columns:
-            conn.execute(text(f"update users set created_at = coalesce(created_at, {created_source}, CURRENT_TIMESTAMP)"))
+            conn.execute(
+                text(
+                    f"update users set created_at = coalesce(created_at, {created_source}, CURRENT_TIMESTAMP)"
+                )
+            )
         if "updated_at" in user_columns:
-            conn.execute(text(f"update users set updated_at = coalesce(updated_at, created_at, {created_source}, CURRENT_TIMESTAMP)"))
+            conn.execute(
+                text(
+                    f"update users set updated_at = coalesce(updated_at, created_at, {created_source}, CURRENT_TIMESTAMP)"
+                )
+            )
 
 
 def ensure_payroll_schema(bind_engine=None):
@@ -186,7 +237,9 @@ def ensure_payroll_schema(bind_engine=None):
     tables = set(inspector.get_table_names())
     with target_engine.begin() as conn:
         if "transactions" in tables:
-            transaction_columns = {column["name"] for column in inspector.get_columns("transactions")}
+            transaction_columns = {
+                column["name"] for column in inspector.get_columns("transactions")
+            }
             for name, sql_type in [
                 ("employee_id", "INTEGER"),
                 ("salary_month", "DATE"),
@@ -194,16 +247,26 @@ def ensure_payroll_schema(bind_engine=None):
                 ("branch_id", "INTEGER"),
             ]:
                 if name not in transaction_columns:
-                    conn.execute(text(f"alter table transactions add column {name} {sql_type}"))
+                    conn.execute(
+                        text(f"alter table transactions add column {name} {sql_type}")
+                    )
 
         if "employees" in tables:
-            employee_columns = {column["name"] for column in inspector.get_columns("employees")}
+            employee_columns = {
+                column["name"] for column in inspector.get_columns("employees")
+            }
             if "avatar_url" not in employee_columns:
-                conn.execute(text("alter table employees add column avatar_url TEXT DEFAULT ''"))
+                conn.execute(
+                    text("alter table employees add column avatar_url TEXT DEFAULT ''")
+                )
             if "joining_date" not in employee_columns:
                 conn.execute(text("alter table employees add column joining_date DATE"))
             if "employment_end_date" not in employee_columns:
-                conn.execute(text("alter table employees add column employment_end_date DATE"))
+                conn.execute(
+                    text("alter table employees add column employment_end_date DATE")
+                )
+
+
 def ensure_company_schema(bind_engine=None):
     """Ensure company_id column exists on accounts, transactions, employees, and settings tables."""
     target_engine = bind_engine or engine
@@ -214,7 +277,11 @@ def ensure_company_schema(bind_engine=None):
             if table in tables:
                 cols = {c["name"] for c in inspector.get_columns(table)}
                 if "company_id" not in cols:
-                    conn.execute(text(f"alter table {table} add column company_id VARCHAR(100) DEFAULT 'bawar-star'"))
+                    conn.execute(
+                        text(
+                            f"alter table {table} add column company_id VARCHAR(100) DEFAULT 'bawar-star'"
+                        )
+                    )
 
     Base.metadata.create_all(bind=target_engine)
 
@@ -225,6 +292,7 @@ def ensure_company_schema(bind_engine=None):
 engines = {}
 _engine_lock = threading.Lock()
 _initialized_db_urls = set()
+
 
 def get_tenant_db_url(company_id: str) -> str:
     if not DATABASE_URL.startswith("sqlite"):
@@ -247,7 +315,11 @@ def get_tenant_session(request=None, company_id=None):
 
     # On PostgreSQL, all companies share the same database and connection URL.
     # We always return SessionLocal() to prevent opening duplicate TCP connection pools.
-    if not IS_SQLITE or company_id in ("bawar-star", "cashbook_bawar_prod", "bawar", "all") or not company_id:
+    if (
+        not IS_SQLITE
+        or company_id in ("bawar-star", "cashbook_bawar_prod", "bawar", "all")
+        or not company_id
+    ):
         return SessionLocal()
 
     if company_id not in engines:
@@ -258,7 +330,10 @@ def get_tenant_session(request=None, company_id=None):
                 if db_url.startswith("sqlite"):
                     tenant_engine_options["connect_args"] = {"check_same_thread": False}
                 elif db_url.startswith("postgresql+pg8000"):
-                    tenant_engine_options["connect_args"] = {"ssl_context": ssl.create_default_context(), "timeout": 30}
+                    tenant_engine_options["connect_args"] = {
+                        "ssl_context": ssl.create_default_context(),
+                        "timeout": 30,
+                    }
 
                 tenant_engine = create_engine(db_url, **tenant_engine_options)
                 engines[company_id] = tenant_engine
@@ -271,15 +346,20 @@ def get_tenant_session(request=None, company_id=None):
                     ensure_payroll_schema(bind_engine=tenant_engine)
 
                     from . import models
-                    TenantSession = sessionmaker(autocommit=False, autoflush=False, bind=tenant_engine)
+
+                    TenantSession = sessionmaker(
+                        autocommit=False, autoflush=False, bind=tenant_engine
+                    )
                     db_temp = TenantSession()
                     try:
                         if not db_temp.query(models.Setting).first():
-                            db_temp.add(models.Setting(
-                                company_name="SKY ARIANA LTD",
-                                default_currency="USD",
-                                print_footer_text="Prepared by SKY ARIANA LTD"
-                            ))
+                            db_temp.add(
+                                models.Setting(
+                                    company_name="SKY ARIANA LTD",
+                                    default_currency="USD",
+                                    print_footer_text="Prepared by SKY ARIANA LTD",
+                                )
+                            )
                             db_temp.commit()
                     except Exception:
                         db_temp.rollback()
@@ -287,7 +367,9 @@ def get_tenant_session(request=None, company_id=None):
                         db_temp.close()
 
     target_engine = engines[company_id]
-    TenantSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=target_engine)
+    TenantSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=target_engine
+    )
     return TenantSessionLocal()
 
 
@@ -297,4 +379,3 @@ def get_db(request=None):
         yield db
     finally:
         db.close()
-

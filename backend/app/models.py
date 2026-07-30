@@ -1,6 +1,17 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -12,7 +23,9 @@ class Group(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), unique=True, nullable=False, index=True)
 
-    branches = relationship("Branch", back_populates="group", cascade="all, delete-orphan")
+    branches = relationship(
+        "Branch", back_populates="group", cascade="all, delete-orphan"
+    )
 
 
 class Branch(Base):
@@ -39,9 +52,13 @@ class Account(Base):
     opening_balance_usd = Column(Float, default=0.0, nullable=False)
     note = Column(Text, default="", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
-    transactions = relationship("Transaction", back_populates="account", cascade="all, delete-orphan")
+    transactions = relationship(
+        "Transaction", back_populates="account", cascade="all, delete-orphan"
+    )
     employee = relationship("Employee", back_populates="account", uselist=False)
 
 
@@ -51,7 +68,9 @@ class Employee(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(String(100), default="bawar-star", nullable=False, index=True)
     employee_code = Column(String(40), unique=True, nullable=False, index=True)
-    account_id = Column(Integer, ForeignKey("accounts.id"), unique=True, nullable=False, index=True)
+    account_id = Column(
+        Integer, ForeignKey("accounts.id"), unique=True, nullable=False, index=True
+    )
     full_name = Column(String(255), nullable=False, index=True)
     father_name = Column(String(255), default="", nullable=False)
     phone = Column(String(100), default="", nullable=False)
@@ -65,20 +84,32 @@ class Employee(Base):
     status = Column(String(20), default="active", nullable=False, index=True)
     notes = Column(Text, default="", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     account = relationship("Account", back_populates="employee")
     transactions = relationship("Transaction", back_populates="employee")
-    salary_payments = relationship("SalaryPayment", back_populates="employee", cascade="all, delete-orphan")
-    salary_history = relationship("SalaryHistory", back_populates="employee", cascade="all, delete-orphan")
-    salary_adjustments = relationship("EmployeeSalaryAdjustment", back_populates="employee", cascade="all, delete-orphan")
+    salary_payments = relationship(
+        "SalaryPayment", back_populates="employee", cascade="all, delete-orphan"
+    )
+    salary_history = relationship(
+        "SalaryHistory", back_populates="employee", cascade="all, delete-orphan"
+    )
+    salary_adjustments = relationship(
+        "EmployeeSalaryAdjustment",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+    )
 
 
 class EmployeeSalaryAdjustment(Base):
     __tablename__ = "employee_salary_adjustments"
 
     id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    employee_id = Column(
+        Integer, ForeignKey("employees.id"), nullable=False, index=True
+    )
     date = Column(Date, nullable=False, index=True)
     period = Column(String(7), nullable=False, index=True)
     amount = Column(Float, nullable=False)
@@ -117,11 +148,15 @@ class Transaction(Base):
     note = Column(Text, default="", nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     account = relationship("Account", back_populates="transactions")
     employee = relationship("Employee", back_populates="transactions")
-    salary_payment = relationship("SalaryPayment", back_populates="cashbook_entry", uselist=False)
+    salary_payment = relationship(
+        "SalaryPayment", back_populates="cashbook_entry", uselist=False
+    )
     branch = relationship("Branch", back_populates="transactions")
 
 
@@ -129,7 +164,9 @@ class SalaryPayment(Base):
     __tablename__ = "salary_payments"
 
     id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    employee_id = Column(
+        Integer, ForeignKey("employees.id"), nullable=False, index=True
+    )
     month = Column(Integer, nullable=False, index=True)
     year = Column(Integer, nullable=False, index=True)
     amount = Column(Float, default=0.0, nullable=False)
@@ -139,9 +176,13 @@ class SalaryPayment(Base):
     previous_carry_forward_balance = Column(Float, default=0.0, nullable=False)
     total_payable_salary = Column(Float, default=0.0, nullable=False)
     carry_forward_balance = Column(Float, default=0.0, nullable=False)
-    cashbook_entry_id = Column(Integer, ForeignKey("transactions.id"), nullable=True, index=True)
+    cashbook_entry_id = Column(
+        Integer, ForeignKey("transactions.id"), nullable=True, index=True
+    )
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     employee = relationship("Employee", back_populates="salary_payments")
     cashbook_entry = relationship("Transaction", back_populates="salary_payment")
@@ -151,7 +192,9 @@ class SalaryHistory(Base):
     __tablename__ = "salary_history"
 
     id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    employee_id = Column(
+        Integer, ForeignKey("employees.id"), nullable=False, index=True
+    )
     old_salary = Column(Float, nullable=False)
     new_salary = Column(Float, nullable=False)
     old_currency = Column(String(10), default="AFN", nullable=False)
@@ -170,7 +213,9 @@ class Setting(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(String(100), default="bawar-star", nullable=False, index=True)
-    company_name = Column(String(255), default="Cashbook Of All companies", nullable=False)
+    company_name = Column(
+        String(255), default="Cashbook Of All companies", nullable=False
+    )
     company_phone = Column(String(100), default="", nullable=False)
     company_email = Column(String(180), default="", nullable=False)
     company_website = Column(String(180), default="", nullable=False)
@@ -183,10 +228,14 @@ class Setting(Base):
     theme = Column(String(20), default="dark", nullable=False)
     language = Column(String(20), default="English", nullable=False)
     date_display_format = Column(String(20), default="dual", nullable=False)
-    print_footer_text = Column(Text, default="Prepared by Cashbook Of All companies", nullable=False)
+    print_footer_text = Column(
+        Text, default="Prepared by Cashbook Of All companies", nullable=False
+    )
     auto_logout_minutes = Column(Integer, default=30, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
 
 class BackupLog(Base):
@@ -218,12 +267,18 @@ class User(Base):
     username = Column(String(120), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(30), default="Administrator", nullable=False, index=True)
-    assigned_group_id = Column(Integer, ForeignKey("groups.id"), nullable=True, index=True)
-    assigned_branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True, index=True)
+    assigned_group_id = Column(
+        Integer, ForeignKey("groups.id"), nullable=True, index=True
+    )
+    assigned_branch_id = Column(
+        Integer, ForeignKey("branches.id"), nullable=True, index=True
+    )
     avatar_path = Column(Text, default="", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     created_date = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
     last_login = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     failed_attempts = Column(Integer, default=0, nullable=False)
@@ -271,7 +326,9 @@ class ExportClient(Base):
     currency = Column(String(10), default="USD", nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
 
-    transactions = relationship("TransportLedger", back_populates="client", cascade="all, delete-orphan")
+    transactions = relationship(
+        "TransportLedger", back_populates="client", cascade="all, delete-orphan"
+    )
 
     @property
     def name(self) -> str:
@@ -290,7 +347,9 @@ class TransportLedger(Base):
     __tablename__ = "transport_ledgers"
 
     id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(Integer, ForeignKey("export_clients.id"), nullable=False, index=True)
+    client_id = Column(
+        Integer, ForeignKey("export_clients.id"), nullable=False, index=True
+    )
     serial_number = Column(String(50), nullable=True, index=True)
     date = Column(String(50), nullable=True, index=True)
     shipper_description = Column(Text, nullable=True)
@@ -304,7 +363,9 @@ class TransportLedger(Base):
     debit = Column(Float, default=0.0, nullable=False)
     credit = Column(Float, default=0.0, nullable=False)
     balance = Column(Float, default=0.0, nullable=False)
-    transaction_type = Column(String(20), default="shipment", nullable=False, index=True) # "shipment" (Credit) | "payment" (Debit)
+    transaction_type = Column(
+        String(20), default="shipment", nullable=False, index=True
+    )  # "shipment" (Credit) | "payment" (Debit)
     is_surrendered_bl = Column(Boolean, default=False, nullable=False)
     notes = Column(Text, default="", nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False, index=True)
@@ -352,9 +413,13 @@ class BawarStarTransaction(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(String(100), default="bawar-star", nullable=False, index=True)
-    partner_company_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    partner_company_id = Column(
+        Integer, ForeignKey("accounts.id"), nullable=False, index=True
+    )
     transaction_date = Column(Date, nullable=False, index=True)
-    transaction_type = Column(String(50), nullable=False, index=True)  # SELL_PRODUCT, PASS_THROUGH_FREIGHT, PASS_THROUGH_PKG, PAYMENT_RECEIVED, BUY_RAW_MATERIAL, OPERATIONAL_EXPENSE
+    transaction_type = Column(
+        String(50), nullable=False, index=True
+    )  # SELL_PRODUCT, PASS_THROUGH_FREIGHT, PASS_THROUGH_PKG, PAYMENT_RECEIVED, BUY_RAW_MATERIAL, OPERATIONAL_EXPENSE
     description_en = Column(Text, default="", nullable=False)
     description_ps = Column(Text, default="", nullable=False)
     quantity = Column(Float, default=0.0, nullable=False)
@@ -364,7 +429,9 @@ class BawarStarTransaction(Base):
     currency = Column(String(10), default="AFN", nullable=False)
     exchange_rate = Column(Float, default=1.0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     partner_company = relationship("Account")
 
@@ -385,9 +452,5 @@ from .models_plastic import (
     PlasticCashbookLedger,
     PlasticPurchaseOrder,
     PlasticTelemetryPing,
-    PlasticAuditLog
+    PlasticAuditLog,
 )
-
-
-
-

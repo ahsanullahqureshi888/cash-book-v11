@@ -4,10 +4,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from .. import payroll, schemas
-from ..auth_dependencies import require_administrator_request, require_authenticated_request
+from ..auth_dependencies import (
+    require_administrator_request,
+    require_authenticated_request,
+)
 from ..database import SessionLocal
 
-router = APIRouter(prefix="/api/employees", tags=["employees"], dependencies=[Depends(require_authenticated_request)])
+router = APIRouter(
+    prefix="/api/employees",
+    tags=["employees"],
+    dependencies=[Depends(require_authenticated_request)],
+)
 
 
 def get_db():
@@ -56,8 +63,12 @@ def read_salary_summary_totals(
     return payroll.salary_report(db, month, year)["summary"]
 
 
-@router.post("/salary-payments", response_model=schemas.SalaryPaymentRead, status_code=201)
-def add_salary_payment(payload: schemas.SalaryPaymentCreate, db: Session = Depends(get_db)):
+@router.post(
+    "/salary-payments", response_model=schemas.SalaryPaymentRead, status_code=201
+)
+def add_salary_payment(
+    payload: schemas.SalaryPaymentCreate, db: Session = Depends(get_db)
+):
     try:
         return payroll.create_salary_payment(db, payload)
     except ValueError as error:
@@ -65,7 +76,9 @@ def add_salary_payment(payload: schemas.SalaryPaymentCreate, db: Session = Depen
 
 
 @router.put("/salary-payments/{payment_id}", response_model=schemas.SalaryPaymentRead)
-def edit_salary_payment(payment_id: int, payload: schemas.SalaryPaymentUpdate, db: Session = Depends(get_db)):
+def edit_salary_payment(
+    payment_id: int, payload: schemas.SalaryPaymentUpdate, db: Session = Depends(get_db)
+):
     payment = payroll.get_salary_payment(db, payment_id)
     if not payment:
         raise HTTPException(status_code=404, detail="Salary payment not found")
@@ -117,7 +130,9 @@ def remove_employee(
     return {"ok": True, "deleted_employee_id": employee_id}
 
 
-@router.get("/{employee_id}/salary-history", response_model=list[schemas.SalaryHistoryRead])
+@router.get(
+    "/{employee_id}/salary-history", response_model=list[schemas.SalaryHistoryRead]
+)
 def read_employee_salary_history(employee_id: int, db: Session = Depends(get_db)):
     employee = payroll.get_employee(db, employee_id)
     if not employee:
@@ -125,7 +140,11 @@ def read_employee_salary_history(employee_id: int, db: Session = Depends(get_db)
     return payroll.salary_history_for_employee(db, employee_id)
 
 
-@router.post("/{employee_id}/salary-history", response_model=schemas.SalaryHistoryRead, status_code=201)
+@router.post(
+    "/{employee_id}/salary-history",
+    response_model=schemas.SalaryHistoryRead,
+    status_code=201,
+)
 def change_employee_salary(
     employee_id: int,
     payload: schemas.SalaryHistoryCreate,
@@ -158,7 +177,9 @@ def read_salary_summary(
         raise HTTPException(status_code=404, detail=str(error)) from error
 
 
-@router.get("/{employee_id}/salary-ledger", response_model=schemas.EmployeeLedgerResponse)
+@router.get(
+    "/{employee_id}/salary-ledger", response_model=schemas.EmployeeLedgerResponse
+)
 def read_employee_salary_ledger(
     employee_id: int,
     from_date: date | None = Query(default=None),
@@ -184,7 +205,10 @@ def read_employee_salary_ledger(
         raise HTTPException(status_code=404, detail=str(error)) from error
 
 
-@router.get("/{employee_id}/adjustments", response_model=list[schemas.EmployeeSalaryAdjustmentRead])
+@router.get(
+    "/{employee_id}/adjustments",
+    response_model=list[schemas.EmployeeSalaryAdjustmentRead],
+)
 def read_employee_salary_adjustments(employee_id: int, db: Session = Depends(get_db)):
     employee = payroll.get_employee(db, employee_id)
     if not employee:
@@ -192,7 +216,11 @@ def read_employee_salary_adjustments(employee_id: int, db: Session = Depends(get
     return payroll.list_salary_adjustments(db, employee_id)
 
 
-@router.post("/{employee_id}/adjustments", response_model=schemas.EmployeeSalaryAdjustmentRead, status_code=201)
+@router.post(
+    "/{employee_id}/adjustments",
+    response_model=schemas.EmployeeSalaryAdjustmentRead,
+    status_code=201,
+)
 def add_employee_salary_adjustment(
     employee_id: int,
     payload: schemas.EmployeeSalaryAdjustmentCreate,
@@ -208,4 +236,3 @@ def add_employee_salary_adjustment(
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-

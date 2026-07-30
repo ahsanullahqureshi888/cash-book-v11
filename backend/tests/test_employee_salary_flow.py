@@ -7,7 +7,15 @@ from sqlalchemy.pool import StaticPool
 
 from app import crud, schemas
 from app.database import Base
-from app.payroll import create_employee, create_salary_history, create_salary_payment, delete_employee, delete_salary_payment, employee_salary_summary, salary_report
+from app.payroll import (
+    create_employee,
+    create_salary_history,
+    create_salary_payment,
+    delete_employee,
+    delete_salary_payment,
+    employee_salary_summary,
+    salary_report,
+)
 
 
 class EmployeeSalaryFlowTests(unittest.TestCase):
@@ -235,7 +243,9 @@ class EmployeeSalaryFlowTests(unittest.TestCase):
         self.assertEqual(9000, july_row["total_payable_salary"])
         self.assertEqual(9000, july_row["remaining_salary"])
 
-    def test_delete_employee_removes_salary_links_without_deleting_legacy_transactions(self):
+    def test_delete_employee_removes_salary_links_without_deleting_legacy_transactions(
+        self,
+    ):
         employee = create_employee(
             self.db,
             schemas.EmployeeCreate(
@@ -279,7 +289,9 @@ class EmployeeSalaryFlowTests(unittest.TestCase):
         delete_employee(self.db, employee)
         self.assertIsNone(crud.get_transaction(self.db, linked_cashbook_id))
         self.assertIsNotNone(crud.get_transaction(self.db, legacy_transaction.id))
-        self.assertIsNone(crud.get_transaction(self.db, legacy_transaction.id).employee_id)
+        self.assertIsNone(
+            crud.get_transaction(self.db, legacy_transaction.id).employee_id
+        )
         self.assertEqual([], salary_report(self.db, 6, 2026)["rows"])
 
 

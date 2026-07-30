@@ -9,7 +9,9 @@ from .utils import sanitize_xss
 
 class AccountBase(BaseModel):
     name: str
-    account_type: Literal["customer", "supplier", "worker", "factory", "bank", "expense", "other"] = "other"
+    account_type: Literal[
+        "customer", "supplier", "worker", "factory", "bank", "expense", "other"
+    ] = "other"
     phone: str = ""
     address: str = ""
     opening_balance_afn: float = 0
@@ -30,7 +32,9 @@ class AccountCreate(AccountBase):
 
 class AccountUpdate(BaseModel):
     name: Optional[str] = None
-    account_type: Optional[Literal["customer", "supplier", "worker", "factory", "bank", "expense", "other"]] = None
+    account_type: Optional[
+        Literal["customer", "supplier", "worker", "factory", "bank", "expense", "other"]
+    ] = None
     phone: Optional[str] = None
     address: Optional[str] = None
     opening_balance_afn: Optional[float] = None
@@ -62,7 +66,15 @@ class TransactionBase(BaseModel):
     exchange_rate: float = Field(default=0, ge=0)
     converted_afn: float = Field(default=0, ge=0)
     payment_method: Literal["cash", "bank", "hawala", "other"] = "cash"
-    category: Literal["salary", "rent", "factory_expense", "home_expense", "bottles_account", "office_expense", "other"] = "other"
+    category: Literal[
+        "salary",
+        "rent",
+        "factory_expense",
+        "home_expense",
+        "bottles_account",
+        "office_expense",
+        "other",
+    ] = "other"
     note: str = ""
 
     @field_validator("account_name", "detail", "note", mode="before")
@@ -94,7 +106,17 @@ class TransactionUpdate(BaseModel):
     exchange_rate: Optional[float] = Field(default=None, ge=0)
     converted_afn: Optional[float] = Field(default=None, ge=0)
     payment_method: Optional[Literal["cash", "bank", "hawala", "other"]] = None
-    category: Optional[Literal["salary", "rent", "factory_expense", "home_expense", "bottles_account", "office_expense", "other"]] = None
+    category: Optional[
+        Literal[
+            "salary",
+            "rent",
+            "factory_expense",
+            "home_expense",
+            "bottles_account",
+            "office_expense",
+            "other",
+        ]
+    ] = None
     note: Optional[str] = None
 
     @field_validator("account_name", "detail", "note", mode="before")
@@ -161,12 +183,26 @@ class UserPublic(BaseModel):
 class UserCreate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    full_name: str = Field(validation_alias=AliasChoices("full_name", "fullName", "name"))
+    full_name: str = Field(
+        validation_alias=AliasChoices("full_name", "fullName", "name")
+    )
     username: str
     password: str
-    role: Literal["Administrator", "Manager", "Cashier", "Viewer", "Super Admin", "Branch Manager", "Clerk"] = "Clerk"
-    avatar_path: str = Field(default="", validation_alias=AliasChoices("avatar_path", "avatar", "avatarUrl"))
-    is_active: bool = Field(default=True, validation_alias=AliasChoices("is_active", "status"))
+    role: Literal[
+        "Administrator",
+        "Manager",
+        "Cashier",
+        "Viewer",
+        "Super Admin",
+        "Branch Manager",
+        "Clerk",
+    ] = "Clerk"
+    avatar_path: str = Field(
+        default="", validation_alias=AliasChoices("avatar_path", "avatar", "avatarUrl")
+    )
+    is_active: bool = Field(
+        default=True, validation_alias=AliasChoices("is_active", "status")
+    )
     assigned_group_id: Optional[int] = None
     assigned_branch_id: Optional[int] = None
 
@@ -181,11 +217,28 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    full_name: Optional[str] = Field(default=None, validation_alias=AliasChoices("full_name", "fullName", "name"))
+    full_name: Optional[str] = Field(
+        default=None, validation_alias=AliasChoices("full_name", "fullName", "name")
+    )
     username: Optional[str] = None
-    role: Optional[Literal["Administrator", "Manager", "Cashier", "Viewer", "Super Admin", "Branch Manager", "Clerk"]] = None
-    avatar_path: Optional[str] = Field(default=None, validation_alias=AliasChoices("avatar_path", "avatar", "avatarUrl"))
-    is_active: Optional[bool] = Field(default=None, validation_alias=AliasChoices("is_active", "status"))
+    role: Optional[
+        Literal[
+            "Administrator",
+            "Manager",
+            "Cashier",
+            "Viewer",
+            "Super Admin",
+            "Branch Manager",
+            "Clerk",
+        ]
+    ] = None
+    avatar_path: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("avatar_path", "avatar", "avatarUrl"),
+    )
+    is_active: Optional[bool] = Field(
+        default=None, validation_alias=AliasChoices("is_active", "status")
+    )
     assigned_group_id: Optional[int] = None
     assigned_branch_id: Optional[int] = None
 
@@ -249,11 +302,22 @@ class EmployeeCreate(BaseModel):
     employment_end_date: Optional[DateType] = None
     monthly_salary: float = Field(ge=0)
     currency: Literal["AFN", "USD"] = "AFN"
-    avatar_url: str = Field(default="", validation_alias=AliasChoices("avatar_url", "avatarUrl", "avatar"))
+    avatar_url: str = Field(
+        default="", validation_alias=AliasChoices("avatar_url", "avatarUrl", "avatar")
+    )
     status: Literal["active", "inactive"] = "active"
     notes: str = ""
 
-    @field_validator("full_name", "father_name", "phone", "position", "department", "company_id", "notes", mode="before")
+    @field_validator(
+        "full_name",
+        "father_name",
+        "phone",
+        "position",
+        "department",
+        "company_id",
+        "notes",
+        mode="before",
+    )
     @classmethod
     def sanitize_employee_fields(cls, v):
         if isinstance(v, str):
@@ -274,11 +338,22 @@ class EmployeeUpdate(BaseModel):
     employment_end_date: Optional[DateType] = None
     monthly_salary: Optional[float] = Field(default=None, ge=0)
     currency: Optional[Literal["AFN", "USD"]] = None
-    avatar_url: Optional[str] = Field(default=None, validation_alias=AliasChoices("avatar_url", "avatarUrl", "avatar"))
+    avatar_url: Optional[str] = Field(
+        default=None, validation_alias=AliasChoices("avatar_url", "avatarUrl", "avatar")
+    )
     status: Optional[Literal["active", "inactive"]] = None
     notes: Optional[str] = None
 
-    @field_validator("full_name", "father_name", "phone", "position", "department", "company_id", "notes", mode="before")
+    @field_validator(
+        "full_name",
+        "father_name",
+        "phone",
+        "position",
+        "department",
+        "company_id",
+        "notes",
+        mode="before",
+    )
     @classmethod
     def sanitize_employee_fields(cls, v):
         if isinstance(v, str):
@@ -365,7 +440,16 @@ class EmployeeLedgerEntry(BaseModel):
     id: str
     date: DateType
     period: str
-    entry_type: Literal["opening_balance", "salary_accrual", "salary_payment", "bonus", "deduction", "advance", "adjustment", "reversal"]
+    entry_type: Literal[
+        "opening_balance",
+        "salary_accrual",
+        "salary_payment",
+        "bonus",
+        "deduction",
+        "advance",
+        "adjustment",
+        "reversal",
+    ]
     description: str
     salary_accrued: float = 0.0
     payment: float = 0.0
@@ -388,7 +472,6 @@ class EmployeeLedgerResponse(BaseModel):
     page: int = 1
     page_size: int = 100
     total_entries: int = 0
-
 
 
 class SalaryPaymentCreate(BaseModel):
@@ -555,11 +638,14 @@ class CsvImportRequest(BaseModel):
 class GroupBase(BaseModel):
     name: str
 
+
 class GroupCreate(GroupBase):
     pass
 
+
 class GroupUpdate(GroupBase):
     name: Optional[str] = None
+
 
 class GroupRead(GroupBase):
     model_config = ConfigDict(from_attributes=True)
@@ -570,12 +656,15 @@ class BranchBase(BaseModel):
     name: str
     group_id: int
 
+
 class BranchCreate(BranchBase):
     pass
+
 
 class BranchUpdate(BaseModel):
     name: Optional[str] = None
     group_id: Optional[int] = None
+
 
 class BranchRead(BranchBase):
     model_config = ConfigDict(from_attributes=True)
@@ -668,7 +757,7 @@ class BawarStarTransactionCreate(BaseModel):
         "PASS_THROUGH_PKG",
         "PAYMENT_RECEIVED",
         "BUY_RAW_MATERIAL",
-        "OPERATIONAL_EXPENSE"
+        "OPERATIONAL_EXPENSE",
     ]
     description_en: str = ""
     description_ps: str = ""
@@ -728,6 +817,3 @@ class BawarStarLedgerSummary(BaseModel):
     estimated_gross_profit: float = 0.0
     profit_margin_percentage: float = 0.0
     total_transactions: int = 0
-
-
-

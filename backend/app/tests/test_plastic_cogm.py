@@ -3,7 +3,9 @@ import sys
 import pytest
 from sqlalchemy.orm import Session
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+)
 
 from backend.app.database import Base, engine, SessionLocal
 from backend.app.models_plastic import (
@@ -13,10 +15,15 @@ from backend.app.models_plastic import (
     PlasticBOM,
     PlasticRawMaterial,
     PlasticProductionRun,
-    PlasticCashbookLedger
+    PlasticCashbookLedger,
 )
-from backend.app.services.cogm_engine import execute_production_run_and_post_ledger, calculate_bom_cost_preview
-from backend.app.services.scrap_service import log_scrap_recovery_and_update_regrind_stock
+from backend.app.services.cogm_engine import (
+    execute_production_run_and_post_ledger,
+    calculate_bom_cost_preview,
+)
+from backend.app.services.scrap_service import (
+    log_scrap_recovery_and_update_regrind_stock,
+)
 from backend.app.seed_plastic_erp import seed_plastic_erp_data
 
 
@@ -31,11 +38,27 @@ def test_plastic_cogm_and_double_entry_ledger_balancing():
 
     try:
         # Fetch seeded Entities
-        branch = db.query(PlasticBranch).filter(PlasticBranch.code == "PLANT-KND").first()
-        machine = db.query(PlasticMachine).filter(PlasticMachine.machine_code == "IMM-250T").first()
-        fg = db.query(PlasticFinishedGood).filter(PlasticFinishedGood.sku == "PET-BTL-120ML").first()
-        bom = db.query(PlasticBOM).filter(PlasticBOM.bom_code == "BOM-120ML-STD").first()
-        raw_mat = db.query(PlasticRawMaterial).filter(PlasticRawMaterial.branch_id == branch.id).first()
+        branch = (
+            db.query(PlasticBranch).filter(PlasticBranch.code == "PLANT-KND").first()
+        )
+        machine = (
+            db.query(PlasticMachine)
+            .filter(PlasticMachine.machine_code == "IMM-250T")
+            .first()
+        )
+        fg = (
+            db.query(PlasticFinishedGood)
+            .filter(PlasticFinishedGood.sku == "PET-BTL-120ML")
+            .first()
+        )
+        bom = (
+            db.query(PlasticBOM).filter(PlasticBOM.bom_code == "BOM-120ML-STD").first()
+        )
+        raw_mat = (
+            db.query(PlasticRawMaterial)
+            .filter(PlasticRawMaterial.branch_id == branch.id)
+            .first()
+        )
 
         initial_resin_stock = raw_mat.stock_qty_kg
         initial_fg_stock = fg.stock_on_hand_units
@@ -50,7 +73,7 @@ def test_plastic_cogm_and_double_entry_ledger_balancing():
             target_quantity=10000,
             good_produced_quantity=9600,
             scrap_quantity_units=400,
-            machine_hours_logged=40.0
+            machine_hours_logged=40.0,
         )
 
         # 1. Assert Production Run Completion
@@ -68,9 +91,11 @@ def test_plastic_cogm_and_double_entry_ledger_balancing():
         assert abs((initial_resin_stock - raw_mat.stock_qty_kg) - total_used_kg) < 0.01
 
         # 4. Assert Double-Entry Ledger Debit equals Credit to the exact penny ($0.00)
-        journal_entries = db.query(PlasticCashbookLedger).filter(
-            PlasticCashbookLedger.journal_ref == f"JRN-{run.run_number}"
-        ).all()
+        journal_entries = (
+            db.query(PlasticCashbookLedger)
+            .filter(PlasticCashbookLedger.journal_ref == f"JRN-{run.run_number}")
+            .all()
+        )
 
         total_debits = sum(e.debit_usd for e in journal_entries)
         total_credits = sum(e.credit_usd for e in journal_entries)
@@ -79,8 +104,12 @@ def test_plastic_cogm_and_double_entry_ledger_balancing():
         # Assertion: Net Debits equal Net Credits to exact penny
         assert abs(total_debits - total_credits) < 0.01
 
-        print(f"\n[TEST PASSED] Production Run {run.run_number}: Total COGM = ${run.total_cogm_usd:.2f} (Unit: ${run.unit_cogm_usd:.4f})")
-        print(f"[TEST PASSED] Double-Entry Ledger Balanced cleanly: Total Debits = ${total_debits:.2f}, Total Credits = ${total_credits:.2f}")
+        print(
+            f"\n[TEST PASSED] Production Run {run.run_number}: Total COGM = ${run.total_cogm_usd:.2f} (Unit: ${run.unit_cogm_usd:.4f})"
+        )
+        print(
+            f"[TEST PASSED] Double-Entry Ledger Balanced cleanly: Total Debits = ${total_debits:.2f}, Total Credits = ${total_credits:.2f}"
+        )
 
     finally:
         db.close()
@@ -101,7 +130,7 @@ def test_bom_preview_calculation():
         cost_per_kwh=0.12,
         hourly_overhead_rate=18.50,
         operator_hourly_wage=15.00,
-        sku="TEST-SKU-120ML"
+        sku="TEST-SKU-120ML",
     )
 
     assert preview["parts_per_hour"] == 240.0

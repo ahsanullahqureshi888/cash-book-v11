@@ -1,13 +1,19 @@
 import asyncio
 from datetime import datetime
 from typing import List
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    WebSocket,
+    WebSocketDisconnect,
+    HTTPException,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models_plastic import PlasticMachine, PlasticTelemetryPing, PlasticAuditLog
 from ..schemas_plastic import TelemetryPingCreate, TelemetryPingResponse
-
 
 router = APIRouter(prefix="/api/v1/iot", tags=["PlastiCorp IoT Telemetry"])
 
@@ -37,16 +43,21 @@ manager = ConnectionManager()
 
 @router.post("/telemetry", response_model=TelemetryPingResponse)
 async def ingest_machine_telemetry(
-    ping: TelemetryPingCreate,
-    db: Session = Depends(get_db)
+    ping: TelemetryPingCreate, db: Session = Depends(get_db)
 ):
     """
     High-concurrency IoT endpoint accepting live PLC machine pings.
     Updates machine status, shot counts, temperature, cycle time, and energy draw.
     """
-    machine = db.query(PlasticMachine).filter(PlasticMachine.machine_code == ping.machine_code).first()
+    machine = (
+        db.query(PlasticMachine)
+        .filter(PlasticMachine.machine_code == ping.machine_code)
+        .first()
+    )
     if not machine:
-        raise HTTPException(status_code=404, detail=f"Machine '{ping.machine_code}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Machine '{ping.machine_code}' not found."
+        )
 
     # 1. Update Machine Live Diagnostics
     machine.status = ping.status
@@ -70,7 +81,7 @@ async def ingest_machine_telemetry(
         incremental_shots=ping.shots_count,
         power_kw=ping.power_kw,
         incremental_kwh=round(incremental_kwh, 4),
-        operator_role=ping.operator_role
+        operator_role=ping.operator_role,
     )
     db.add(db_ping)
     db.commit()
@@ -88,7 +99,7 @@ async def ingest_machine_telemetry(
         "power_kw": machine.power_kw,
         "incremental_kwh": round(incremental_kwh, 4),
         "energy_cost_usd": round(energy_cost, 4),
-        "timestamp": str(db_ping.timestamp)
+        "timestamp": str(db_ping.timestamp),
     }
     asyncio.create_task(manager.broadcast(payload))
 
@@ -102,7 +113,7 @@ async def ingest_machine_telemetry(
         "cycle_time_sec": db_ping.cycle_time_sec,
         "power_kw": db_ping.power_kw,
         "incremental_kwh": round(incremental_kwh, 4),
-        "energy_cost_usd": round(energy_cost, 4)
+        "energy_cost_usd": round(energy_cost, 4),
     }
 
 

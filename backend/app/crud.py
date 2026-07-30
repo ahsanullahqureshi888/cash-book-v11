@@ -62,7 +62,11 @@ def _datetime_value(value):
             return datetime.fromisoformat(text.replace("Z", "+00:00"))
         except ValueError:
             parsed_date = _date_value(text)
-            return datetime.combine(parsed_date, datetime.min.time()) if isinstance(parsed_date, date) else None
+            return (
+                datetime.combine(parsed_date, datetime.min.time())
+                if isinstance(parsed_date, date)
+                else None
+            )
     return value
 
 
@@ -112,7 +116,9 @@ def _get_imported(mapping: dict, original_id):
     return mapping.get(key) or mapping.get(str(key))
 
 
-def _choice(value, allowed: set[str], default: str, aliases: dict[str, str] | None = None) -> str:
+def _choice(
+    value, allowed: set[str], default: str, aliases: dict[str, str] | None = None
+) -> str:
     text = _normalize_text(str(value or "")).lower().replace("-", "_").replace(" ", "_")
     aliases = aliases or {}
     return aliases.get(text) or (text if text in allowed else default)
@@ -124,7 +130,14 @@ def _backup_root(payload: dict) -> dict:
     for key in ("payload", "backup", "data"):
         nested = payload.get(key)
         if isinstance(nested, dict) and any(
-            marker in nested for marker in ("settings", "accounts", "employees", "transactions", "records")
+            marker in nested
+            for marker in (
+                "settings",
+                "accounts",
+                "employees",
+                "transactions",
+                "records",
+            )
         ):
             payload = nested
             break
@@ -140,31 +153,86 @@ def _normalize_settings_backup(settings_data: dict) -> dict:
     if not isinstance(settings_data, dict):
         return {}
     date_format = _choice(
-        _first_value(settings_data, "date_display_format", "dateFormat", "calendar_format", default="dual"),
+        _first_value(
+            settings_data,
+            "date_display_format",
+            "dateFormat",
+            "calendar_format",
+            default="dual",
+        ),
         {"persian", "gregorian", "dual"},
         "dual",
-        {"english": "gregorian", "jalali": "persian", "shamsi": "persian", "both": "dual"},
+        {
+            "english": "gregorian",
+            "jalali": "persian",
+            "shamsi": "persian",
+            "both": "dual",
+        },
     )
     default_exchange_rate = _first_value(
         settings_data,
-        "default_exchange_rate", "defaultExchangeRate", "exchange_rate", "exchangeRate",
+        "default_exchange_rate",
+        "defaultExchangeRate",
+        "exchange_rate",
+        "exchangeRate",
     )
     normalized = {
-        "company_name": _first_value(settings_data, "company_name", "companyName", "name"),
-        "company_phone": _first_value(settings_data, "company_phone", "companyPhone", "phone"),
-        "company_email": _first_value(settings_data, "company_email", "companyEmail", "email"),
-        "company_website": _first_value(settings_data, "company_website", "companyWebsite", "website"),
-        "company_tax_number": _first_value(settings_data, "company_tax_number", "companyTaxNumber", "tax_number"),
-        "company_logo": _first_value(settings_data, "company_logo", "companyLogo", "logo"),
-        "company_address": _first_value(settings_data, "company_address", "companyAddress", "address"),
-        "company_license": _first_value(settings_data, "company_license", "companyLicense", "license"),
-        "default_exchange_rate": _amount(default_exchange_rate) if default_exchange_rate not in (None, "") else None,
-        "default_currency": str(_first_value(settings_data, "default_currency", "defaultCurrency", "currency", default="AFN") or "AFN").upper(),
+        "company_name": _first_value(
+            settings_data, "company_name", "companyName", "name"
+        ),
+        "company_phone": _first_value(
+            settings_data, "company_phone", "companyPhone", "phone"
+        ),
+        "company_email": _first_value(
+            settings_data, "company_email", "companyEmail", "email"
+        ),
+        "company_website": _first_value(
+            settings_data, "company_website", "companyWebsite", "website"
+        ),
+        "company_tax_number": _first_value(
+            settings_data, "company_tax_number", "companyTaxNumber", "tax_number"
+        ),
+        "company_logo": _first_value(
+            settings_data, "company_logo", "companyLogo", "logo"
+        ),
+        "company_address": _first_value(
+            settings_data, "company_address", "companyAddress", "address"
+        ),
+        "company_license": _first_value(
+            settings_data, "company_license", "companyLicense", "license"
+        ),
+        "default_exchange_rate": (
+            _amount(default_exchange_rate)
+            if default_exchange_rate not in (None, "")
+            else None
+        ),
+        "default_currency": str(
+            _first_value(
+                settings_data,
+                "default_currency",
+                "defaultCurrency",
+                "currency",
+                default="AFN",
+            )
+            or "AFN"
+        ).upper(),
         "theme": _first_value(settings_data, "theme", default="dark"),
         "language": _first_value(settings_data, "language", default="English"),
         "date_display_format": date_format,
-        "print_footer_text": _first_value(settings_data, "print_footer_text", "printFooterText", "footer"),
-        "auto_logout_minutes": int(_amount(_first_value(settings_data, "auto_logout_minutes", "autoLogoutMinutes", default=30)) or 30),
+        "print_footer_text": _first_value(
+            settings_data, "print_footer_text", "printFooterText", "footer"
+        ),
+        "auto_logout_minutes": int(
+            _amount(
+                _first_value(
+                    settings_data,
+                    "auto_logout_minutes",
+                    "autoLogoutMinutes",
+                    default=30,
+                )
+            )
+            or 30
+        ),
     }
     return {key: value for key, value in normalized.items() if value is not None}
 
@@ -172,10 +240,19 @@ def _normalize_settings_backup(settings_data: dict) -> dict:
 def _normalize_account_backup(account_data: dict) -> dict | None:
     if not isinstance(account_data, dict):
         return None
-    name = _normalize_text(_first_value(
-        account_data,
-        "name", "account_name", "accountName", "customer", "customer_name", "person", "party", "full_name",
-    ))
+    name = _normalize_text(
+        _first_value(
+            account_data,
+            "name",
+            "account_name",
+            "accountName",
+            "customer",
+            "customer_name",
+            "person",
+            "party",
+            "full_name",
+        )
+    )
     if not name:
         return None
     return {
@@ -184,48 +261,149 @@ def _normalize_account_backup(account_data: dict) -> dict | None:
             _first_value(account_data, "account_type", "accountType", "type"),
             {"customer", "supplier", "worker", "factory", "expense", "other"},
             "other",
-            {"client": "customer", "employee": "worker", "staff": "worker", "vendor": "supplier", "company": "supplier"},
+            {
+                "client": "customer",
+                "employee": "worker",
+                "staff": "worker",
+                "vendor": "supplier",
+                "company": "supplier",
+            },
         ),
-        "phone": _normalize_text(_first_value(account_data, "phone", "mobile", "contact")),
+        "phone": _normalize_text(
+            _first_value(account_data, "phone", "mobile", "contact")
+        ),
         "address": _normalize_text(_first_value(account_data, "address", "location")),
-        "opening_balance_afn": _amount(_first_value(account_data, "opening_balance_afn", "openingBalanceAfn", "opening_balance", "balance_afn", "balance")),
-        "opening_balance_usd": _amount(_first_value(account_data, "opening_balance_usd", "openingBalanceUsd", "balance_usd")),
-        "note": _normalize_text(_first_value(account_data, "note", "notes", "description")),
+        "opening_balance_afn": _amount(
+            _first_value(
+                account_data,
+                "opening_balance_afn",
+                "openingBalanceAfn",
+                "opening_balance",
+                "balance_afn",
+                "balance",
+            )
+        ),
+        "opening_balance_usd": _amount(
+            _first_value(
+                account_data, "opening_balance_usd", "openingBalanceUsd", "balance_usd"
+            )
+        ),
+        "note": _normalize_text(
+            _first_value(account_data, "note", "notes", "description")
+        ),
     }
 
 
 def _normalize_employee_backup(employee_data: dict) -> dict | None:
     if not isinstance(employee_data, dict):
         return None
-    full_name = _normalize_text(_first_value(employee_data, "full_name", "fullName", "employee_name", "employeeName", "name"))
+    full_name = _normalize_text(
+        _first_value(
+            employee_data,
+            "full_name",
+            "fullName",
+            "employee_name",
+            "employeeName",
+            "name",
+        )
+    )
     if not full_name:
         return None
-    joining_date = _date_value(_first_value(employee_data, "joining_date", "joiningDate", "date_joined"))
-    employment_end_date = _date_value(_first_value(employee_data, "employment_end_date", "employmentEndDate", "end_date", "endDate", "termination_date", "terminationDate"))
+    joining_date = _date_value(
+        _first_value(employee_data, "joining_date", "joiningDate", "date_joined")
+    )
+    employment_end_date = _date_value(
+        _first_value(
+            employee_data,
+            "employment_end_date",
+            "employmentEndDate",
+            "end_date",
+            "endDate",
+            "termination_date",
+            "terminationDate",
+        )
+    )
     return {
         "full_name": full_name,
-        "father_name": _normalize_text(_first_value(employee_data, "father_name", "fatherName", "father")),
-        "phone": _normalize_text(_first_value(employee_data, "phone", "mobile", "contact")),
-        "position": _normalize_text(_first_value(employee_data, "position", "role", "job_title", "jobTitle", "designation")) or "Employee",
-        "department": _normalize_text(_first_value(employee_data, "department", "section")),
+        "father_name": _normalize_text(
+            _first_value(employee_data, "father_name", "fatherName", "father")
+        ),
+        "phone": _normalize_text(
+            _first_value(employee_data, "phone", "mobile", "contact")
+        ),
+        "position": _normalize_text(
+            _first_value(
+                employee_data,
+                "position",
+                "role",
+                "job_title",
+                "jobTitle",
+                "designation",
+            )
+        )
+        or "Employee",
+        "department": _normalize_text(
+            _first_value(employee_data, "department", "section")
+        ),
         "joining_date": joining_date,
         "employment_end_date": employment_end_date,
-        "monthly_salary": _amount(_first_value(employee_data, "monthly_salary", "monthlySalary", "salary", "salary_afn")),
-        "currency": "USD" if str(_first_value(employee_data, "currency", default="AFN")).upper() == "USD" else "AFN",
-        "avatar_url": _normalize_text(_first_value(employee_data, "avatar_url", "avatarUrl", "avatar", "avatar_path", "avatarPath")),
-        "status": _choice(_first_value(employee_data, "status", "is_active", "active"), {"active", "inactive"}, "active", {"true": "active", "false": "inactive", "1": "active", "0": "inactive"}),
+        "monthly_salary": _amount(
+            _first_value(
+                employee_data, "monthly_salary", "monthlySalary", "salary", "salary_afn"
+            )
+        ),
+        "currency": (
+            "USD"
+            if str(_first_value(employee_data, "currency", default="AFN")).upper()
+            == "USD"
+            else "AFN"
+        ),
+        "avatar_url": _normalize_text(
+            _first_value(
+                employee_data,
+                "avatar_url",
+                "avatarUrl",
+                "avatar",
+                "avatar_path",
+                "avatarPath",
+            )
+        ),
+        "status": _choice(
+            _first_value(employee_data, "status", "is_active", "active"),
+            {"active", "inactive"},
+            "active",
+            {"true": "active", "false": "inactive", "1": "active", "0": "inactive"},
+        ),
         "notes": _normalize_text(_first_value(employee_data, "notes", "note")),
     }
 
 
-def _transaction_type_from_backup(tx_data: dict, cash_in_afn: float, cash_out_afn: float, usd_in: float, usd_out: float) -> str:
+def _transaction_type_from_backup(
+    tx_data: dict,
+    cash_in_afn: float,
+    cash_out_afn: float,
+    usd_in: float,
+    usd_out: float,
+) -> str:
     tx_type = _choice(
-        _first_value(tx_data, "transaction_type", "transactionType", "type", "kind", "direction"),
+        _first_value(
+            tx_data, "transaction_type", "transactionType", "type", "kind", "direction"
+        ),
         {"cash_in", "cash_out"},
         "",
         {
-            "cashin": "cash_in", "in": "cash_in", "income": "cash_in", "credit": "cash_in", "receive": "cash_in", "received": "cash_in",
-            "cashout": "cash_out", "out": "cash_out", "expense": "cash_out", "debit": "cash_out", "payment": "cash_out", "paid": "cash_out",
+            "cashin": "cash_in",
+            "in": "cash_in",
+            "income": "cash_in",
+            "credit": "cash_in",
+            "receive": "cash_in",
+            "received": "cash_in",
+            "cashout": "cash_out",
+            "out": "cash_out",
+            "expense": "cash_out",
+            "debit": "cash_out",
+            "payment": "cash_out",
+            "paid": "cash_out",
         },
     )
     if tx_type:
@@ -241,23 +419,65 @@ def _transaction_type_from_backup(tx_data: dict, cash_in_afn: float, cash_out_af
 def _normalize_transaction_backup(tx_data: dict) -> dict | None:
     if not isinstance(tx_data, dict):
         return None
-    tx_date = _date_value(_first_value(tx_data, "date", "transaction_date", "transactionDate", "created_at", "createdAt"))
-    account_name = _normalize_text(_first_value(
-        tx_data,
-        "account_name", "accountName", "account", "name", "customer", "customer_name", "person", "party", "employee_name",
-    )) or "Imported Account"
-    cash_in_afn = _amount(_first_value(tx_data, "cash_in_afn", "cashInAfn", "cash_in", "cashIn", "afn_in", "afnIn"))
-    cash_out_afn = _amount(_first_value(tx_data, "cash_out_afn", "cashOutAfn", "cash_out", "cashOut", "afn_out", "afnOut"))
+    tx_date = _date_value(
+        _first_value(
+            tx_data,
+            "date",
+            "transaction_date",
+            "transactionDate",
+            "created_at",
+            "createdAt",
+        )
+    )
+    account_name = (
+        _normalize_text(
+            _first_value(
+                tx_data,
+                "account_name",
+                "accountName",
+                "account",
+                "name",
+                "customer",
+                "customer_name",
+                "person",
+                "party",
+                "employee_name",
+            )
+        )
+        or "Imported Account"
+    )
+    cash_in_afn = _amount(
+        _first_value(
+            tx_data, "cash_in_afn", "cashInAfn", "cash_in", "cashIn", "afn_in", "afnIn"
+        )
+    )
+    cash_out_afn = _amount(
+        _first_value(
+            tx_data,
+            "cash_out_afn",
+            "cashOutAfn",
+            "cash_out",
+            "cashOut",
+            "afn_out",
+            "afnOut",
+        )
+    )
     usd_in = _amount(_first_value(tx_data, "usd_in", "usdIn", "dollar_in", "dollarIn"))
-    usd_out = _amount(_first_value(tx_data, "usd_out", "usdOut", "dollar_out", "dollarOut"))
-    tx_type = _transaction_type_from_backup(tx_data, cash_in_afn, cash_out_afn, usd_in, usd_out)
+    usd_out = _amount(
+        _first_value(tx_data, "usd_out", "usdOut", "dollar_out", "dollarOut")
+    )
+    tx_type = _transaction_type_from_backup(
+        tx_data, cash_in_afn, cash_out_afn, usd_in, usd_out
+    )
     amount = _amount(_first_value(tx_data, "amount", "total"))
     if amount and not any((cash_in_afn, cash_out_afn, usd_in, usd_out)):
         if tx_type == "cash_in":
             cash_in_afn = abs(amount)
         else:
             cash_out_afn = abs(amount)
-    exchange_rate = _amount(_first_value(tx_data, "exchange_rate", "exchangeRate", "rate"))
+    exchange_rate = _amount(
+        _first_value(tx_data, "exchange_rate", "exchangeRate", "rate")
+    )
     if (usd_in or usd_out) and not exchange_rate:
         exchange_rate = 64.3
     return {
@@ -265,19 +485,63 @@ def _normalize_transaction_backup(tx_data: dict) -> dict | None:
         "date": tx_date or date.today(),
         "account_id": _id_key(_first_value(tx_data, "account_id", "accountId")),
         "employee_id": _id_key(_first_value(tx_data, "employee_id", "employeeId")),
-        "salary_month": _date_value(_first_value(tx_data, "salary_month", "salaryMonth", "month")),
-        "payroll_kind": _choice(_first_value(tx_data, "payroll_kind", "payrollKind"), {"salary", "advance"}, None),
+        "salary_month": _date_value(
+            _first_value(tx_data, "salary_month", "salaryMonth", "month")
+        ),
+        "payroll_kind": _choice(
+            _first_value(tx_data, "payroll_kind", "payrollKind"),
+            {"salary", "advance"},
+            None,
+        ),
         "account_name": account_name,
-        "detail": _normalize_text(_first_value(tx_data, "detail", "description", "memo", "particulars", "reason", "note")) or "Imported transaction",
+        "detail": _normalize_text(
+            _first_value(
+                tx_data,
+                "detail",
+                "description",
+                "memo",
+                "particulars",
+                "reason",
+                "note",
+            )
+        )
+        or "Imported transaction",
         "transaction_type": tx_type,
         "cash_in_afn": cash_in_afn,
         "cash_out_afn": cash_out_afn,
         "usd_in": usd_in,
         "usd_out": usd_out,
         "exchange_rate": exchange_rate,
-        "converted_afn": _amount(_first_value(tx_data, "converted_afn", "convertedAfn", "afn_amount")),
-        "payment_method": _choice(_first_value(tx_data, "payment_method", "paymentMethod", "method"), {"cash", "bank", "hawala", "other"}, "cash", {"transfer": "bank", "card": "bank", "cheque": "bank", "check": "bank"}),
-        "category": _choice(_first_value(tx_data, "category", "expense_category", "expenseCategory"), {"salary", "rent", "factory_expense", "home_expense", "bottles_account", "office_expense", "other"}, "other", {"factory": "factory_expense", "home": "home_expense", "office": "office_expense", "bottle": "bottles_account", "bottles": "bottles_account", "employee_salary": "salary"}),
+        "converted_afn": _amount(
+            _first_value(tx_data, "converted_afn", "convertedAfn", "afn_amount")
+        ),
+        "payment_method": _choice(
+            _first_value(tx_data, "payment_method", "paymentMethod", "method"),
+            {"cash", "bank", "hawala", "other"},
+            "cash",
+            {"transfer": "bank", "card": "bank", "cheque": "bank", "check": "bank"},
+        ),
+        "category": _choice(
+            _first_value(tx_data, "category", "expense_category", "expenseCategory"),
+            {
+                "salary",
+                "rent",
+                "factory_expense",
+                "home_expense",
+                "bottles_account",
+                "office_expense",
+                "other",
+            },
+            "other",
+            {
+                "factory": "factory_expense",
+                "home": "home_expense",
+                "office": "office_expense",
+                "bottle": "bottles_account",
+                "bottles": "bottles_account",
+                "employee_salary": "salary",
+            },
+        ),
         "note": _normalize_text(_first_value(tx_data, "note", "notes", "remarks")),
     }
 
@@ -316,7 +580,11 @@ def get_account(db: Session, account_id: int) -> models.Account | None:
 
 
 def get_account_by_name(db: Session, name: str) -> models.Account | None:
-    return db.query(models.Account).filter(func.lower(models.Account.name) == name.lower()).first()
+    return (
+        db.query(models.Account)
+        .filter(func.lower(models.Account.name) == name.lower())
+        .first()
+    )
 
 
 def create_account(db: Session, payload: schemas.AccountCreate) -> models.Account:
@@ -338,7 +606,9 @@ def create_account(db: Session, payload: schemas.AccountCreate) -> models.Accoun
     return account
 
 
-def update_account(db: Session, account: models.Account, payload: schemas.AccountUpdate) -> models.Account:
+def update_account(
+    db: Session, account: models.Account, payload: schemas.AccountUpdate
+) -> models.Account:
     data = payload.model_dump(exclude_unset=True)
     for key, value in data.items():
         if value is None:
@@ -346,7 +616,15 @@ def update_account(db: Session, account: models.Account, payload: schemas.Accoun
         if key == "account_type":
             setattr(account, key, value)
         else:
-            setattr(account, key, _amount(value) if key.startswith("opening_balance") else _normalize_text(value))
+            setattr(
+                account,
+                key,
+                (
+                    _amount(value)
+                    if key.startswith("opening_balance")
+                    else _normalize_text(value)
+                ),
+            )
     db.commit()
     db.refresh(account)
     return account
@@ -358,16 +636,29 @@ def delete_account(db: Session, account: models.Account) -> None:
 
 
 def list_transactions(db: Session) -> list[models.Transaction]:
-    return db.query(models.Transaction).order_by(models.Transaction.date.asc(), models.Transaction.id.asc()).all()
+    return (
+        db.query(models.Transaction)
+        .order_by(models.Transaction.date.asc(), models.Transaction.id.asc())
+        .all()
+    )
 
 
-def get_transaction(db: Session, transaction_id: int, user: models.User | None = None) -> models.Transaction | None:
+def get_transaction(
+    db: Session, transaction_id: int, user: models.User | None = None
+) -> models.Transaction | None:
     query = db.query(models.Transaction).filter(models.Transaction.id == transaction_id)
     if user and user.role not in ["Administrator", "Super Admin"]:
         if user.assigned_branch_id is not None:
-            query = query.filter(models.Transaction.branch_id == user.assigned_branch_id)
+            query = query.filter(
+                models.Transaction.branch_id == user.assigned_branch_id
+            )
         elif user.assigned_group_id is not None:
-            group_branch_ids = [b.id for b in db.query(models.Branch).filter(models.Branch.group_id == user.assigned_group_id).all()]
+            group_branch_ids = [
+                b.id
+                for b in db.query(models.Branch)
+                .filter(models.Branch.group_id == user.assigned_group_id)
+                .all()
+            ]
             query = query.filter(models.Transaction.branch_id.in_(group_branch_ids))
     return query.first()
 
@@ -382,14 +673,20 @@ def _cash_to_afn(payload: schemas.TransactionBase) -> float:
 
 
 def _afn_to_usd(amount_afn: float, rate: float) -> float:
-    return round(_amount(amount_afn) / _amount(rate), 2) if _amount(amount_afn) and _amount(rate) else 0.0
+    return (
+        round(_amount(amount_afn) / _amount(rate), 2)
+        if _amount(amount_afn) and _amount(rate)
+        else 0.0
+    )
 
 
 def _next_transaction_no(db: Session, transaction_date: date) -> str:
     prefix = transaction_date.strftime("TX-%Y%m%d")
-    existing = db.query(models.Transaction.transaction_no).filter(
-        models.Transaction.transaction_no.like(f"{prefix}-%")
-    ).all()
+    existing = (
+        db.query(models.Transaction.transaction_no)
+        .filter(models.Transaction.transaction_no.like(f"{prefix}-%"))
+        .all()
+    )
     sequences = []
     for (number,) in existing:
         try:
@@ -400,7 +697,13 @@ def _next_transaction_no(db: Session, transaction_date: date) -> str:
 
 
 def _validate_transaction(payload: schemas.TransactionBase) -> None:
-    values = [payload.cash_in_afn, payload.cash_out_afn, payload.usd_in, payload.usd_out, payload.exchange_rate]
+    values = [
+        payload.cash_in_afn,
+        payload.cash_out_afn,
+        payload.usd_in,
+        payload.usd_out,
+        payload.exchange_rate,
+    ]
     if any(_amount(value) < 0 for value in values):
         raise ValueError("Amounts cannot be negative")
     usd_amount = _amount(payload.usd_in or payload.usd_out)
@@ -411,11 +714,19 @@ def _validate_transaction(payload: schemas.TransactionBase) -> None:
         raise ValueError("Exchange rate is required when USD is entered")
 
 
-def create_transaction(db: Session, payload: schemas.TransactionCreate) -> models.Transaction:
+def create_transaction(
+    db: Session, payload: schemas.TransactionCreate
+) -> models.Transaction:
     _validate_transaction(payload)
     amount_afn = _cash_to_afn(payload)
     derived_usd = _afn_to_usd(amount_afn, payload.exchange_rate)
-    employee = db.query(models.Employee).filter(models.Employee.id == payload.employee_id).first() if payload.employee_id else None
+    employee = (
+        db.query(models.Employee)
+        .filter(models.Employee.id == payload.employee_id)
+        .first()
+        if payload.employee_id
+        else None
+    )
     if payload.employee_id and not employee:
         raise ValueError("Employee not found")
     if employee and payload.transaction_type != "cash_out":
@@ -426,7 +737,11 @@ def create_transaction(db: Session, payload: schemas.TransactionCreate) -> model
     if not account:
         account = get_account_by_name(db, payload.account_name)
     if not account:
-        account = models.Account(name=_normalize_text(payload.account_name), opening_balance_afn=0, opening_balance_usd=0)
+        account = models.Account(
+            name=_normalize_text(payload.account_name),
+            opening_balance_afn=0,
+            opening_balance_usd=0,
+        )
         db.add(account)
         db.flush()
     transaction = models.Transaction(
@@ -434,16 +749,30 @@ def create_transaction(db: Session, payload: schemas.TransactionCreate) -> model
         date=payload.date,
         account_id=account.id,
         employee_id=employee.id if employee else None,
-        company_id=(employee.company_id or "all") if employee else (getattr(payload, "company_id", None) or "bawar-star"),
-        salary_month=(payload.salary_month or payload.date).replace(day=1) if employee else None,
+        company_id=(
+            (employee.company_id or "all")
+            if employee
+            else (getattr(payload, "company_id", None) or "bawar-star")
+        ),
+        salary_month=(
+            (payload.salary_month or payload.date).replace(day=1) if employee else None
+        ),
         payroll_kind=(payload.payroll_kind or "salary") if employee else None,
         account_name=account.name,
         detail=_normalize_text(payload.detail),
         transaction_type=payload.transaction_type,
         cash_in_afn=amount_afn if payload.transaction_type == "cash_in" else 0,
         cash_out_afn=amount_afn if payload.transaction_type == "cash_out" else 0,
-        usd_in=_amount(payload.usd_in) if payload.transaction_type == "cash_in" and _amount(payload.usd_in) else (derived_usd if payload.transaction_type == "cash_in" else 0),
-        usd_out=_amount(payload.usd_out) if payload.transaction_type == "cash_out" and _amount(payload.usd_out) else (derived_usd if payload.transaction_type == "cash_out" else 0),
+        usd_in=(
+            _amount(payload.usd_in)
+            if payload.transaction_type == "cash_in" and _amount(payload.usd_in)
+            else (derived_usd if payload.transaction_type == "cash_in" else 0)
+        ),
+        usd_out=(
+            _amount(payload.usd_out)
+            if payload.transaction_type == "cash_out" and _amount(payload.usd_out)
+            else (derived_usd if payload.transaction_type == "cash_out" else 0)
+        ),
         exchange_rate=_amount(payload.exchange_rate),
         converted_afn=amount_afn,
         payment_method=payload.payment_method,
@@ -457,7 +786,9 @@ def create_transaction(db: Session, payload: schemas.TransactionCreate) -> model
     return transaction
 
 
-def import_cashbook_csv(db: Session, content: str, filename: str = "cashbook.csv") -> dict:
+def import_cashbook_csv(
+    db: Session, content: str, filename: str = "cashbook.csv"
+) -> dict:
     rows = parse_cashbook_csv(content)
     imported = 0
     skipped = 0
@@ -550,11 +881,13 @@ def import_cashbook_csv(db: Session, content: str, filename: str = "cashbook.csv
             existing_signatures.add(signature)
             imported += 1
 
-        db.add(models.BackupLog(
-            backup_name=_normalize_text(filename) or "cashbook.csv",
-            backup_type="csv_import",
-            note=f"Imported {imported} transactions, skipped {skipped} duplicates, created {created_accounts} accounts",
-        ))
+        db.add(
+            models.BackupLog(
+                backup_name=_normalize_text(filename) or "cashbook.csv",
+                backup_type="csv_import",
+                note=f"Imported {imported} transactions, skipped {skipped} duplicates, created {created_accounts} accounts",
+            )
+        )
         db.commit()
     except Exception:
         db.rollback()
@@ -594,16 +927,18 @@ def import_master_excel(db: Session, file_bytes: bytes, filename: str) -> dict:
         models.Transaction.usd_in,
         models.Transaction.usd_out,
     ).all():
-        existing_sigs.add((
-            str(row[0] or ""),
-            (row[1] or "").strip().lower(),
-            (row[2] or "").strip().lower(),
-            str(row[3] or ""),
-            float(row[4] or 0),
-            float(row[5] or 0),
-            float(row[6] or 0),
-            float(row[7] or 0),
-        ))
+        existing_sigs.add(
+            (
+                str(row[0] or ""),
+                (row[1] or "").strip().lower(),
+                (row[2] or "").strip().lower(),
+                str(row[3] or ""),
+                float(row[4] or 0),
+                float(row[5] or 0),
+                float(row[6] or 0),
+                float(row[7] or 0),
+            )
+        )
 
     try:
         for sheet_name in wb.sheetnames:
@@ -617,18 +952,41 @@ def import_master_excel(db: Session, file_bytes: bytes, filename: str) -> dict:
             for idx, r in enumerate(rows[:10]):
                 r_str = [str(c or "").strip().lower() for c in r]
                 joined = " ".join(r_str)
-                if any(k in joined for k in ["date", "detail", "description", "received", "paid", "amount", "in", "out", "debit", "credit"]):
+                if any(
+                    k in joined
+                    for k in [
+                        "date",
+                        "detail",
+                        "description",
+                        "received",
+                        "paid",
+                        "amount",
+                        "in",
+                        "out",
+                        "debit",
+                        "credit",
+                    ]
+                ):
                     header_idx = idx
                     for c_idx, val in enumerate(r_str):
                         if "date" in val:
                             col_map["date"] = c_idx
-                        elif any(k in val for k in ["account", "name", "customer", "vendor"]):
+                        elif any(
+                            k in val for k in ["account", "name", "customer", "vendor"]
+                        ):
                             col_map["account"] = c_idx
-                        elif any(k in val for k in ["detail", "description", "particular", "item"]):
+                        elif any(
+                            k in val
+                            for k in ["detail", "description", "particular", "item"]
+                        ):
                             col_map["detail"] = c_idx
-                        elif any(k in val for k in ["received", "cash in", "debit"]) or (val == "in"):
+                        elif any(
+                            k in val for k in ["received", "cash in", "debit"]
+                        ) or (val == "in"):
                             col_map["cash_in"] = c_idx
-                        elif any(k in val for k in ["paid", "cash out", "credit"]) or (val == "out"):
+                        elif any(k in val for k in ["paid", "cash out", "credit"]) or (
+                            val == "out"
+                        ):
                             col_map["cash_out"] = c_idx
                         elif "usd" in val:
                             col_map["usd"] = c_idx
@@ -643,11 +1001,15 @@ def import_master_excel(db: Session, file_bytes: bytes, filename: str) -> dict:
                 col_map = {"date": 0, "detail": 1, "cash_in": 2, "cash_out": 3}
                 header_idx = 0
 
-            for r in rows[header_idx + 1:]:
+            for r in rows[header_idx + 1 :]:
                 if not r or not any(r):
                     continue
 
-                raw_date = r[col_map["date"]] if "date" in col_map and col_map["date"] < len(r) else None
+                raw_date = (
+                    r[col_map["date"]]
+                    if "date" in col_map and col_map["date"] < len(r)
+                    else None
+                )
                 if isinstance(raw_date, datetime):
                     tx_date = raw_date.strftime("%Y-%m-%d")
                 elif isinstance(raw_date, date):
@@ -657,31 +1019,76 @@ def import_master_excel(db: Session, file_bytes: bytes, filename: str) -> dict:
                 else:
                     tx_date = today_str
 
-                acc_cell = r[col_map["account"]] if "account" in col_map and col_map["account"] < len(r) else None
+                acc_cell = (
+                    r[col_map["account"]]
+                    if "account" in col_map and col_map["account"] < len(r)
+                    else None
+                )
                 acc_name = str(acc_cell).strip() if acc_cell else sheet_name.strip()
                 if not acc_name or acc_name.lower() in ("sheet", "total", "summary"):
                     acc_name = sheet_name.strip()
 
-                detail_cell = r[col_map["detail"]] if "detail" in col_map and col_map["detail"] < len(r) else None
-                detail = str(detail_cell).strip() if detail_cell else f"Entry from {sheet_name}"
+                detail_cell = (
+                    r[col_map["detail"]]
+                    if "detail" in col_map and col_map["detail"] < len(r)
+                    else None
+                )
+                detail = (
+                    str(detail_cell).strip()
+                    if detail_cell
+                    else f"Entry from {sheet_name}"
+                )
 
-                cin = _amount(r[col_map["cash_in"]]) if "cash_in" in col_map and col_map["cash_in"] < len(r) else 0.0
-                cout = _amount(r[col_map["cash_out"]]) if "cash_out" in col_map and col_map["cash_out"] < len(r) else 0.0
-                usd_amt = _amount(r[col_map["usd"]]) if "usd" in col_map and col_map["usd"] < len(r) else 0.0
-                rate = _amount(r[col_map["rate"]]) if "rate" in col_map and col_map["rate"] < len(r) else 0.0
-                note_cell = r[col_map["note"]] if "note" in col_map and col_map["note"] < len(r) else None
+                cin = (
+                    _amount(r[col_map["cash_in"]])
+                    if "cash_in" in col_map and col_map["cash_in"] < len(r)
+                    else 0.0
+                )
+                cout = (
+                    _amount(r[col_map["cash_out"]])
+                    if "cash_out" in col_map and col_map["cash_out"] < len(r)
+                    else 0.0
+                )
+                usd_amt = (
+                    _amount(r[col_map["usd"]])
+                    if "usd" in col_map and col_map["usd"] < len(r)
+                    else 0.0
+                )
+                rate = (
+                    _amount(r[col_map["rate"]])
+                    if "rate" in col_map and col_map["rate"] < len(r)
+                    else 0.0
+                )
+                note_cell = (
+                    r[col_map["note"]]
+                    if "note" in col_map and col_map["note"] < len(r)
+                    else None
+                )
                 note = str(note_cell).strip() if note_cell else ""
 
                 if cin == 0.0 and cout == 0.0 and usd_amt == 0.0:
                     continue
 
-                tx_type = "cash_in" if (cin > 0 or (usd_amt > 0 and cout == 0)) else "cash_out"
+                tx_type = (
+                    "cash_in"
+                    if (cin > 0 or (usd_amt > 0 and cout == 0))
+                    else "cash_out"
+                )
                 cash_in_afn = cin if tx_type == "cash_in" else 0.0
                 cash_out_afn = cout if tx_type == "cash_out" else 0.0
                 usd_in = usd_amt if tx_type == "cash_in" else 0.0
                 usd_out = usd_amt if tx_type == "cash_out" else 0.0
 
-                sig = (tx_date, acc_name.lower(), detail.lower(), tx_type, cash_in_afn, cash_out_afn, usd_in, usd_out)
+                sig = (
+                    tx_date,
+                    acc_name.lower(),
+                    detail.lower(),
+                    tx_type,
+                    cash_in_afn,
+                    cash_out_afn,
+                    usd_in,
+                    usd_out,
+                )
                 if sig in existing_sigs:
                     continue
 
@@ -720,11 +1127,13 @@ def import_master_excel(db: Session, file_bytes: bytes, filename: str) -> dict:
                 existing_sigs.add(sig)
                 imported_transactions += 1
 
-        db.add(models.BackupLog(
-            backup_name=_normalize_text(filename) or "master-excel.xlsx",
-            backup_type="excel_import",
-            note=f"Parsed {sheets_processed} sheets. Imported {imported_transactions} transactions, created {created_accounts} accounts",
-        ))
+        db.add(
+            models.BackupLog(
+                backup_name=_normalize_text(filename) or "master-excel.xlsx",
+                backup_type="excel_import",
+                note=f"Parsed {sheets_processed} sheets. Imported {imported_transactions} transactions, created {created_accounts} accounts",
+            )
+        )
         db.commit()
     except Exception:
         db.rollback()
@@ -740,14 +1149,23 @@ def import_master_excel(db: Session, file_bytes: bytes, filename: str) -> dict:
     }
 
 
-def update_transaction(db: Session, transaction: models.Transaction, payload: schemas.TransactionUpdate) -> models.Transaction:
+def update_transaction(
+    db: Session, transaction: models.Transaction, payload: schemas.TransactionUpdate
+) -> models.Transaction:
     data = payload.model_dump(exclude_unset=True)
     for key, value in data.items():
         if value is None:
             continue
         if key in {"account_name", "detail", "note"}:
             setattr(transaction, key, _normalize_text(value))
-        elif key in {"cash_in_afn", "cash_out_afn", "usd_in", "usd_out", "exchange_rate", "converted_afn"}:
+        elif key in {
+            "cash_in_afn",
+            "cash_out_afn",
+            "usd_in",
+            "usd_out",
+            "exchange_rate",
+            "converted_afn",
+        }:
             setattr(transaction, key, _amount(value))
         else:
             setattr(transaction, key, value)
@@ -755,26 +1173,62 @@ def update_transaction(db: Session, transaction: models.Transaction, payload: sc
         transaction.cash_out_afn = 0
         transaction.usd_out = 0
         if not transaction.cash_in_afn:
-            transaction.cash_in_afn = round(_amount(transaction.usd_in) * _amount(transaction.exchange_rate), 2) if transaction.usd_in and transaction.exchange_rate else transaction.cash_in_afn
+            transaction.cash_in_afn = (
+                round(
+                    _amount(transaction.usd_in) * _amount(transaction.exchange_rate), 2
+                )
+                if transaction.usd_in and transaction.exchange_rate
+                else transaction.cash_in_afn
+            )
     if transaction.transaction_type == "cash_out":
         transaction.cash_in_afn = 0
         transaction.usd_in = 0
         if not transaction.cash_out_afn:
-            transaction.cash_out_afn = round(_amount(transaction.usd_out) * _amount(transaction.exchange_rate), 2) if transaction.usd_out and transaction.exchange_rate else transaction.cash_out_afn
-    transaction.converted_afn = _amount(transaction.cash_in_afn or transaction.cash_out_afn)
+            transaction.cash_out_afn = (
+                round(
+                    _amount(transaction.usd_out) * _amount(transaction.exchange_rate), 2
+                )
+                if transaction.usd_out and transaction.exchange_rate
+                else transaction.cash_out_afn
+            )
+    transaction.converted_afn = _amount(
+        transaction.cash_in_afn or transaction.cash_out_afn
+    )
     if not transaction.converted_afn and transaction.exchange_rate:
-        transaction.converted_afn = round(_amount(transaction.usd_in or transaction.usd_out) * _amount(transaction.exchange_rate), 2)
+        transaction.converted_afn = round(
+            _amount(transaction.usd_in or transaction.usd_out)
+            * _amount(transaction.exchange_rate),
+            2,
+        )
     if transaction.exchange_rate:
-        if transaction.transaction_type == "cash_in" and transaction.cash_in_afn and not transaction.usd_in:
-            transaction.usd_in = _afn_to_usd(transaction.cash_in_afn, transaction.exchange_rate)
-        if transaction.transaction_type == "cash_out" and transaction.cash_out_afn and not transaction.usd_out:
-            transaction.usd_out = _afn_to_usd(transaction.cash_out_afn, transaction.exchange_rate)
+        if (
+            transaction.transaction_type == "cash_in"
+            and transaction.cash_in_afn
+            and not transaction.usd_in
+        ):
+            transaction.usd_in = _afn_to_usd(
+                transaction.cash_in_afn, transaction.exchange_rate
+            )
+        if (
+            transaction.transaction_type == "cash_out"
+            and transaction.cash_out_afn
+            and not transaction.usd_out
+        ):
+            transaction.usd_out = _afn_to_usd(
+                transaction.cash_out_afn, transaction.exchange_rate
+            )
     if transaction.account_name:
-        account = get_account(db, transaction.account_id) if transaction.account_id else None
+        account = (
+            get_account(db, transaction.account_id) if transaction.account_id else None
+        )
         if not account or account.name.lower() != transaction.account_name.lower():
             account = get_account_by_name(db, transaction.account_name)
             if not account:
-                account = models.Account(name=_normalize_text(transaction.account_name), opening_balance_afn=0, opening_balance_usd=0)
+                account = models.Account(
+                    name=_normalize_text(transaction.account_name),
+                    opening_balance_afn=0,
+                    opening_balance_usd=0,
+                )
                 db.add(account)
                 db.flush()
             transaction.account_id = account.id
@@ -807,29 +1261,52 @@ def delete_transaction(db: Session, transaction: models.Transaction) -> None:
     db.commit()
 
 
-def summary(db: Session, user: models.User | None = None, group_id: int | None = None, branch_id: int | None = None) -> dict:
+def summary(
+    db: Session,
+    user: models.User | None = None,
+    group_id: int | None = None,
+    branch_id: int | None = None,
+) -> dict:
     today = date.today()
     month_start = today.replace(day=1)
     next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
-    
+
     base_q = db.query(models.Transaction)
     if branch_id:
         base_q = base_q.filter(models.Transaction.branch_id == branch_id)
     elif group_id:
-        branch_ids = [b.id for b in db.query(models.Branch).filter(models.Branch.group_id == group_id).all()]
+        branch_ids = [
+            b.id
+            for b in db.query(models.Branch)
+            .filter(models.Branch.group_id == group_id)
+            .all()
+        ]
         base_q = base_q.filter(models.Transaction.branch_id.in_(branch_ids))
 
     if user and user.role not in ["Administrator", "Super Admin"]:
         if user.assigned_branch_id is not None:
-            base_q = base_q.filter(models.Transaction.branch_id == user.assigned_branch_id)
+            base_q = base_q.filter(
+                models.Transaction.branch_id == user.assigned_branch_id
+            )
         elif user.assigned_group_id is not None:
-            group_branch_ids = [b.id for b in db.query(models.Branch).filter(models.Branch.group_id == user.assigned_group_id).all()]
+            group_branch_ids = [
+                b.id
+                for b in db.query(models.Branch)
+                .filter(models.Branch.group_id == user.assigned_group_id)
+                .all()
+            ]
             base_q = base_q.filter(models.Transaction.branch_id.in_(group_branch_ids))
 
-    cash_in_afn = _amount(base_q.with_entities(func.sum(models.Transaction.cash_in_afn)).scalar())
-    cash_out_afn = _amount(base_q.with_entities(func.sum(models.Transaction.cash_out_afn)).scalar())
+    cash_in_afn = _amount(
+        base_q.with_entities(func.sum(models.Transaction.cash_in_afn)).scalar()
+    )
+    cash_out_afn = _amount(
+        base_q.with_entities(func.sum(models.Transaction.cash_out_afn)).scalar()
+    )
     usd_in = _amount(base_q.with_entities(func.sum(models.Transaction.usd_in)).scalar())
-    usd_out = _amount(base_q.with_entities(func.sum(models.Transaction.usd_out)).scalar())
+    usd_out = _amount(
+        base_q.with_entities(func.sum(models.Transaction.usd_out)).scalar()
+    )
     today_transactions = base_q.filter(models.Transaction.date == today).count()
     monthly_transactions = base_q.filter(
         models.Transaction.date >= month_start,
@@ -852,7 +1329,9 @@ def summary(db: Session, user: models.User | None = None, group_id: int | None =
         "today_cash_in": round(sum(_amount(tx.cash_in_afn) for tx in today_rows), 2),
         "today_cash_out": round(sum(_amount(tx.cash_out_afn) for tx in today_rows), 2),
         "monthly_cash_in": round(sum(_amount(tx.cash_in_afn) for tx in month_rows), 2),
-        "monthly_cash_out": round(sum(_amount(tx.cash_out_afn) for tx in month_rows), 2),
+        "monthly_cash_out": round(
+            sum(_amount(tx.cash_out_afn) for tx in month_rows), 2
+        ),
     }
 
 
@@ -874,9 +1353,16 @@ def filtered_transactions(
     query = db.query(models.Transaction)
     if user and user.role not in ["Administrator", "Super Admin"]:
         if user.assigned_branch_id is not None:
-            query = query.filter(models.Transaction.branch_id == user.assigned_branch_id)
+            query = query.filter(
+                models.Transaction.branch_id == user.assigned_branch_id
+            )
         elif user.assigned_group_id is not None:
-            group_branch_ids = [b.id for b in db.query(models.Branch).filter(models.Branch.group_id == user.assigned_group_id).all()]
+            group_branch_ids = [
+                b.id
+                for b in db.query(models.Branch)
+                .filter(models.Branch.group_id == user.assigned_group_id)
+                .all()
+            ]
             query = query.filter(models.Transaction.branch_id.in_(group_branch_ids))
 
     if start_date:
@@ -886,7 +1372,9 @@ def filtered_transactions(
     if type in {"cash_in", "cash_out"}:
         query = query.filter(models.Transaction.transaction_type == type)
     if account:
-        query = query.filter(func.lower(models.Transaction.account_name).like(f"%{account.lower()}%"))
+        query = query.filter(
+            func.lower(models.Transaction.account_name).like(f"%{account.lower()}%")
+        )
     if category:
         query = query.filter(models.Transaction.category == category)
     if payment_method:
@@ -894,7 +1382,12 @@ def filtered_transactions(
     if branch_id:
         query = query.filter(models.Transaction.branch_id == branch_id)
     elif group_id:
-        branch_ids = [b.id for b in db.query(models.Branch).filter(models.Branch.group_id == group_id).all()]
+        branch_ids = [
+            b.id
+            for b in db.query(models.Branch)
+            .filter(models.Branch.group_id == group_id)
+            .all()
+        ]
         query = query.filter(models.Transaction.branch_id.in_(branch_ids))
     if search:
         pattern = f"%{search.lower()}%"
@@ -958,8 +1451,12 @@ def account_ledger(db: Session, account_id: int) -> dict:
         "account": account,
         "opening_balance_afn": account.opening_balance_afn,
         "opening_balance_usd": account.opening_balance_usd,
-        "total_cash_in_afn": round(sum(_amount(tx.cash_in_afn) for tx in transactions), 2),
-        "total_cash_out_afn": round(sum(_amount(tx.cash_out_afn) for tx in transactions), 2),
+        "total_cash_in_afn": round(
+            sum(_amount(tx.cash_in_afn) for tx in transactions), 2
+        ),
+        "total_cash_out_afn": round(
+            sum(_amount(tx.cash_out_afn) for tx in transactions), 2
+        ),
         "total_usd_in": round(sum(_amount(tx.usd_in) for tx in transactions), 2),
         "total_usd_out": round(sum(_amount(tx.usd_out) for tx in transactions), 2),
         "final_balance_afn": round(running_afn, 2),
@@ -969,21 +1466,31 @@ def account_ledger(db: Session, account_id: int) -> dict:
 
 
 def backup_payload(db: Session) -> dict:
-    db.add(models.BackupLog(
-        backup_name=f"cashbook-backup-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
-        backup_type="export",
-        note="Full JSON backup exported",
-    ))
+    db.add(
+        models.BackupLog(
+            backup_name=f"cashbook-backup-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
+            backup_type="export",
+            note="Full JSON backup exported",
+        )
+    )
     db.commit()
     return {
         "exported_at": datetime.utcnow(),
         "settings": get_settings(db),
         "accounts": list_accounts(db),
-        "employees": db.query(models.Employee).order_by(models.Employee.full_name.asc()).all(),
+        "employees": db.query(models.Employee)
+        .order_by(models.Employee.full_name.asc())
+        .all(),
         "transactions": list_transactions(db),
-        "salary_payments": db.query(models.SalaryPayment).order_by(models.SalaryPayment.id.asc()).all(),
-        "salary_history": db.query(models.SalaryHistory).order_by(models.SalaryHistory.id.asc()).all(),
-        "salary_adjustments": db.query(models.EmployeeSalaryAdjustment).order_by(models.EmployeeSalaryAdjustment.id.asc()).all(),
+        "salary_payments": db.query(models.SalaryPayment)
+        .order_by(models.SalaryPayment.id.asc())
+        .all(),
+        "salary_history": db.query(models.SalaryHistory)
+        .order_by(models.SalaryHistory.id.asc())
+        .all(),
+        "salary_adjustments": db.query(models.EmployeeSalaryAdjustment)
+        .order_by(models.EmployeeSalaryAdjustment.id.asc())
+        .all(),
     }
 
 
@@ -991,7 +1498,8 @@ def import_backup(db: Session, payload: dict, replace_all: bool = False) -> dict
     payload = _backup_root(payload)
     settings_data = _normalize_settings_backup(payload.get("settings") or {})
     account_rows = [
-        row for row in (
+        row
+        for row in (
             _normalize_account_backup(item)
             for item in _rows_from(payload, "accounts", "account_list", "parties")
         )
@@ -1010,12 +1518,16 @@ def import_backup(db: Session, payload: dict, replace_all: bool = False) -> dict
             _first_value(item, "id", "transaction_id", "transactionId"),
             row,
         )
-        for item in _rows_from(payload, "transactions", "records", "entries", "cashbook")
+        for item in _rows_from(
+            payload, "transactions", "records", "entries", "cashbook"
+        )
         if (row := _normalize_transaction_backup(item))
     ]
     salary_history_rows = _rows_from(payload, "salary_history", "salaryHistory")
     salary_payment_rows = _rows_from(payload, "salary_payments", "salaryPayments")
-    salary_adjustment_rows = _rows_from(payload, "salary_adjustments", "salaryAdjustments")
+    salary_adjustment_rows = _rows_from(
+        payload, "salary_adjustments", "salaryAdjustments"
+    )
 
     if replace_all:
         db.query(models.EmployeeSalaryAdjustment).delete()
@@ -1050,17 +1562,33 @@ def import_backup(db: Session, payload: dict, replace_all: bool = False) -> dict
         for original_id, employee_data in employee_rows:
             existing_employee = (
                 db.query(models.Employee)
-                .filter(func.lower(models.Employee.full_name) == employee_data["full_name"].lower())
+                .filter(
+                    func.lower(models.Employee.full_name)
+                    == employee_data["full_name"].lower()
+                )
                 .first()
             )
-            employee = existing_employee or create_employee(db, schemas.EmployeeCreate(**employee_data))
+            employee = existing_employee or create_employee(
+                db, schemas.EmployeeCreate(**employee_data)
+            )
             _map_imported(employee_id_map, original_id, employee)
             imported_employees += 1
     transaction_id_map = {}
     for original_transaction_id, tx_data in transaction_rows:
-        if not any((_amount(tx_data.get("cash_in_afn")), _amount(tx_data.get("cash_out_afn")), _amount(tx_data.get("usd_in")), _amount(tx_data.get("usd_out")))):
+        if not any(
+            (
+                _amount(tx_data.get("cash_in_afn")),
+                _amount(tx_data.get("cash_out_afn")),
+                _amount(tx_data.get("usd_in")),
+                _amount(tx_data.get("usd_out")),
+            )
+        ):
             continue
-        existing = get_transaction(db, tx_data["id"]) if isinstance(tx_data.get("id"), int) else None
+        existing = (
+            get_transaction(db, tx_data["id"])
+            if isinstance(tx_data.get("id"), int)
+            else None
+        )
         if existing:
             _map_imported(transaction_id_map, original_transaction_id, existing)
             continue
@@ -1068,20 +1596,27 @@ def import_backup(db: Session, payload: dict, replace_all: bool = False) -> dict
             db.query(models.Transaction)
             .filter(
                 models.Transaction.date == tx_data["date"],
-                func.lower(models.Transaction.account_name) == tx_data["account_name"].lower(),
+                func.lower(models.Transaction.account_name)
+                == tx_data["account_name"].lower(),
                 models.Transaction.detail == tx_data["detail"],
-                models.Transaction.transaction_type == tx_data.get("transaction_type", tx_data.get("type")),
-                models.Transaction.cash_in_afn == _amount(tx_data.get("cash_in_afn", 0)),
-                models.Transaction.cash_out_afn == _amount(tx_data.get("cash_out_afn", 0)),
+                models.Transaction.transaction_type
+                == tx_data.get("transaction_type", tx_data.get("type")),
+                models.Transaction.cash_in_afn
+                == _amount(tx_data.get("cash_in_afn", 0)),
+                models.Transaction.cash_out_afn
+                == _amount(tx_data.get("cash_out_afn", 0)),
                 models.Transaction.usd_in == _amount(tx_data.get("usd_in", 0)),
                 models.Transaction.usd_out == _amount(tx_data.get("usd_out", 0)),
-                models.Transaction.exchange_rate == _amount(tx_data.get("exchange_rate", 0)),
+                models.Transaction.exchange_rate
+                == _amount(tx_data.get("exchange_rate", 0)),
                 models.Transaction.note == tx_data.get("note", ""),
             )
             .first()
         )
         if natural_duplicate:
-            _map_imported(transaction_id_map, original_transaction_id, natural_duplicate)
+            _map_imported(
+                transaction_id_map, original_transaction_id, natural_duplicate
+            )
             continue
         account = get_account_by_name(db, tx_data["account_name"])
         account_id = account.id if account else tx_data.get("account_id")
@@ -1114,103 +1649,228 @@ def import_backup(db: Session, payload: dict, replace_all: bool = False) -> dict
     for history_data in salary_history_rows:
         if not isinstance(history_data, dict):
             continue
-        employee = _get_imported(employee_id_map, _first_value(history_data, "employee_id", "employeeId"))
+        employee = _get_imported(
+            employee_id_map, _first_value(history_data, "employee_id", "employeeId")
+        )
         if not employee:
             continue
-        effective_date = _date_value(_first_value(history_data, "effective_date", "effectiveDate", "date"))
+        effective_date = _date_value(
+            _first_value(history_data, "effective_date", "effectiveDate", "date")
+        )
         if not effective_date:
             continue
-        duplicate = db.query(models.SalaryHistory).filter(
-            models.SalaryHistory.employee_id == employee.id,
-            models.SalaryHistory.effective_date == effective_date,
-            models.SalaryHistory.new_salary == _amount(_first_value(history_data, "new_salary", "newSalary", "salary")),
-        ).first()
+        duplicate = (
+            db.query(models.SalaryHistory)
+            .filter(
+                models.SalaryHistory.employee_id == employee.id,
+                models.SalaryHistory.effective_date == effective_date,
+                models.SalaryHistory.new_salary
+                == _amount(
+                    _first_value(history_data, "new_salary", "newSalary", "salary")
+                ),
+            )
+            .first()
+        )
         if duplicate:
             continue
-        db.add(models.SalaryHistory(
-            employee_id=employee.id,
-            old_salary=_amount(_first_value(history_data, "old_salary", "oldSalary")),
-            new_salary=_amount(_first_value(history_data, "new_salary", "newSalary", "salary")),
-            old_currency=str(_first_value(history_data, "old_currency", "oldCurrency", default="AFN") or "AFN").upper(),
-            new_currency=str(_first_value(history_data, "new_currency", "newCurrency", "currency", default="AFN") or "AFN").upper(),
-            effective_date=effective_date,
-            changed_at=_datetime_value(_first_value(history_data, "changed_at", "changedAt")) or datetime.utcnow(),
-            changed_by=_normalize_text(_first_value(history_data, "changed_by", "changedBy")) or "Administrator",
-            reason=_normalize_text(_first_value(history_data, "reason")) or "Imported backup",
-            notes=_normalize_text(_first_value(history_data, "notes", "note")),
-        ))
+        db.add(
+            models.SalaryHistory(
+                employee_id=employee.id,
+                old_salary=_amount(
+                    _first_value(history_data, "old_salary", "oldSalary")
+                ),
+                new_salary=_amount(
+                    _first_value(history_data, "new_salary", "newSalary", "salary")
+                ),
+                old_currency=str(
+                    _first_value(
+                        history_data, "old_currency", "oldCurrency", default="AFN"
+                    )
+                    or "AFN"
+                ).upper(),
+                new_currency=str(
+                    _first_value(
+                        history_data,
+                        "new_currency",
+                        "newCurrency",
+                        "currency",
+                        default="AFN",
+                    )
+                    or "AFN"
+                ).upper(),
+                effective_date=effective_date,
+                changed_at=_datetime_value(
+                    _first_value(history_data, "changed_at", "changedAt")
+                )
+                or datetime.utcnow(),
+                changed_by=_normalize_text(
+                    _first_value(history_data, "changed_by", "changedBy")
+                )
+                or "Administrator",
+                reason=_normalize_text(_first_value(history_data, "reason"))
+                or "Imported backup",
+                notes=_normalize_text(_first_value(history_data, "notes", "note")),
+            )
+        )
         imported_salary_history += 1
 
     for payment_data in salary_payment_rows:
         if not isinstance(payment_data, dict):
             continue
-        employee = _get_imported(employee_id_map, _first_value(payment_data, "employee_id", "employeeId"))
-        transaction = _get_imported(transaction_id_map, _first_value(payment_data, "cashbook_entry_id", "cashbookEntryId", "transaction_id", "transactionId"))
+        employee = _get_imported(
+            employee_id_map, _first_value(payment_data, "employee_id", "employeeId")
+        )
+        transaction = _get_imported(
+            transaction_id_map,
+            _first_value(
+                payment_data,
+                "cashbook_entry_id",
+                "cashbookEntryId",
+                "transaction_id",
+                "transactionId",
+            ),
+        )
         if not employee or not transaction:
             continue
-        duplicate = db.query(models.SalaryPayment).filter(
-            models.SalaryPayment.cashbook_entry_id == transaction.id,
-        ).first()
+        duplicate = (
+            db.query(models.SalaryPayment)
+            .filter(
+                models.SalaryPayment.cashbook_entry_id == transaction.id,
+            )
+            .first()
+        )
         if duplicate:
             continue
-        payment_date = _date_value(_first_value(payment_data, "payment_date", "paymentDate", "date"))
+        payment_date = _date_value(
+            _first_value(payment_data, "payment_date", "paymentDate", "date")
+        )
         if not payment_date:
             continue
-        db.add(models.SalaryPayment(
-            employee_id=employee.id,
-            month=int(_amount(_first_value(payment_data, "month")) or payment_date.month),
-            year=int(_amount(_first_value(payment_data, "year")) or payment_date.year),
-            amount=_amount(_first_value(payment_data, "amount", "paid_amount", "paidAmount")),
-            payment_date=payment_date,
-            payment_method=_choice(_first_value(payment_data, "payment_method", "paymentMethod", "method"), {"cash", "bank", "hawala", "other"}, "cash", {"transfer": "bank", "card": "bank"}),
-            notes=_normalize_text(_first_value(payment_data, "notes", "note")),
-            previous_carry_forward_balance=_amount(_first_value(payment_data, "previous_carry_forward_balance", "previousCarryForwardBalance")),
-            total_payable_salary=_amount(_first_value(payment_data, "total_payable_salary", "totalPayableSalary")),
-            carry_forward_balance=_amount(_first_value(payment_data, "carry_forward_balance", "carryForwardBalance")),
-            cashbook_entry_id=transaction.id,
-        ))
+        db.add(
+            models.SalaryPayment(
+                employee_id=employee.id,
+                month=int(
+                    _amount(_first_value(payment_data, "month")) or payment_date.month
+                ),
+                year=int(
+                    _amount(_first_value(payment_data, "year")) or payment_date.year
+                ),
+                amount=_amount(
+                    _first_value(payment_data, "amount", "paid_amount", "paidAmount")
+                ),
+                payment_date=payment_date,
+                payment_method=_choice(
+                    _first_value(
+                        payment_data, "payment_method", "paymentMethod", "method"
+                    ),
+                    {"cash", "bank", "hawala", "other"},
+                    "cash",
+                    {"transfer": "bank", "card": "bank"},
+                ),
+                notes=_normalize_text(_first_value(payment_data, "notes", "note")),
+                previous_carry_forward_balance=_amount(
+                    _first_value(
+                        payment_data,
+                        "previous_carry_forward_balance",
+                        "previousCarryForwardBalance",
+                    )
+                ),
+                total_payable_salary=_amount(
+                    _first_value(
+                        payment_data, "total_payable_salary", "totalPayableSalary"
+                    )
+                ),
+                carry_forward_balance=_amount(
+                    _first_value(
+                        payment_data, "carry_forward_balance", "carryForwardBalance"
+                    )
+                ),
+                cashbook_entry_id=transaction.id,
+            )
+        )
         imported_salary_payments += 1
 
     for adj_data in salary_adjustment_rows:
         if not isinstance(adj_data, dict):
             continue
-        employee = _get_imported(employee_id_map, _first_value(adj_data, "employee_id", "employeeId"))
+        employee = _get_imported(
+            employee_id_map, _first_value(adj_data, "employee_id", "employeeId")
+        )
         if not employee:
             continue
-        adj_date = _date_value(_first_value(adj_data, "date", "adjustment_date", "adjustmentDate"))
+        adj_date = _date_value(
+            _first_value(adj_data, "date", "adjustment_date", "adjustmentDate")
+        )
         if not adj_date:
             continue
-        period_str = str(_first_value(adj_data, "period") or f"{adj_date.year:04d}-{adj_date.month:02d}")
+        period_str = str(
+            _first_value(adj_data, "period")
+            or f"{adj_date.year:04d}-{adj_date.month:02d}"
+        )
         amount_val = _amount(_first_value(adj_data, "amount"))
         if not amount_val:
             continue
-        duplicate = db.query(models.EmployeeSalaryAdjustment).filter(
-            models.EmployeeSalaryAdjustment.employee_id == employee.id,
-            models.EmployeeSalaryAdjustment.date == adj_date,
-            models.EmployeeSalaryAdjustment.amount == amount_val,
-            models.EmployeeSalaryAdjustment.adjustment_type == str(_first_value(adj_data, "adjustment_type", "adjustmentType", "type", default="adjustment")),
-        ).first()
+        duplicate = (
+            db.query(models.EmployeeSalaryAdjustment)
+            .filter(
+                models.EmployeeSalaryAdjustment.employee_id == employee.id,
+                models.EmployeeSalaryAdjustment.date == adj_date,
+                models.EmployeeSalaryAdjustment.amount == amount_val,
+                models.EmployeeSalaryAdjustment.adjustment_type
+                == str(
+                    _first_value(
+                        adj_data,
+                        "adjustment_type",
+                        "adjustmentType",
+                        "type",
+                        default="adjustment",
+                    )
+                ),
+            )
+            .first()
+        )
         if duplicate:
             continue
-        db.add(models.EmployeeSalaryAdjustment(
-            employee_id=employee.id,
-            date=adj_date,
-            period=period_str,
-            amount=amount_val,
-            currency=str(_first_value(adj_data, "currency", default="AFN") or "AFN").upper(),
-            adjustment_type=str(_first_value(adj_data, "adjustment_type", "adjustmentType", "type", default="adjustment")),
-            reason=_normalize_text(_first_value(adj_data, "reason")) or "Imported adjustment",
-            notes=_normalize_text(_first_value(adj_data, "notes", "note")),
-            created_by=_normalize_text(_first_value(adj_data, "created_by", "createdBy")) or "Administrator",
-            created_at=_datetime_value(_first_value(adj_data, "created_at", "createdAt")) or datetime.utcnow(),
-        ))
+        db.add(
+            models.EmployeeSalaryAdjustment(
+                employee_id=employee.id,
+                date=adj_date,
+                period=period_str,
+                amount=amount_val,
+                currency=str(
+                    _first_value(adj_data, "currency", default="AFN") or "AFN"
+                ).upper(),
+                adjustment_type=str(
+                    _first_value(
+                        adj_data,
+                        "adjustment_type",
+                        "adjustmentType",
+                        "type",
+                        default="adjustment",
+                    )
+                ),
+                reason=_normalize_text(_first_value(adj_data, "reason"))
+                or "Imported adjustment",
+                notes=_normalize_text(_first_value(adj_data, "notes", "note")),
+                created_by=_normalize_text(
+                    _first_value(adj_data, "created_by", "createdBy")
+                )
+                or "Administrator",
+                created_at=_datetime_value(
+                    _first_value(adj_data, "created_at", "createdAt")
+                )
+                or datetime.utcnow(),
+            )
+        )
         imported_salary_adjustments += 1
 
-    db.add(models.BackupLog(
-        backup_name=f"cashbook-restore-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
-        backup_type="restore",
-        note=f"Imported {imported_accounts} accounts, {imported_employees} employees, and {imported_transactions} transactions",
-    ))
+    db.add(
+        models.BackupLog(
+            backup_name=f"cashbook-restore-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
+            backup_type="restore",
+            note=f"Imported {imported_accounts} accounts, {imported_employees} employees, and {imported_transactions} transactions",
+        )
+    )
     db.commit()
     return {
         "imported_accounts": imported_accounts,
@@ -1241,11 +1901,13 @@ def clear_all(db: Session) -> dict:
     db.commit()
     db.expunge_all()
     _ensure_settings(db)
-    db.add(models.BackupLog(
-        backup_name=f"cashbook-clear-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
-        backup_type="clear",
-        note=f"Cleared {account_count} accounts, {employee_count} employees, and {transaction_count} transactions",
-    ))
+    db.add(
+        models.BackupLog(
+            backup_name=f"cashbook-clear-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
+            backup_type="clear",
+            note=f"Cleared {account_count} accounts, {employee_count} employees, and {transaction_count} transactions",
+        )
+    )
     db.commit()
     return {
         "ok": True,
@@ -1253,6 +1915,7 @@ def clear_all(db: Session) -> dict:
         "deleted_employees": employee_count,
         "deleted_transactions": transaction_count,
     }
+
 
 def dashboard_summary(db: Session, branch_id: int | None = None) -> dict:
     today = date.today()
@@ -1264,7 +1927,9 @@ def dashboard_summary(db: Session, branch_id: int | None = None) -> dict:
         base_q = base_q.filter(models.Transaction.branch_id == branch_id)
 
     today_q = base_q.filter(models.Transaction.date == today)
-    month_q = base_q.filter(models.Transaction.date >= month_start, models.Transaction.date < next_month)
+    month_q = base_q.filter(
+        models.Transaction.date >= month_start, models.Transaction.date < next_month
+    )
 
     def get_sum(q, col):
         return _amount(q.with_entities(func.sum(col)).scalar())
@@ -1273,13 +1938,17 @@ def dashboard_summary(db: Session, branch_id: int | None = None) -> dict:
     afn_out_today = get_sum(today_q, models.Transaction.cash_out_afn)
     afn_in_month = get_sum(month_q, models.Transaction.cash_in_afn)
     afn_out_month = get_sum(month_q, models.Transaction.cash_out_afn)
-    afn_balance = get_sum(base_q, models.Transaction.cash_in_afn) - get_sum(base_q, models.Transaction.cash_out_afn)
+    afn_balance = get_sum(base_q, models.Transaction.cash_in_afn) - get_sum(
+        base_q, models.Transaction.cash_out_afn
+    )
 
     usd_in_today = get_sum(today_q, models.Transaction.usd_in)
     usd_out_today = get_sum(today_q, models.Transaction.usd_out)
     usd_in_month = get_sum(month_q, models.Transaction.usd_in)
     usd_out_month = get_sum(month_q, models.Transaction.usd_out)
-    usd_balance = get_sum(base_q, models.Transaction.usd_in) - get_sum(base_q, models.Transaction.usd_out)
+    usd_balance = get_sum(base_q, models.Transaction.usd_in) - get_sum(
+        base_q, models.Transaction.usd_out
+    )
 
     toman_balance = 0.0
     toman_in_today = 0.0
@@ -1292,9 +1961,11 @@ def dashboard_summary(db: Session, branch_id: int | None = None) -> dict:
 
     active_accounts = db.query(models.Account).count()
     # Handle both boolean and integer is_active representation
-    active_employees = db.query(models.Employee).filter(
-        or_(models.Employee.is_active == True, models.Employee.is_active == 1)
-    ).count()
+    active_employees = (
+        db.query(models.Employee)
+        .filter(or_(models.Employee.is_active == True, models.Employee.is_active == 1))
+        .count()
+    )
 
     recent_transactions = base_q.order_by(models.Transaction.id.desc()).limit(10).all()
 
@@ -1304,48 +1975,57 @@ def dashboard_summary(db: Session, branch_id: int | None = None) -> dict:
     for r in cf_rows:
         d = r.date.isoformat()
         if d not in cf_map:
-            cf_map[d] = {"date": d, "in_afn": 0, "out_afn": 0, "in_usd": 0, "out_usd": 0}
+            cf_map[d] = {
+                "date": d,
+                "in_afn": 0,
+                "out_afn": 0,
+                "in_usd": 0,
+                "out_usd": 0,
+            }
         cf_map[d]["in_afn"] += _amount(r.cash_in_afn)
         cf_map[d]["out_afn"] += _amount(r.cash_out_afn)
         cf_map[d]["in_usd"] += _amount(r.usd_in)
         cf_map[d]["out_usd"] += _amount(r.usd_out)
-    
+
     cash_flow = sorted(list(cf_map.values()), key=lambda x: x["date"])
 
     return {
-        "period": { "start": month_start.isoformat(), "end": today.isoformat() },
-        "branch": { "id": branch_id, "name": "Consolidated" if not branch_id else str(branch_id) },
-        "currencies": {
-            "AFN": { 
-                "balance": round(afn_balance, 2), 
-                "cash_in_today": round(afn_in_today, 2), 
-                "cash_out_today": round(afn_out_today, 2), 
-                "cash_in_month": round(afn_in_month, 2), 
-                "cash_out_month": round(afn_out_month, 2) 
-            },
-            "USD": { 
-                "balance": round(usd_balance, 2), 
-                "cash_in_today": round(usd_in_today, 2), 
-                "cash_out_today": round(usd_out_today, 2), 
-                "cash_in_month": round(usd_in_month, 2), 
-                "cash_out_month": round(usd_out_month, 2) 
-            },
-            "TOMAN": { 
-                "balance": round(toman_balance, 2), 
-                "cash_in_today": round(toman_in_today, 2), 
-                "cash_out_today": round(toman_out_today, 2), 
-                "cash_in_month": round(toman_in_month, 2), 
-                "cash_out_month": round(toman_out_month, 2) 
-            }
+        "period": {"start": month_start.isoformat(), "end": today.isoformat()},
+        "branch": {
+            "id": branch_id,
+            "name": "Consolidated" if not branch_id else str(branch_id),
         },
-        "totals": { 
-            "entries_today": entries_today, 
-            "entries_month": entries_month, 
-            "active_accounts": active_accounts, 
-            "active_employees": active_employees 
+        "currencies": {
+            "AFN": {
+                "balance": round(afn_balance, 2),
+                "cash_in_today": round(afn_in_today, 2),
+                "cash_out_today": round(afn_out_today, 2),
+                "cash_in_month": round(afn_in_month, 2),
+                "cash_out_month": round(afn_out_month, 2),
+            },
+            "USD": {
+                "balance": round(usd_balance, 2),
+                "cash_in_today": round(usd_in_today, 2),
+                "cash_out_today": round(usd_out_today, 2),
+                "cash_in_month": round(usd_in_month, 2),
+                "cash_out_month": round(usd_out_month, 2),
+            },
+            "TOMAN": {
+                "balance": round(toman_balance, 2),
+                "cash_in_today": round(toman_in_today, 2),
+                "cash_out_today": round(toman_out_today, 2),
+                "cash_in_month": round(toman_in_month, 2),
+                "cash_out_month": round(toman_out_month, 2),
+            },
+        },
+        "totals": {
+            "entries_today": entries_today,
+            "entries_month": entries_month,
+            "active_accounts": active_accounts,
+            "active_employees": active_employees,
         },
         "cash_flow": cash_flow,
         "recent_transactions": recent_transactions,
         "account_balances": [],
-        "system_status": { "status": "operational" }
+        "system_status": {"status": "operational"},
     }

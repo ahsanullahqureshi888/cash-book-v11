@@ -80,7 +80,9 @@ class ScrapLogCreate(BaseModel):
     scrap_weight_kg: float = Field(50.0, example=50.0)
     regrind_valuation_per_kg: float = Field(0.90, example=0.90)
     logged_by: str = Field("Operator", example="Operator")
-    notes: str = Field("Granulated sprues and defective moldings", example="Defective moldings")
+    notes: str = Field(
+        "Granulated sprues and defective moldings", example="Defective moldings"
+    )
 
 
 class ScrapLogResponse(BaseModel):
@@ -153,7 +155,9 @@ class MaterialRunwayItem(BaseModel):
 class DispatchPOCreate(BaseModel):
     material_code: str = Field("RM-PP-VIRGIN", example="RM-PP-VIRGIN")
     branch_code: str = Field("PLANT-KND", example="PLANT-KND")
-    supplier_name: str = Field("Borouge Plastics Supply", example="Borouge Plastics Supply")
+    supplier_name: str = Field(
+        "Borouge Plastics Supply", example="Borouge Plastics Supply"
+    )
     order_qty_kg: float = Field(5000.0, example=5000.0)
 
 

@@ -53,8 +53,12 @@ def require_authenticated_request(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-        
-    user = db.query(models.User).filter(models.User.username == username, models.User.is_active == True).first()
+
+    user = (
+        db.query(models.User)
+        .filter(models.User.username == username, models.User.is_active == True)
+        .first()
+    )
     if user is None:
         raise credentials_exception
     return user
@@ -69,7 +73,7 @@ def require_administrator_request(user=Depends(require_authenticated_request)):
 def get_current_tenant(
     x_tenant_id: str | None = Header(None),
     x_company_id: str | None = Header(None),
-    company_id: str | None = Query(None)
+    company_id: str | None = Query(None),
 ) -> str:
     raw = x_tenant_id or x_company_id or company_id or "cashbook_bawar_prod"
     raw_lower = raw.lower()
@@ -92,7 +96,6 @@ class RoleChecker:
         if user_role not in self.allowed_roles:
             raise HTTPException(
                 status_code=403,
-                detail=f"Operation forbidden for role: {user.role}. Required: {self.allowed_roles}"
+                detail=f"Operation forbidden for role: {user.role}. Required: {self.allowed_roles}",
             )
         return user
-

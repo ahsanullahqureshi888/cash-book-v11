@@ -16,6 +16,7 @@ os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 from app.database import Base
 from app import models, schemas, crud
 
+
 class MainEndpointTests(unittest.TestCase):
     def setUp(self):
         self.engine = create_engine(
@@ -26,13 +27,15 @@ class MainEndpointTests(unittest.TestCase):
         Base.metadata.create_all(self.engine)
         SessionLocal = sessionmaker(bind=self.engine, autoflush=False, autocommit=False)
         self.db = SessionLocal()
-        
+
         # Seed settings required for transaction defaults
-        self.db.add(models.Setting(
-            company_name="Cashbook Of All companies",
-            default_exchange_rate=64.3,
-            default_currency="AFN"
-        ))
+        self.db.add(
+            models.Setting(
+                company_name="Cashbook Of All companies",
+                default_exchange_rate=64.3,
+                default_currency="AFN",
+            )
+        )
         self.db.commit()
 
     def tearDown(self):
@@ -50,7 +53,7 @@ class MainEndpointTests(unittest.TestCase):
                 exchange_rate=64.3,
                 payment_method="cash",
                 category="other",
-                note="Testing Note"
+                note="Testing Note",
             )
         # Verify the validation error mentions the cash_in_afn constraint
         self.assertIn("cash_in_afn", str(ctx.exception))
@@ -58,7 +61,9 @@ class MainEndpointTests(unittest.TestCase):
 
     def test_transaction_updates_rolling_ledger_totals(self):
         # Ensure Test Client account exists
-        account = models.Account(name="Test Client", opening_balance_afn=0, opening_balance_usd=0)
+        account = models.Account(
+            name="Test Client", opening_balance_afn=0, opening_balance_usd=0
+        )
         self.db.add(account)
         self.db.commit()
 
@@ -77,7 +82,7 @@ class MainEndpointTests(unittest.TestCase):
             exchange_rate=64.3,
             payment_method="cash",
             category="other",
-            note="Payment received"
+            note="Payment received",
         )
         crud.create_transaction(self.db, tx_payload)
 
@@ -101,7 +106,9 @@ class MainEndpointTests(unittest.TestCase):
         self.db.commit()
 
         # 3. Create transactions for each branch
-        account = models.Account(name="Branch Client", opening_balance_afn=0, opening_balance_usd=0)
+        account = models.Account(
+            name="Branch Client", opening_balance_afn=0, opening_balance_usd=0
+        )
         self.db.add(account)
         self.db.commit()
 
@@ -111,7 +118,7 @@ class MainEndpointTests(unittest.TestCase):
             detail="Kabul Inflow",
             transaction_type="cash_in",
             cash_in_afn=1000.0,
-            branch_id=kabul.id
+            branch_id=kabul.id,
         )
         tx2 = schemas.TransactionCreate(
             date=date(2026, 7, 17),
@@ -119,7 +126,7 @@ class MainEndpointTests(unittest.TestCase):
             detail="Kandahar Inflow",
             transaction_type="cash_in",
             cash_in_afn=2000.0,
-            branch_id=kandahar.id
+            branch_id=kandahar.id,
         )
         tx3 = schemas.TransactionCreate(
             date=date(2026, 7, 17),
@@ -127,7 +134,7 @@ class MainEndpointTests(unittest.TestCase):
             detail="Herat Inflow",
             transaction_type="cash_in",
             cash_in_afn=4000.0,
-            branch_id=herat.id
+            branch_id=herat.id,
         )
 
         crud.create_transaction(self.db, tx1)
@@ -153,6 +160,7 @@ class MainEndpointTests(unittest.TestCase):
         totals_herat = crud.summary(self.db, branch_id=herat.id)
         self.assertEqual(4000.0, totals_herat["cash_in_afn"])
         self.assertEqual(4000.0, totals_herat["afn_balance"])
+
 
 if __name__ == "__main__":
     unittest.main()

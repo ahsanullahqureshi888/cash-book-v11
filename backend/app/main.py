@@ -63,9 +63,7 @@ ensure_company_schema()
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(
-    request: Request, exc: RequestValidationError
-):
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle validation errors and log details."""
     request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
     log_data = {
@@ -84,9 +82,7 @@ async def validation_exception_handler(
 
 
 @app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(
-    request: Request, exc: StarletteHTTPException
-):
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     """Handle HTTP exceptions and log details."""
     request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
     log_data = {
@@ -162,10 +158,7 @@ def root():
     from fastapi.responses import FileResponse
 
     dist_index = (
-        Path(__file__).resolve().parents[2]
-        / "frontend"
-        / "dist"
-        / "index.html"
+        Path(__file__).resolve().parents[2] / "frontend" / "dist" / "index.html"
     )
     if dist_index.is_file():
         return FileResponse(dist_index)
@@ -220,14 +213,10 @@ def health(
         payload["auth"] = "ready"
         auth_header = request.headers.get("Authorization") if request else None
         is_bearer = auth_header and auth_header.startswith("Bearer ")
-        token = (
-            auth_header.split(" ")[1] if is_bearer else x_session_token
-        )
+        token = auth_header.split(" ")[1] if is_bearer else x_session_token
         if token:
             try:
-                jwt_payload = jwt.decode(
-                    token, SECRET_KEY, algorithms=[ALGORITHM]
-                )
+                jwt_payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
                 username = jwt_payload.get("sub")
                 if username:
                     user = (
@@ -295,9 +284,9 @@ app.include_router(bawar_star.router)
 app.include_router(transport.router)
 
 from .routes import plastic_erp, iot_telemetry
+
 app.include_router(plastic_erp.router)
 app.include_router(iot_telemetry.router)
-
 
 
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -315,20 +304,31 @@ def get_db():
         db.close()
 
 
-@app.post("/api/import-master-excel", dependencies=[Depends(require_administrator_request)])
-async def direct_import_master_excel(file: UploadFile = File(...), db: Session = Depends(get_db)):
+@app.post(
+    "/api/import-master-excel", dependencies=[Depends(require_administrator_request)]
+)
+async def direct_import_master_excel(
+    file: UploadFile = File(...), db: Session = Depends(get_db)
+):
     filename = file.filename or "master-excel.xlsx"
     if not (filename.lower().endswith(".xlsx") or filename.lower().endswith(".xls")):
-        raise HTTPException(status_code=400, detail="Invalid file format. Only .xlsx and .xls files are supported.")
-    
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file format. Only .xlsx and .xls files are supported.",
+        )
+
     contents = await file.read()
     if len(contents) > 50 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Excel file size exceeds 50MB limit.")
-        
+        raise HTTPException(
+            status_code=413, detail="Excel file size exceeds 50MB limit."
+        )
+
     try:
         return crud.import_master_excel(db, contents, filename)
     except Exception as error:
-        raise HTTPException(status_code=422, detail=f"Master Excel import failed: {error}") from error
+        raise HTTPException(
+            status_code=422, detail=f"Master Excel import failed: {error}"
+        ) from error
 
 
 import shutil
@@ -344,13 +344,12 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 async def upload_media_file(file: UploadFile = File(...)):
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
-    
+
     ext = Path(file.filename).suffix or ".jpg"
     filename = f"{uuid.uuid4().hex}{ext}"
     file_path = uploads_dir / filename
-    
+
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-        
-    return {"url": f"/uploads/{filename}", "filename": filename}
 
+    return {"url": f"/uploads/{filename}", "filename": filename}
