@@ -1,3 +1,5 @@
+import { API_BASE } from '../services/api.js';
+
 export const currency = (value, code = 'AFN') => {
   const number = Number(value || 0);
   const label = code === 'USD' ? 'USD' : 'AFN';
@@ -58,7 +60,11 @@ export const resolveAvatarUrl = (url) => {
   }
   const cleanPath = url.startsWith('/') ? url : `/${url}`;
   if (cleanPath.startsWith('/uploads/')) {
-    return `http://localhost:8000${cleanPath}`;
+    if (API_BASE && API_BASE.startsWith('http')) {
+      const base = API_BASE.replace(/\/api$/, '').replace(/\/+$/, '');
+      return `${base}${cleanPath}`;
+    }
+    return `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}${cleanPath}`;
   }
   return `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}${cleanPath}`;
 };

@@ -1,9 +1,25 @@
 import { formatApiErrorDetail } from './errorFormatting.js';
 
-// We default to relative paths to utilize Vite's dev proxy and Nginx's same-origin routing.
-const apiBaseUrl = (import.meta.env?.VITE_API_URL || '').replace(/\/+$/, '');
-export const API_BASE = apiBaseUrl;
-let authToken = localStorage.getItem('cashbook-session-token') || '';
+// We default to relative paths for same-origin routing, but allow localStorage or VITE_API_URL overrides for mobile APKs.
+const getDynamicApiBaseUrl = () => {
+  if (typeof localStorage !== 'undefined') {
+    const customUrl = localStorage.getItem('cashbook_api_url');
+    if (customUrl) return customUrl.replace(/\/+$/, '');
+  }
+  if (import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+  }
+  return import.meta.env?.PROD ? '' : '';
+};
+export const API_BASE = getDynamicApiBaseUrl();
+export function setApiBaseUrl(url) {
+  if (typeof localStorage !== 'undefined') {
+    if (url) localStorage.setItem('cashbook_api_url', url);
+    else localStorage.removeItem('cashbook_api_url');
+  }
+}
+
+let authToken = typeof localStorage !== 'undefined' && localStorage.getItem ? (localStorage.getItem('cashbook-session-token') || '') : '';
 
 export function setAuthToken(token) {
   authToken = token || '';
@@ -21,13 +37,13 @@ export function setAuthToken(token) {
   }
 }
 
-async function request(path, options = {}) {
+async function request(path, options = {}, retries = 1) {
   let response;
   const isFormData = options.body instanceof FormData;
   
-  // Add a 15-second timeout for robust frontend behavior
+  // Add a 90-second timeout to accommodate cloud cold starts and complex report queries
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 90000);
   
   const activeTenantId = (() => {
     try {
@@ -38,7 +54,8 @@ async function request(path, options = {}) {
   })();
 
   try {
-    response = await fetch(`${API_BASE}${path}`, {
+    const currentBase = getDynamicApiBaseUrl();
+    response = await fetch(`${currentBase}${path}`, {
       signal: controller.signal,
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
@@ -50,6 +67,11 @@ async function request(path, options = {}) {
       ...options
     });
   } catch (error) {
+    clearTimeout(timeoutId);
+    if (retries > 0 && (!options.method || options.method === 'GET') && error.name !== 'AbortError') {
+      await new Promise(r => setTimeout(r, 600));
+      return request(path, options, retries - 1);
+    }
     if (error.name === 'AbortError') {
       throw new Error('Backend connection timed out.');
     }
@@ -59,6 +81,10 @@ async function request(path, options = {}) {
   }
   
   if (!response.ok) {
+    if (retries > 0 && (!options.method || options.method === 'GET') && [502, 503, 504].includes(response.status)) {
+      await new Promise(r => setTimeout(r, 600));
+      return request(path, options, retries - 1);
+    }
     if (response.status === 401) {
       setAuthToken('');
       try {

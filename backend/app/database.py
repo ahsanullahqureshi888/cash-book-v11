@@ -1,6 +1,7 @@
 # cspell:ignore sessionmaker autoflush libpq vercel VERCEL BAWAR
 import os
 import ssl
+import threading
 
 from sqlalchemy import create_engine, inspect
 from sqlalchemy import text
@@ -48,11 +49,11 @@ DATABASE_URL = resolve_database_url()
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 IS_PG8000 = DATABASE_URL.startswith("postgresql+pg8000")
 
-engine_options = {"pool_pre_ping": True}
+engine_options = {"pool_pre_ping": True, "pool_recycle": 240}
 if IS_SQLITE:
     engine_options["connect_args"] = {"check_same_thread": False}
 elif IS_PG8000:
-    engine_options["connect_args"] = {"ssl_context": ssl.create_default_context()}
+    engine_options["connect_args"] = {"ssl_context": ssl.create_default_context(), "timeout": 30}
 
 engine = create_engine(DATABASE_URL, **engine_options)
 
@@ -222,13 +223,15 @@ def ensure_company_schema(bind_engine=None):
 # Dynamic Multi-Tenant Engine Cache & Request Session Resolver
 # ---------------------------------------------------------------------------
 engines = {}
+_engine_lock = threading.Lock()
+_initialized_db_urls = set()
 
 def get_tenant_db_url(company_id: str) -> str:
     if not DATABASE_URL.startswith("sqlite"):
         return DATABASE_URL
 
     root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    if company_id == "sky-ariana":
+    if company_id in ("sky-ariana", "cashbook_sky_prod", "sky"):
         db_file = os.path.join(root_dir, "cashbook_skyariana.db").replace("\\", "/")
     else:
         db_file = os.path.join(root_dir, "cashbook.db").replace("\\", "/")
@@ -242,40 +245,46 @@ def get_tenant_session(request=None, company_id=None):
         else:
             company_id = "bawar-star"
 
-    if company_id == "bawar-star" or not company_id:
+    # On PostgreSQL, all companies share the same database and connection URL.
+    # We always return SessionLocal() to prevent opening duplicate TCP connection pools.
+    if not IS_SQLITE or company_id in ("bawar-star", "cashbook_bawar_prod", "bawar", "all") or not company_id:
         return SessionLocal()
 
     if company_id not in engines:
-        db_url = get_tenant_db_url(company_id)
-        tenant_engine_options = {"pool_pre_ping": True}
-        if db_url.startswith("sqlite"):
-            tenant_engine_options["connect_args"] = {"check_same_thread": False}
-        elif db_url.startswith("postgresql+pg8000"):
-            tenant_engine_options["connect_args"] = {"ssl_context": ssl.create_default_context()}
+        with _engine_lock:
+            if company_id not in engines:
+                db_url = get_tenant_db_url(company_id)
+                tenant_engine_options = {"pool_pre_ping": True, "pool_recycle": 240}
+                if db_url.startswith("sqlite"):
+                    tenant_engine_options["connect_args"] = {"check_same_thread": False}
+                elif db_url.startswith("postgresql+pg8000"):
+                    tenant_engine_options["connect_args"] = {"ssl_context": ssl.create_default_context(), "timeout": 30}
 
-        tenant_engine = create_engine(db_url, **tenant_engine_options)
-        Base.metadata.create_all(bind=tenant_engine)
-        ensure_sqlite_schema(bind_engine=tenant_engine)
-        ensure_user_schema(bind_engine=tenant_engine)
-        ensure_payroll_schema(bind_engine=tenant_engine)
+                tenant_engine = create_engine(db_url, **tenant_engine_options)
+                engines[company_id] = tenant_engine
 
-        from . import models
-        TenantSession = sessionmaker(autocommit=False, autoflush=False, bind=tenant_engine)
-        db_temp = TenantSession()
-        try:
-            if not db_temp.query(models.Setting).first():
-                db_temp.add(models.Setting(
-                    company_name="SKY ARIANA LTD",
-                    default_currency="USD",
-                    print_footer_text="Prepared by SKY ARIANA LTD"
-                ))
-                db_temp.commit()
-        except Exception:
-            db_temp.rollback()
-        finally:
-            db_temp.close()
+                if db_url not in _initialized_db_urls:
+                    _initialized_db_urls.add(db_url)
+                    Base.metadata.create_all(bind=tenant_engine)
+                    ensure_sqlite_schema(bind_engine=tenant_engine)
+                    ensure_user_schema(bind_engine=tenant_engine)
+                    ensure_payroll_schema(bind_engine=tenant_engine)
 
-        engines[company_id] = tenant_engine
+                    from . import models
+                    TenantSession = sessionmaker(autocommit=False, autoflush=False, bind=tenant_engine)
+                    db_temp = TenantSession()
+                    try:
+                        if not db_temp.query(models.Setting).first():
+                            db_temp.add(models.Setting(
+                                company_name="SKY ARIANA LTD",
+                                default_currency="USD",
+                                print_footer_text="Prepared by SKY ARIANA LTD"
+                            ))
+                            db_temp.commit()
+                    except Exception:
+                        db_temp.rollback()
+                    finally:
+                        db_temp.close()
 
     target_engine = engines[company_id]
     TenantSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=target_engine)

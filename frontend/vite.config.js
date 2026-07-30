@@ -22,6 +22,11 @@ export default defineConfig({
         target: backendTarget,
         changeOrigin: true,
         rewrite: (path) => path
+      },
+      '/uploads': {
+        target: backendTarget,
+        changeOrigin: true,
+        rewrite: (path) => path
       }
     }
   },

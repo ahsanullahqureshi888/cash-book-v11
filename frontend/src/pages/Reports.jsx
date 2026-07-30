@@ -196,15 +196,43 @@ export default function Reports({
       );
     }
 
-    // Sort
-    if (sortOrder === 'oldest') {
-      list.sort((a, b) => new Date(a.date) - new Date(b.date));
-    } else {
-      list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Sort chronologically (oldest first) to compute accurate running balance
+    list.sort((a, b) => String(a.date).localeCompare(String(b.date)) || (a.id || 0) - (b.id || 0));
+
+    let initialAfn = 0;
+    let initialUsd = 0;
+    if (selectedAccount && selectedAccount !== 'ALL') {
+      const acc = accounts.find((a) => String(a.id) === String(selectedAccount) || unescapeText(a.name) === unescapeText(selectedAccount));
+      if (acc) {
+        initialAfn = Number(acc.opening_balance_afn || 0);
+        initialUsd = Number(acc.opening_balance_usd || 0);
+      }
+    }
+
+    let runningAfn = initialAfn;
+    let runningUsd = initialUsd;
+    list = list.map((tx) => {
+      const cin = Number(tx.cash_in_afn || 0);
+      const cout = Number(tx.cash_out_afn || 0);
+      const uin = Number(tx.usd_in || 0);
+      const uout = Number(tx.usd_out || 0);
+      runningAfn += (cin - cout);
+      runningUsd += (uin - uout);
+      return {
+        ...tx,
+        running_afn_balance: runningAfn,
+        running_usd_balance: runningUsd,
+        has_afn: cin > 0 || cout > 0 || (uin === 0 && uout === 0),
+        has_usd: uin > 0 || uout > 0
+      };
+    });
+
+    if (sortOrder !== 'oldest') {
+      list.reverse();
     }
 
     return list;
-  }, [transactions, employees, reportType, startDate, endDate, selectedAccount, selectedCategory, selectedPayment, search, sortOrder]);
+  }, [transactions, employees, accounts, reportType, startDate, endDate, selectedAccount, selectedCategory, selectedPayment, search, sortOrder]);
 
   // Compute summary totals
   const summary = useMemo(() => {
@@ -247,7 +275,7 @@ export default function Reports({
 
   function exportCsv() {
     if (!filteredRows.length) return;
-    const headers = ['S.No', 'Date', 'TX No', 'Account Name', 'Transaction Type', 'Category', 'Payment Method', 'Detail', 'Cash In (AFN)', 'Cash Out (AFN)', 'USD In', 'USD Out', 'Rate', 'Reference'];
+    const headers = ['S.No', 'Date', 'TX No', 'Account Name', 'Transaction Type', 'Category', 'Payment Method', 'Detail', 'Cash In (AFN)', 'Cash Out (AFN)', 'USD In', 'USD Out', 'Running Bal (AFN)', 'Running Bal (USD)', 'Rate', 'Reference'];
     const body = filteredRows.map((tx, idx) => {
       const comp = getTransactionEmployeeCompany(tx, employees);
       const catText = comp === 'sky-ariana' ? 'Sky Ariana Employee Salary' : comp === 'bawar-star' ? 'Bawar Star Employee Salary' : comp === 'all_employees' ? 'Employee Salary' : unescapeText(tx.category || '-');
@@ -264,6 +292,8 @@ export default function Reports({
         csvCell(tx.cash_out_afn || 0),
         csvCell(tx.usd_in || 0),
         csvCell(tx.usd_out || 0),
+        csvCell(tx.running_afn_balance || 0),
+        csvCell(tx.running_usd_balance || 0),
         csvCell(tx.exchange_rate || '-'),
         csvCell(tx.reference || '-')
       ];
@@ -318,6 +348,7 @@ export default function Reports({
         <td style="text-align:right;color:#059669;font-weight:bold;">${Number(tx.cash_in_afn || 0) > 0 ? currency(tx.cash_in_afn, 'AFN') : '-'}</td>
         <td style="text-align:right;color:#e11d48;font-weight:bold;">${Number(tx.cash_out_afn || 0) > 0 ? currency(tx.cash_out_afn, 'AFN') : '-'}</td>
         <td style="text-align:right;color:#2563eb;font-weight:bold;">${Number(tx.usd_in || 0) > 0 ? currency(tx.usd_in, 'USD') : Number(tx.usd_out || 0) > 0 ? `-${currency(tx.usd_out, 'USD')}` : '-'}</td>
+        <td style="text-align:right;font-weight:bold;">${tx.has_usd && !tx.has_afn ? currency(tx.running_usd_balance, 'USD') : `${currency(tx.running_afn_balance, 'AFN')}${tx.has_usd ? `<br/><span style="font-size:9px;color:#2563eb;">${currency(tx.running_usd_balance, 'USD')}</span>` : ''}`}</td>
       </tr>
     `;
     }).join('');
@@ -385,6 +416,7 @@ export default function Reports({
               <th style="width:95px;text-align:right;">Cash In (AFN)</th>
               <th style="width:95px;text-align:right;">Cash Out (AFN)</th>
               <th style="width:95px;text-align:right;">USD Amount</th>
+              <th style="width:105px;text-align:right;">Balance</th>
             </tr>
           </thead>
           <tbody>
@@ -696,16 +728,17 @@ export default function Reports({
                 <th className={fitToScreen ? "py-3 px-2 w-[18%]" : "py-3 px-4 min-w-[180px]"}>Account Name</th>
                 <th className={fitToScreen ? "py-3 px-2 w-[10%]" : "py-3 px-3 min-w-[100px]"}>Category</th>
                 <th className={fitToScreen ? "py-3 px-2 w-[21.5%]" : "py-3 px-4 min-w-[200px]"}>Particulars Detail</th>
-                <th className={fitToScreen ? "py-3 px-2 text-right w-[9.5%]" : "py-3 px-3 text-right min-w-[110px]"}>Cash In</th>
-                <th className={fitToScreen ? "py-3 px-2 text-right w-[9.5%]" : "py-3 px-3 text-right min-w-[110px]"}>Cash Out</th>
-                <th className={fitToScreen ? "py-3 px-2 text-right w-[9%]" : "py-3 px-3 text-right min-w-[100px]"}>USD</th>
-                <th className={fitToScreen ? "py-3 px-1.5 text-center w-[6%]" : "py-3 px-2 text-center min-w-[70px]"}>Method</th>
+                <th className={fitToScreen ? "py-3 px-2 text-right w-[8.5%]" : "py-3 px-3 text-right min-w-[110px]"}>Cash In</th>
+                <th className={fitToScreen ? "py-3 px-2 text-right w-[8.5%]" : "py-3 px-3 text-right min-w-[110px]"}>Cash Out</th>
+                <th className={fitToScreen ? "py-3 px-2 text-right w-[8%]" : "py-3 px-3 text-right min-w-[100px]"}>USD</th>
+                <th className={fitToScreen ? "py-3 px-2 text-right w-[9.5%]" : "py-3 px-3 text-right min-w-[130px]"}>{fitToScreen ? "Balance" : "Remaining Balance"}</th>
+                <th className={fitToScreen ? "py-3 px-1.5 text-center w-[5.5%]" : "py-3 px-2 text-center min-w-[70px]"}>Method</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="py-16 text-center text-slate-500 dark:text-slate-400 font-medium text-sm">
+                  <td colSpan="11" className="py-16 text-center text-slate-500 dark:text-slate-400 font-medium text-sm">
                     No transactions found matching the report criteria.
                   </td>
                 </tr>
@@ -771,6 +804,24 @@ export default function Reports({
                       </td>
                       <td className={fitToScreen ? "py-2.5 px-2 text-right font-mono font-black text-indigo-600 dark:text-indigo-400 text-[11px] tabular-nums truncate" : "py-2.5 px-3 text-right font-mono font-black text-indigo-600 dark:text-indigo-400 whitespace-nowrap tabular-nums text-[11px]"}>
                         {Number(tx.usd_in || 0) > 0 ? currency(tx.usd_in, 'USD') : Number(tx.usd_out || 0) > 0 ? `-${currency(tx.usd_out, 'USD')}` : '-'}
+                      </td>
+                      <td className={fitToScreen ? "py-2.5 px-2 text-right font-mono text-[11px] tabular-nums truncate" : "py-2.5 px-3 text-right font-mono text-[11px] whitespace-nowrap tabular-nums"}>
+                        {tx.has_usd && !tx.has_afn ? (
+                          <span className={`font-black ${tx.running_usd_balance >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                            {currency(tx.running_usd_balance, 'USD')}
+                          </span>
+                        ) : (
+                          <div className="flex flex-col items-end justify-center">
+                            <span className={`font-black ${tx.running_afn_balance >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-400'}`}>
+                              {currency(tx.running_afn_balance, 'AFN')}
+                            </span>
+                            {tx.has_usd && (
+                              <span className={`text-[9.5px] font-bold ${tx.running_usd_balance >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                                {currency(tx.running_usd_balance, 'USD')}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className={fitToScreen ? "py-2.5 px-1.5 text-center uppercase font-mono text-[9.5px] font-extrabold text-slate-500 dark:text-slate-400 truncate" : "py-2.5 px-2 text-center uppercase font-mono text-[10px] font-extrabold text-slate-500 dark:text-slate-400 whitespace-nowrap"}>
                         {tx.payment_method || 'cash'}

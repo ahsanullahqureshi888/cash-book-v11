@@ -1,0 +1,9 @@
+{
+  "appId": "com.bawarstar.cashbook",
+  "appName": "Cash Book",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

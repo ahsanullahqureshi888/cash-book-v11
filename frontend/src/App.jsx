@@ -816,7 +816,7 @@ export default function App() {
 
     try {
       if (isLoadingRef.current) {
-        await waitForCondition(() => !isLoadingRef.current, { timeoutMs: 8000 });
+        await waitForCondition(() => !isLoadingRef.current, { timeoutMs: 60000 });
       }
 
       let context = printContextRef.current;
@@ -825,7 +825,7 @@ export default function App() {
       if (context.activeView === 'reports') {
         const data = await withTimeout(
           runReport({ throwOnError: true }),
-          10000,
+          60000,
           'The report request timed out. Check the backend and try again.'
         );
         context = { ...context, reportData: data };
@@ -834,7 +834,7 @@ export default function App() {
       if (context.activeView === 'ledger' && context.selectedAccount && !context.ledger) {
         const ledgerData = await withTimeout(
           api.getLedger(context.selectedAccount.id),
-          10000,
+          60000,
           'The ledger request timed out. Check the backend and try again.'
         );
         setLedger(ledgerData);

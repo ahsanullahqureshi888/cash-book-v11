@@ -1728,6 +1728,252 @@ body.dark .sidebar-user-popover__item:hover {
   font-size: 12px;
 }
 
+/* ==========================================================================
+   DARK THEME OVERRIDES FOR MODALS, FORMS & SALARY CARDS
+   ========================================================================== */
+body.dark .modal-shell,
+:root.dark .modal-shell,
+html.dark .modal-shell,
+[data-theme="dark"] .modal-shell,
+.app-root.dark .modal-shell,
+body.dark .employee-modal,
+:root.dark .employee-modal,
+html.dark .employee-modal,
+[data-theme="dark"] .employee-modal,
+.app-root.dark .employee-modal {
+  background: #0f172a !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75) !important;
+}
+
+body.dark .modal-header,
+:root.dark .modal-header,
+html.dark .modal-header,
+[data-theme="dark"] .modal-header,
+.app-root.dark .modal-header {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.dark .modal-title,
+:root.dark .modal-title,
+html.dark .modal-title,
+[data-theme="dark"] .modal-title,
+.app-root.dark .modal-title {
+  color: #f8fafc !important;
+}
+
+body.dark .modal-close,
+:root.dark .modal-close,
+html.dark .modal-close,
+[data-theme="dark"] .modal-close,
+.app-root.dark .modal-close {
+  background: rgba(30, 41, 59, 0.8) !important;
+  color: #94a3b8 !important;
+}
+
+body.dark .modal-close:hover:not(:disabled),
+:root.dark .modal-close:hover:not(:disabled),
+html.dark .modal-close:hover:not(:disabled),
+[data-theme="dark"] .modal-close:hover:not(:disabled),
+.app-root.dark .modal-close:hover:not(:disabled) {
+  background: #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.dark .modal-footer,
+:root.dark .modal-footer,
+html.dark .modal-footer,
+[data-theme="dark"] .modal-footer,
+.app-root.dark .modal-footer {
+  background: rgba(15, 23, 42, 0.98) !important;
+  border-top-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.dark .form-label,
+:root.dark .form-label,
+html.dark .form-label,
+[data-theme="dark"] .form-label,
+.app-root.dark .form-label {
+  color: #e2e8f0 !important;
+}
+
+body.dark .form-control,
+:root.dark .form-control,
+html.dark .form-control,
+[data-theme="dark"] .form-control,
+.app-root.dark .form-control,
+body.dark .form-select,
+:root.dark .form-select,
+html.dark .form-select,
+[data-theme="dark"] .form-select,
+.app-root.dark .form-select,
+body.dark .form-textarea,
+:root.dark .form-textarea,
+html.dark .form-textarea,
+[data-theme="dark"] .form-textarea,
+.app-root.dark .form-textarea {
+  background: rgba(30, 41, 59, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: #f8fafc !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+body.dark .form-control:hover,
+:root.dark .form-control:hover,
+html.dark .form-control:hover,
+[data-theme="dark"] .form-control:hover,
+.app-root.dark .form-control:hover,
+body.dark .form-select:hover,
+:root.dark .form-select:hover,
+html.dark .form-select:hover,
+[data-theme="dark"] .form-select:hover,
+.app-root.dark .form-select:hover,
+body.dark .form-textarea:hover,
+:root.dark .form-textarea:hover,
+html.dark .form-textarea:hover,
+[data-theme="dark"] .form-textarea:hover,
+.app-root.dark .form-textarea:hover {
+  border-color: rgba(148, 163, 184, 0.45) !important;
+}
+
+body.dark .form-control:focus,
+:root.dark .form-control:focus,
+html.dark .form-control:focus,
+[data-theme="dark"] .form-control:focus,
+.app-root.dark .form-control:focus,
+body.dark .form-select:focus,
+:root.dark .form-select:focus,
+html.dark .form-select:focus,
+[data-theme="dark"] .form-select:focus,
+.app-root.dark .form-select:focus,
+body.dark .form-textarea:focus,
+:root.dark .form-textarea:focus,
+html.dark .form-textarea:focus,
+[data-theme="dark"] .form-textarea:focus,
+.app-root.dark .form-textarea:focus {
+  background: #1e293b !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25) !important;
+  color: #ffffff !important;
+}
+
+body.dark .modal-section-title,
+:root.dark .modal-section-title,
+html.dark .modal-section-title,
+[data-theme="dark"] .modal-section-title,
+.app-root.dark .modal-section-title {
+  color: #94a3b8 !important;
+}
+
+body.dark .salary-current-summary,
+:root.dark .salary-current-summary,
+html.dark .salary-current-summary,
+[data-theme="dark"] .salary-current-summary,
+.app-root.dark .salary-current-summary {
+  background: rgba(30, 41, 59, 0.8) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+body.dark .salary-summary-name,
+:root.dark .salary-summary-name,
+html.dark .salary-summary-name,
+[data-theme="dark"] .salary-summary-name,
+.app-root.dark .salary-summary-name {
+  color: #f8fafc !important;
+}
+
+body.dark .salary-summary-id,
+:root.dark .salary-summary-id,
+html.dark .salary-summary-id,
+[data-theme="dark"] .salary-summary-id,
+.app-root.dark .salary-summary-id {
+  color: #94a3b8 !important;
+}
+
+body.dark .salary-summary-label,
+:root.dark .salary-summary-label,
+html.dark .salary-summary-label,
+[data-theme="dark"] .salary-summary-label,
+.app-root.dark .salary-summary-label {
+  color: #60a5fa !important;
+}
+
+body.dark .salary-summary-val,
+:root.dark .salary-summary-val,
+html.dark .salary-summary-val,
+[data-theme="dark"] .salary-summary-val,
+.app-root.dark .salary-summary-val {
+  color: #93c5fd !important;
+}
+
+body.dark .salary-diff-preview,
+:root.dark .salary-diff-preview,
+html.dark .salary-diff-preview,
+[data-theme="dark"] .salary-diff-preview,
+.app-root.dark .salary-diff-preview {
+  background: rgba(30, 41, 59, 0.75) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.dark .salary-diff-item span,
+:root.dark .salary-diff-item span,
+html.dark .salary-diff-item span,
+[data-theme="dark"] .salary-diff-item span,
+.app-root.dark .salary-diff-item span {
+  color: #94a3b8 !important;
+}
+
+body.dark .salary-diff-item strong,
+:root.dark .salary-diff-item strong,
+html.dark .salary-diff-item strong,
+[data-theme="dark"] .salary-diff-item strong,
+.app-root.dark .salary-diff-item strong {
+  color: #f8fafc !important;
+}
+
+body.dark .salary-diff-item.diff-positive strong,
+:root.dark .salary-diff-item.diff-positive strong,
+html.dark .salary-diff-item.diff-positive strong,
+[data-theme="dark"] .salary-diff-item.diff-positive strong,
+.app-root.dark .salary-diff-item.diff-positive strong {
+  color: #4ade80 !important;
+}
+
+body.dark .salary-diff-item.diff-negative strong,
+:root.dark .salary-diff-item.diff-negative strong,
+html.dark .salary-diff-item.diff-negative strong,
+[data-theme="dark"] .salary-diff-item.diff-negative strong,
+.app-root.dark .salary-diff-item.diff-negative strong {
+  color: #fb923c !important;
+}
+
+body.dark .salary-history-section,
+:root.dark .salary-history-section,
+html.dark .salary-history-section,
+[data-theme="dark"] .salary-history-section,
+.app-root.dark .salary-history-section {
+  border-top-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.dark .salary-history-title,
+:root.dark .salary-history-title,
+html.dark .salary-history-title,
+[data-theme="dark"] .salary-history-title,
+.app-root.dark .salary-history-title {
+  color: #e2e8f0 !important;
+}
+
+body.dark .salary-history-item,
+:root.dark .salary-history-item,
+html.dark .salary-history-item,
+[data-theme="dark"] .salary-history-item,
+.app-root.dark .salary-history-item {
+  background: rgba(30, 41, 59, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #cbd5e1 !important;
+}
+
 /* 5. TopHeader (app-topbar) grid layout */
 .app-topbar {
   min-width: 0 !important;

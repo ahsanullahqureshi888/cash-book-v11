@@ -53,7 +53,8 @@ const emptyEmployee = {
   monthly_salary: '',
   currency: 'AFN',
   status: 'active',
-  notes: ''
+  notes: '',
+  avatar_url: ''
 };
 
 function currentMonthYear() {
@@ -63,8 +64,42 @@ function currentMonthYear() {
 
 function imageFileToDataUrl(file) {
   return new Promise((resolve, reject) => {
+    if (file.type === 'image/svg+xml') {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Unable to read selected image.'));
+      reader.readAsDataURL(file);
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxSize = 400;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxSize) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, width);
+        canvas.height = Math.max(1, height);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/webp', 0.82);
+        resolve(dataUrl || String(reader.result || ''));
+      };
+      img.onerror = () => resolve(String(reader.result || ''));
+      img.src = String(reader.result || '');
+    };
     reader.onerror = () => reject(new Error('Unable to read selected image.'));
     reader.readAsDataURL(file);
   });
@@ -180,7 +215,8 @@ export default function EmployeesSalary({
       monthly_salary: String(employee.monthly_salary || ''),
       currency: employee.currency || 'AFN',
       status: employee.status || 'active',
-      notes: unescapeText(employee.notes || '')
+      notes: unescapeText(employee.notes || ''),
+      avatar_url: employee.avatar_url || employee.avatarUrl || employee.photo || ''
     });
     setEditingEmployeeId(employee.id);
     setActiveTab('Employees');
@@ -256,22 +292,7 @@ export default function EmployeesSalary({
     }
     setUploadingAvatarId(Number(employee.id));
     try {
-      let avatarUrl = '';
-      try {
-        const uploadRes = await api.uploadMedia(file);
-        if (uploadRes && uploadRes.url) {
-          avatarUrl = uploadRes.url;
-        } else {
-          throw new Error('Upload returned empty response.');
-        }
-      } catch (uploadError) {
-        console.warn('Google Drive upload failed, using local fallback:', uploadError);
-        if (file.size > 900 * 1024) {
-          throw new Error('Employee picture must be smaller than 900 KB for local database fallback.');
-        }
-        avatarUrl = await imageFileToDataUrl(file);
-      }
-
+      const avatarUrl = await imageFileToDataUrl(file);
       const updated = await api.updateEmployee(employee.id, { avatar_url: avatarUrl });
       if (onEmployeeAvatarChanged) await onEmployeeAvatarChanged(updated);
       await loadSalaryReport(filters.month, filters.year);
@@ -449,7 +470,7 @@ export default function EmployeesSalary({
           >
             <form id="employeeForm" className="modal-form flex flex-col gap-4" onSubmit={submitEmployee}>
               {/* 1. PERSONAL INFORMATION CARD */}
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/80">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-200 dark:border-slate-700/80">
                 <h4 className="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">1. Personal Information</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="form-field">
@@ -518,16 +539,10 @@ export default function EmployeesSalary({
                             const file = e.target.files?.[0];
                             if (!file) return;
                             try {
-                              const uploadRes = await api.uploadMedia(file);
-                              if (uploadRes && uploadRes.url) {
-                                setEmployeeForm((prev) => ({ ...prev, avatar_url: uploadRes.url }));
-                              } else {
-                                const dataUrl = await imageFileToDataUrl(file);
-                                setEmployeeForm((prev) => ({ ...prev, avatar_url: dataUrl }));
-                              }
-                            } catch (err) {
                               const dataUrl = await imageFileToDataUrl(file);
                               setEmployeeForm((prev) => ({ ...prev, avatar_url: dataUrl }));
+                            } catch (err) {
+                              showLocalToast('Failed to process selected image.');
                             }
                           }}
                         />
@@ -538,7 +553,7 @@ export default function EmployeesSalary({
               </div>
 
               {/* 2. EMPLOYMENT DETAILS CARD */}
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/80">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-200 dark:border-slate-700/80">
                 <h4 className="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">2. Employment Details</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="form-field">
@@ -614,7 +629,7 @@ export default function EmployeesSalary({
               </div>
 
               {/* 3. SALARY & REMARKS CARD */}
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/80">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-200 dark:border-slate-700/80">
                 <h4 className="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">3. Salary Information & Remarks</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="form-field">

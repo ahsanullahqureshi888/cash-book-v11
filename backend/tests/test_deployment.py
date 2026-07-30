@@ -139,7 +139,10 @@ class DeploymentContractTests(unittest.TestCase):
         if not project_config_path.exists():
             self.skipTest("repository is not linked to a local Vercel project")
 
-        settings = json.loads(project_config_path.read_text(encoding="utf-8"))["settings"]
+        data = json.loads(project_config_path.read_text(encoding="utf-8"))
+        if "settings" not in data:
+            self.skipTest("project.json does not contain local settings cache")
+        settings = data["settings"]
 
         self.assertIsNone(settings["rootDirectory"])
         self.assertEqual("vite", settings["framework"])

@@ -141,7 +141,7 @@ def export_transactions(user: models.User = Depends(require_authenticated_reques
 
 @router.get("/export/csv")
 def export_ledger_csv(
-    branch: Optional[str] = Query(None),
+    branch: str | None = Query(None),
     user: models.User = Depends(require_authenticated_request),
     tenant_id: str = Depends(get_current_tenant),
     db: Session = Depends(get_db)
@@ -244,10 +244,10 @@ def delete_transaction(transaction_id: int, user: models.User = Depends(require_
 
 @router.get("/filter")
 def filter_ledger_transactions(
-    search: Optional[str] = Query(None),
-    account: Optional[str] = Query("ALL"),
-    date_range: Optional[str] = Query("ALL_TIME"),
-    branch: Optional[str] = Query(None),
+    search: str | None = Query(None),
+    account: str | None = Query("ALL"),
+    date_range: str | None = Query("ALL_TIME"),
+    branch: str | None = Query(None),
     user: models.User = Depends(require_authenticated_request),
     tenant_id: str = Depends(get_current_tenant),
     db: Session = Depends(get_db)
