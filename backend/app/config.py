@@ -13,7 +13,9 @@ DEFAULT_FRONTEND_ORIGINS = [
 
 FRONTEND_ORIGINS = [
     origin.strip()
-    for origin in os.getenv("FRONTEND_ORIGINS", ",".join(DEFAULT_FRONTEND_ORIGINS)).split(",")
+    for origin in os.getenv(
+        "FRONTEND_ORIGINS", ",".join(DEFAULT_FRONTEND_ORIGINS)
+    ).split(",")
     if origin.strip()
 ]
 FRONTEND_ORIGIN_REGEX = os.getenv(

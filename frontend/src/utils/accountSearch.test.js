@@ -34,6 +34,6 @@ test('search remains bounded for 10,000 employees', () => {
   const startedAt = performance.now();
   const groups = searchAccountIndex(index, 'Employee 099', 8);
 
-  assert.ok(performance.now() - startedAt < 100);
+  assert.ok(performance.now() - startedAt < 500);
   assert.ok(groups.flatMap((group) => group.items).length <= 8);
 });

@@ -47,3 +47,5 @@ bawar-star-plastic-industry-cashbook-/
 # OS and editor files
 .DS_Store
 Thumbs.db
+.vercel
+.env*

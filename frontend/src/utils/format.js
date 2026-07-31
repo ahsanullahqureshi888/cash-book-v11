@@ -1,3 +1,5 @@
+import { API_BASE } from '../services/api.js';
+
 export const currency = (value, code = 'AFN') => {
   const number = Number(value || 0);
   const label = code === 'USD' ? 'USD' : 'AFN';
@@ -49,4 +51,20 @@ export const isRTLText = (text = '') => /[\u0591-\u08FF]/.test(text);
 export const compactTransactionNo = (value = '') => {
   const text = String(value);
   return text.replace(/^TX-(\d{2})(\d{6})-(\d+)$/i, 'TX-$2-$3');
+};
+
+export const resolveAvatarUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  if (cleanPath.startsWith('/uploads/')) {
+    if (API_BASE && API_BASE.startsWith('http')) {
+      const base = API_BASE.replace(/\/api$/, '').replace(/\/+$/, '');
+      return `${base}${cleanPath}`;
+    }
+    return `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}${cleanPath}`;
+  }
+  return `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}${cleanPath}`;
 };

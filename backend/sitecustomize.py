@@ -1,7 +1,6 @@
 from pathlib import Path
 import sys
 
-
 VENDOR_DIR = Path(__file__).resolve().parent / ".vendor"
 
 if VENDOR_DIR.exists():

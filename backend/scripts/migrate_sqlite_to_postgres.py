@@ -14,11 +14,14 @@ from sqlalchemy import create_engine, func, select
 
 def normalize_postgres_url(url: str) -> str:
     from app.database import normalize_database_url
+
     return normalize_database_url(url)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Copy the local SQLite cash book into PostgreSQL.")
+    parser = argparse.ArgumentParser(
+        description="Copy the local SQLite cash book into PostgreSQL."
+    )
     parser.add_argument(
         "--source",
         default=str(BACKEND_DIR / "cashbook.db"),
@@ -47,6 +50,7 @@ def main() -> None:
     from app import models
 
     import ssl
+
     target_db_url = normalize_postgres_url(database_url)
     target_opts = {"pool_pre_ping": True}
     if target_db_url.startswith("postgresql+pg8000"):
@@ -67,10 +71,16 @@ def main() -> None:
     ]
 
     with source_engine.connect() as source, target_engine.begin() as target:
-        existing_transactions = target.execute(select(func.count()).select_from(models.Transaction.__table__)).scalar_one()
-        existing_accounts = target.execute(select(func.count()).select_from(models.Account.__table__)).scalar_one()
+        existing_transactions = target.execute(
+            select(func.count()).select_from(models.Transaction.__table__)
+        ).scalar_one()
+        existing_accounts = target.execute(
+            select(func.count()).select_from(models.Account.__table__)
+        ).scalar_one()
         if (existing_transactions or existing_accounts) and not args.replace:
-            raise SystemExit("Cloud database already contains business data. Re-run with --replace only after backup.")
+            raise SystemExit(
+                "Cloud database already contains business data. Re-run with --replace only after backup."
+            )
 
         if args.replace:
             for table in reversed(ordered_tables):
@@ -91,11 +101,15 @@ def main() -> None:
                 if "id" not in table.c:
                     continue
                 target.execute(
-                    select(func.setval(
-                        func.pg_get_serial_sequence(table.name, "id"),
-                        func.coalesce(select(func.max(table.c.id)).scalar_subquery(), 1),
-                        True,
-                    ))
+                    select(
+                        func.setval(
+                            func.pg_get_serial_sequence(table.name, "id"),
+                            func.coalesce(
+                                select(func.max(table.c.id)).scalar_subquery(), 1
+                            ),
+                            True,
+                        )
+                    )
                 )
 
     print(f"Migration completed from {source_path}")

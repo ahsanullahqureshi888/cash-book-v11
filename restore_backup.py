@@ -57,27 +57,45 @@ def restore_backup_from_file(backup_file: str, replace_all: bool = True) -> dict
 
 
 def _ensure_default_admin(db):
-    """Ensure a default admin user exists."""
+    """Ensure default admin users exist."""
+    from app.routes.auth import hash_password, TEMPORARY_DEFAULT_PASSWORD
+    
+    # 1. Default admin user
     admin_exists = db.query(models.User).filter(
         models.User.username == "admin"
     ).first()
     
-    if admin_exists:
-        return
+    if not admin_exists:
+        admin = models.User(
+            username="admin",
+            full_name="Administrator",
+            password_hash=hash_password(TEMPORARY_DEFAULT_PASSWORD),
+            role="Administrator",
+            is_active=True,
+            must_change_password=True,
+        )
+        db.add(admin)
+        db.commit()
+        print(f"Created default admin user. Initial password: {TEMPORARY_DEFAULT_PASSWORD}")
+
+    # 2. Default ahsanullahqur888 user
+    user2_exists = db.query(models.User).filter(
+        models.User.username == "ahsanullahqur888"
+    ).first()
     
-    from app.routes.auth import hash_password, TEMPORARY_DEFAULT_PASSWORD
-    
-    admin = models.User(
-        username="admin",
-        full_name="Administrator",
-        password_hash=hash_password(TEMPORARY_DEFAULT_PASSWORD),
-        role="Administrator",
-        is_active=True,
-        must_change_password=True,
-    )
-    db.add(admin)
-    db.commit()
-    print(f"Created default admin user. Initial password: {TEMPORARY_DEFAULT_PASSWORD}")
+    if not user2_exists:
+        user2 = models.User(
+            username="ahsanullahqur888",
+            full_name="Ahsanullah Qureshi",
+            password_hash=hash_password("Qur78Ahs@@"),
+            role="Administrator",
+            is_active=True,
+            must_change_password=False,
+        )
+        db.add(user2)
+        db.commit()
+        print("Created default admin user ahsanullahqur888. Initial password: Qur78Ahs@@")
+
 
 
 def main():
@@ -100,11 +118,11 @@ def main():
     
     try:
         result = restore_backup_from_file(str(backup_file), replace_all=replace_all)
-        print("\n✓ Backup restored successfully!")
+        print("\n[SUCCESS] Backup restored successfully!")
         print(f"Results: {result}")
         return 0
     except Exception as e:
-        print(f"\n✗ Backup restoration failed: {e}", file=sys.stderr)
+        print(f"\n[ERROR] Backup restoration failed: {e}", file=sys.stderr)
         return 1
 
 

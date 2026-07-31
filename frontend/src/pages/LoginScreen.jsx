@@ -118,13 +118,6 @@ export default function LoginScreen({ users, rememberedUsername, onLogin, connec
 
   return (
     <main className={`login-screen ${isSubmitting ? 'login-success' : ''}`}>
-      <div className="login-top-controls" aria-hidden="true">
-        <span>U.S.</span>
-        <Keyboard size={18} />
-        <BatteryFull size={22} />
-        <Power size={21} />
-      </div>
-
       <section className="login-panel">
         <div className="login-intro">
           <div className="login-time-display" aria-label={`${dateLabel(now)}, ${timeLabel(now)}`}>
@@ -164,43 +157,48 @@ export default function LoginScreen({ users, rememberedUsername, onLogin, connec
           </div>
 
           <form className="login-form" onSubmit={submit}>
-            <label className="login-field-label" htmlFor="login-username">{t('login.username')}</label>
-            <div className="login-password-shell" style={{ marginBottom: '16px' }}>
-              <User size={18} />
-              <input
-                id="login-username"
-                type="text"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                placeholder={t('login.usernamePlaceholder')}
-                autoComplete="username"
-                autoFocus
-                required
-                disabled={isSubmitting || isPreparing}
-              />
+            <div className="login-field-group">
+              <label className="login-field-label" htmlFor="login-username">{t('login.username')}</label>
+              <div className="login-input-shell">
+                <User size={19} className="login-field-icon" />
+                <input
+                  id="login-username"
+                  type="text"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder={t('login.usernamePlaceholder')}
+                  autoComplete="username"
+                  autoFocus
+                  required
+                  disabled={isSubmitting || isPreparing}
+                />
+              </div>
             </div>
 
-            <label className="login-field-label" htmlFor="login-password">{t('login.password')}</label>
-            <div className="login-password-shell">
-              <LockKeyhole size={18} />
-              <input
-                id="login-password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder={t('login.passwordPlaceholder')}
-                autoComplete="current-password"
-                required
-                disabled={isSubmitting || isPreparing}
-              />
-              <button
-                type="button"
-                aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
-                onClick={() => setShowPassword((value) => !value)}
-                disabled={isSubmitting}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+            <div className="login-field-group">
+              <label className="login-field-label" htmlFor="login-password">{t('login.password')}</label>
+              <div className="login-input-shell login-password-shell">
+                <LockKeyhole size={19} className="login-field-icon" />
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder={t('login.passwordPlaceholder')}
+                  autoComplete="current-password"
+                  required
+                  disabled={isSubmitting || isPreparing}
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                  onClick={() => setShowPassword((value) => !value)}
+                  disabled={isSubmitting}
+                  className="password-toggle-btn"
+                >
+                  {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                </button>
+              </div>
             </div>
 
             <div className="login-form-options">

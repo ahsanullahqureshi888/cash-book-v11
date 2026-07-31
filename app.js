@@ -346,16 +346,16 @@ function renderDashboard() {
 
   const latest = [...state.transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
   if (!latest.length) {
-    els.latestTransactions.innerHTML = '<div class="list-item">No transactions yet.</div>';
+    els.latestTransactions.innerHTML = '<div class="empty-state"><i class="ph ph-receipt"></i><p>No transactions yet.</p></div>';
     return;
   }
   els.latestTransactions.innerHTML = latest.map((tx) => 
     '<div class="list-item">' +
-      '<div>' +
-        '<strong>' + escapeHtml(tx.accountName || 'Unnamed') + '</strong>' +
-        '<p>' + escapeHtml(tx.detail || '') + '</p>' +
+      '<div class="account-info">' +
+        '<h4>' + escapeHtml(tx.accountName || 'Unnamed') + '</h4>' +
+        '<span class="account-meta">' + escapeHtml(tx.detail || '') + '</span>' +
       '</div>' +
-      '<div class="' + (tx.type === 'cash-in' ? 'balance-positive' : 'balance-negative') + '">' +
+      '<div class="money-cell ' + (tx.type === 'cash-in' ? 'balance-positive' : 'balance-negative') + '">' +
         (tx.type === 'cash-in' ? '+' : '-') + formatCurrency(tx.cashInAfn || tx.cashOutAfn) +
       '</div>' +
     '</div>'
@@ -386,13 +386,13 @@ function renderTransactions() {
         '<td>' + escapeHtml(tx.note || '') + '</td>' +
         '<td>' +
           '<div class="row-actions">' +
-            '<button class="ghost-btn table-action" data-action="edit" data-id="' + tx.id + '">Edit</button>' +
-            '<button class="ghost-btn table-action" data-action="receipt" data-id="' + tx.id + '">Receipt</button>' +
-            '<button class="ghost-btn table-action" data-action="delete" data-id="' + tx.id + '">Delete</button>' +
+            '<button class="icon-btn table-action" data-action="edit" data-id="' + tx.id + '" title="Edit"><i class="ph ph-pencil-simple"></i></button>' +
+            '<button class="icon-btn table-action" data-action="receipt" data-id="' + tx.id + '" title="Receipt"><i class="ph ph-receipt"></i></button>' +
+            '<button class="icon-btn table-action" data-action="delete" data-id="' + tx.id + '" title="Delete" style="color:var(--danger)"><i class="ph ph-trash"></i></button>' +
           '</div>' +
         '</td>' +
       '</tr>';
-  }).join('') : '<tr><td colspan="12" style="text-align:center;padding:24px;">No transactions match your filters.</td></tr>';
+  }).join('') : '<tr><td colspan="12"><div class="empty-state"><i class="ph ph-table"></i><p>No transactions match your filters.</p></div></td></tr>';
 
   const totals = filtered.reduce((acc, tx) => {
     acc.cashIn += Number(tx.cashInAfn || 0);
@@ -403,10 +403,10 @@ function renderTransactions() {
   }, { cashIn: 0, cashOut: 0, usdIn: 0, usdOut: 0 });
 
   els.tableSummary.innerHTML = 
-    '<span>Total Cash In: ' + formatCurrency(totals.cashIn) + '</span>' +
-    '<span>Total Cash Out: ' + formatCurrency(totals.cashOut) + '</span>' +
-    '<span>USD In: ' + formatCurrency(totals.usdIn, 'USD') + '</span>' +
-    '<span>USD Out: ' + formatCurrency(totals.usdOut, 'USD') + '</span>';
+    '<span><i class="ph ph-trend-up" style="color:var(--success)"></i> Total Cash In: ' + formatCurrency(totals.cashIn) + '</span>' +
+    '<span><i class="ph ph-trend-down" style="color:var(--danger)"></i> Total Cash Out: ' + formatCurrency(totals.cashOut) + '</span>' +
+    '<span><i class="ph ph-currency-dollar-simple" style="color:var(--success)"></i> USD In: ' + formatCurrency(totals.usdIn, 'USD') + '</span>' +
+    '<span><i class="ph ph-currency-dollar-simple" style="color:var(--danger)"></i> USD Out: ' + formatCurrency(totals.usdOut, 'USD') + '</span>';
 
   els.transactionsTableBody.querySelectorAll('button').forEach((button) => {
     button.addEventListener('click', () => handleTableAction(button.dataset.action, button.dataset.id));
@@ -575,15 +575,15 @@ function renderAccounts() {
   const filtered = state.accounts.filter((account) => account.name.toLowerCase().includes(search));
   els.accountList.innerHTML = filtered.length ? filtered.map((account) => 
     '<div class="account-item ' + (account.name === state.selectedAccount ? 'active' : '') + '">' +
-      '<div>' +
-        '<strong>' + escapeHtml(account.name) + '</strong>' +
-        '<span class="account-meta">' + formatCurrency(getAccountBalance(account.name)) + '</span>' +
+      '<div class="account-info">' +
+        '<h4><i class="ph ph-user"></i> ' + escapeHtml(account.name) + '</h4>' +
+        '<span class="account-meta">Balance: ' + formatCurrency(getAccountBalance(account.name)) + '</span>' +
       '</div>' +
       '<div>' +
-        '<button class="ghost-btn table-action" data-account="' + escapeHtml(account.name) + '">Select</button>' +
+        '<button class="btn secondary-btn table-action" data-account="' + escapeHtml(account.name) + '">Select</button>' +
       '</div>' +
     '</div>'
-  ).join('') : '<div class="list-item">No accounts found.</div>';
+  ).join('') : '<div class="empty-state" style="padding: 20px 0;"><i class="ph ph-users-three"></i><p>No accounts found.</p></div>';
   els.accountList.querySelectorAll('button').forEach((button) => {
     button.addEventListener('click', () => {
       state.selectedAccount = button.dataset.account;
@@ -599,7 +599,7 @@ function renderLedger() {
   if (!accountName) {
     els.ledgerTitle.textContent = 'Selected Ledger';
     els.ledgerSummary.innerHTML = '<p>No account selected.</p>';
-    els.ledgerTableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;">Create an account to begin.</td></tr>';
+    els.ledgerTableBody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><i class="ph ph-book-open"></i><p>Create an account to begin.</p></div></td></tr>';
     return;
   }
 
@@ -636,10 +636,10 @@ function renderLedger() {
         '<td class="money-cell">' + (tx.usdOut ? formatCurrency(tx.usdOut, 'USD') : '-') + '</td>' +
         '<td>' + escapeHtml(tx.note || '') + '</td>' +
         '<td>' +
-          '<button class="ghost-btn table-action" data-action="receipt" data-id="' + tx.id + '">Receipt</button>' +
+          '<button class="icon-btn table-action" data-action="receipt" data-id="' + tx.id + '" title="Receipt"><i class="ph ph-receipt"></i></button>' +
         '</td>' +
       '</tr>';
-  }).join('') : '<tr><td colspan="10" style="text-align:center;padding:24px;">No transactions for this account.</td></tr>';
+  }).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="ph ph-list-dashes"></i><p>No transactions for this account.</p></div></td></tr>';
 
   els.ledgerTableBody.querySelectorAll('button').forEach((button) => {
     button.addEventListener('click', () => handleTableAction(button.dataset.action, button.dataset.id));
@@ -926,7 +926,7 @@ function openReceipt(tx) {
       '<div>Cashier</div>' +
       '<div>Manager</div>' +
     '</div>' +
-    '<button class="primary-btn" type="button" onclick="window.print()">Print Receipt</button>';
+    '<button class="btn primary-btn full-width" style="margin-top:24px;" type="button" onclick="window.print()"><i class="ph ph-printer"></i> Print Receipt</button>';
   els.receiptModal.classList.remove('hidden');
 }
 

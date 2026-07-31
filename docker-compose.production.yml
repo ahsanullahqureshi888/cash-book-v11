@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: plasticorp_timescaledb
+    environment:
+      POSTGRES_DB: plasticorp_erp
+      POSTGRES_USER: plastic_admin
+      POSTGRES_PASSWORD: SecureFactoryPassword2026!
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plastic_admin -d plasticorp_erp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: plasticorp_backend
+    environment:
+      DATABASE_URL: postgresql://plastic_admin:SecureFactoryPassword2026!@timescaledb:5432/plasticorp_erp
+      SECRET_KEY: super-secret-plasticorp-jwt-key
+    ports:
+      - "8000:8000"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: plasticorp_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  timescale_data:

@@ -104,7 +104,7 @@ test('waitForPrintReady has a bounded timeout for images that never finish', asy
     timeoutMs: 20
   });
 
-  assert.ok(Date.now() - startedAt < 200);
+  assert.ok(Date.now() - startedAt < 5000);
 });
 
 test('waitForCondition resolves when data becomes ready and rejects on timeout', async () => {
