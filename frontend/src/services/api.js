@@ -2,7 +2,7 @@ import { formatApiErrorDetail } from './errorFormatting.js';
 
 // We default to relative paths when hosted on Vercel, but use https://cashbook-v11.vercel.app for mobile APKs and all other hosts.
 export const getDynamicApiBaseUrl = () => {
-  if (typeof localStorage !== 'undefined') {
+  if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
     const customUrl = localStorage.getItem('cashbook_api_url');
     if (customUrl) return customUrl.replace(/\/+$/, '');
   }
