@@ -1,16 +1,6 @@
 import { formatApiErrorDetail } from './errorFormatting.js';
 
-const isCapacitor = () => {
-  if (typeof window === 'undefined') return false;
-  return (
-    Boolean(window.Capacitor?.isNativePlatform?.()) ||
-    window.location.protocol === 'capacitor:' ||
-    window.location.protocol === 'file:' ||
-    (window.location.hostname === 'localhost' && !import.meta.env?.DEV)
-  );
-};
-
-// We default to relative paths for web same-origin routing, but use https://cashbook-v11.vercel.app for mobile APKs.
+// We default to relative paths when hosted on Vercel, but use https://cashbook-v11.vercel.app for mobile APKs and all other hosts.
 const getDynamicApiBaseUrl = () => {
   if (typeof localStorage !== 'undefined') {
     const customUrl = localStorage.getItem('cashbook_api_url');
@@ -19,10 +9,13 @@ const getDynamicApiBaseUrl = () => {
   if (import.meta.env?.VITE_API_URL) {
     return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
   }
-  if (isCapacitor()) {
-    return 'https://cashbook-v11.vercel.app';
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname || '';
+    if (host.endsWith('vercel.app')) {
+      return '';
+    }
   }
-  return import.meta.env?.PROD ? '' : '';
+  return 'https://cashbook-v11.vercel.app';
 };
 export const API_BASE = getDynamicApiBaseUrl();
 export function setApiBaseUrl(url) {
