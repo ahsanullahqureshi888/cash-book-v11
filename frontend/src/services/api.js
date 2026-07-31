@@ -32,7 +32,10 @@ export async function testConnection(targetUrl) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 12000);
   try {
-    const res = await fetch(`${base}/api/health`, { signal: controller.signal });
+    const res = await fetch(`${base}/api/health`, {
+      signal: controller.signal,
+      headers: { 'Accept': 'application/json, text/plain, */*' }
+    });
     clearTimeout(timeoutId);
     if (!res.ok) {
       return { ok: false, status: res.status, message: `Server returned HTTP ${res.status}` };
@@ -84,6 +87,7 @@ async function request(path, options = {}, retries = 1) {
     response = await fetch(`${currentBase}${path}`, {
       signal: controller.signal,
       headers: {
+        'Accept': 'application/json, text/plain, */*',
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(authToken ? { 'X-Session-Token': authToken, 'Authorization': `Bearer ${authToken}` } : {}),
         'X-Tenant-ID': activeTenantId,
