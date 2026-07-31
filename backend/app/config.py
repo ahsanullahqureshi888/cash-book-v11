@@ -9,6 +9,9 @@ DEFAULT_FRONTEND_ORIGINS = [
     "http://127.0.0.1:5174",
     "http://localhost:5175",
     "http://127.0.0.1:5175",
+    "https://localhost",
+    "http://localhost",
+    "capacitor://localhost",
 ]
 
 FRONTEND_ORIGINS = [
@@ -20,5 +23,5 @@ FRONTEND_ORIGINS = [
 ]
 FRONTEND_ORIGIN_REGEX = os.getenv(
     "FRONTEND_ORIGIN_REGEX",
-    r"^(https://[a-z0-9-]+\.vercel\.app|http://(localhost|127\.0\.0\.1):\d{2,5})$",
+    r"^(https://[a-z0-9-]+\.vercel\.app|https?://(localhost|127\.0\.0\.1)(:\d{1,5})?|capacitor://localhost)$",
 )
