@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 import sys
 
-
 VENDOR_DIR = Path(__file__).resolve().parent.parent / ".vendor"
 
 if VENDOR_DIR.exists() and os.name != "nt":

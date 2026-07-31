@@ -1,19 +1,25 @@
 import {
   BatteryFull,
+  CheckCircle2,
   CircleHelp,
   Eye,
   EyeOff,
+  Globe,
   Keyboard,
   LockKeyhole,
   Power,
+  RefreshCw,
+  Server,
+  Settings,
   ShieldCheck,
-  User
+  User,
+  XCircle
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import CompanyLogo from '../components/CompanyLogo';
 import { isNeonAuthEnabled, signInWithNeonAuth, signUpWithNeonAuth, getNeonAuthToken } from '../auth';
-import { api, setAuthToken } from '../services/api';
+import { api, setAuthToken, setApiBaseUrl, getApiBaseUrl, testConnection } from '../services/api';
 
 function initials(name) {
   return (name || 'User').split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
@@ -46,6 +52,28 @@ export default function LoginScreen({ users, rememberedUsername, onLogin, connec
   const [neonMessage, setNeonMessage] = useState('');
   const [isNeonSubmitting, setIsNeonSubmitting] = useState(false);
   const [showNeonSection, setShowNeonSection] = useState(false);
+
+  // Server Settings state
+  const [serverModalOpen, setServerModalOpen] = useState(false);
+  const [customServerUrl, setCustomServerUrl] = useState(() => getApiBaseUrl() || 'https://cashbook-v11.vercel.app');
+  const [testResult, setTestResult] = useState(null);
+  const [isTestingServer, setIsTestingServer] = useState(false);
+
+  const handleTestServer = async (targetUrl) => {
+    setIsTestingServer(true);
+    setTestResult(null);
+    const target = targetUrl || customServerUrl;
+    const res = await testConnection(target);
+    setTestResult(res);
+    setIsTestingServer(false);
+  };
+
+  const handleSaveServerUrl = (urlToSave) => {
+    const target = urlToSave !== undefined ? urlToSave : customServerUrl;
+    setApiBaseUrl(target);
+    setServerModalOpen(false);
+    if (onRetryConnection) onRetryConnection();
+  };
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
@@ -118,13 +146,6 @@ export default function LoginScreen({ users, rememberedUsername, onLogin, connec
 
   return (
     <main className={`login-screen ${isSubmitting ? 'login-success' : ''}`}>
-      <div className="login-top-controls" aria-hidden="true">
-        <span>U.S.</span>
-        <Keyboard size={18} />
-        <BatteryFull size={22} />
-        <Power size={21} />
-      </div>
-
       <section className="login-panel">
         <div className="login-intro">
           <div className="login-time-display" aria-label={`${dateLabel(now)}, ${timeLabel(now)}`}>
@@ -164,43 +185,48 @@ export default function LoginScreen({ users, rememberedUsername, onLogin, connec
           </div>
 
           <form className="login-form" onSubmit={submit}>
-            <label className="login-field-label" htmlFor="login-username">{t('login.username')}</label>
-            <div className="login-password-shell" style={{ marginBottom: '16px' }}>
-              <User size={18} />
-              <input
-                id="login-username"
-                type="text"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                placeholder={t('login.usernamePlaceholder')}
-                autoComplete="username"
-                autoFocus
-                required
-                disabled={isSubmitting || isPreparing}
-              />
+            <div className="login-field-group">
+              <label className="login-field-label" htmlFor="login-username">{t('login.username')}</label>
+              <div className="login-input-shell">
+                <User size={19} className="login-field-icon" />
+                <input
+                  id="login-username"
+                  type="text"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder={t('login.usernamePlaceholder')}
+                  autoComplete="username"
+                  autoFocus
+                  required
+                  disabled={isSubmitting || isPreparing}
+                />
+              </div>
             </div>
 
-            <label className="login-field-label" htmlFor="login-password">{t('login.password')}</label>
-            <div className="login-password-shell">
-              <LockKeyhole size={18} />
-              <input
-                id="login-password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder={t('login.passwordPlaceholder')}
-                autoComplete="current-password"
-                required
-                disabled={isSubmitting || isPreparing}
-              />
-              <button
-                type="button"
-                aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
-                onClick={() => setShowPassword((value) => !value)}
-                disabled={isSubmitting}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+            <div className="login-field-group">
+              <label className="login-field-label" htmlFor="login-password">{t('login.password')}</label>
+              <div className="login-input-shell login-password-shell">
+                <LockKeyhole size={19} className="login-field-icon" />
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder={t('login.passwordPlaceholder')}
+                  autoComplete="current-password"
+                  required
+                  disabled={isSubmitting || isPreparing}
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                  onClick={() => setShowPassword((value) => !value)}
+                  disabled={isSubmitting}
+                  className="password-toggle-btn"
+                >
+                  {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                </button>
+              </div>
             </div>
 
             <div className="login-form-options">
@@ -224,7 +250,90 @@ export default function LoginScreen({ users, rememberedUsername, onLogin, connec
               <div className="login-connection-alert">
                 <strong>{t('login.backendConnectionNeeded')}</strong>
                 <span>{connectionError}</span>
-                <button type="button" onClick={onRetryConnection}>{t('login.retryConnection')}</button>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                  <button type="button" onClick={onRetryConnection}>{t('login.retryConnection')}</button>
+                  <button
+                    type="button"
+                    onClick={() => { setServerModalOpen(true); handleTestServer(getApiBaseUrl()); }}
+                    style={{ background: 'rgba(255, 255, 255, 0.2)', border: '1px solid rgba(255, 255, 255, 0.4)', color: '#fff', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600' }}
+                  >
+                    <Settings size={14} /> Server Settings
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {serverModalOpen && (
+              <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                <div className="modal-card" style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '24px', maxWidth: '440px', width: '100%', color: '#f8fafc', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                    <Server size={24} style={{ color: '#38bdf8' }} />
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700' }}>Backend Server Configuration</h3>
+                  </div>
+
+                  <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 16px 0', lineHeight: '1.5' }}>
+                    Select or enter your Cash Book backend API server URL to establish connection:
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setCustomServerUrl('https://cashbook-v11.vercel.app'); handleTestServer('https://cashbook-v11.vercel.app'); }}
+                      style={{ padding: '10px 14px', borderRadius: '8px', border: customServerUrl === 'https://cashbook-v11.vercel.app' ? '2px solid #38bdf8' : '1px solid #334155', background: customServerUrl === 'https://cashbook-v11.vercel.app' ? 'rgba(56, 189, 248, 0.1)' : '#0f172a', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Globe size={16} style={{ color: '#38bdf8' }} />
+                        <strong>Live Cloud Server (Vercel)</strong>
+                      </span>
+                      <span style={{ fontSize: '11px', background: '#0369a1', padding: '2px 6px', borderRadius: '4px' }}>Recommended</span>
+                    </button>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: '600' }}>
+                        Custom Server URL (Local / IP / Cloud):
+                      </label>
+                      <input
+                        type="url"
+                        value={customServerUrl}
+                        onChange={(e) => setCustomServerUrl(e.target.value)}
+                        placeholder="https://cashbook-v11.vercel.app"
+                        style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff', fontSize: '13px', outline: 'none' }}
+                      />
+                    </div>
+                  </div>
+
+                  {testResult && (
+                    <div style={{ padding: '10px 14px', borderRadius: '8px', marginBottom: '20px', background: testResult.ok ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)', border: testResult.ok ? '1px solid #22c55e' : '1px solid #ef4444', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: testResult.ok ? '#4ade80' : '#f87171' }}>
+                      {testResult.ok ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
+                      <span>{testResult.message}</span>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleTestServer()}
+                      disabled={isTestingServer}
+                      style={{ padding: '8px 14px', borderRadius: '8px', background: '#334155', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600' }}
+                    >
+                      <RefreshCw size={14} className={isTestingServer ? 'spin' : ''} /> Test
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setServerModalOpen(false)}
+                      style={{ padding: '8px 14px', borderRadius: '8px', background: 'transparent', border: '1px solid #475569', color: '#94a3b8', cursor: 'pointer', fontSize: '13px' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveServerUrl()}
+                      style={{ padding: '8px 16px', borderRadius: '8px', background: '#0284c7', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}
+                    >
+                      Save & Connect
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
             {message && <p className="login-message" role="alert">{message}</p>}

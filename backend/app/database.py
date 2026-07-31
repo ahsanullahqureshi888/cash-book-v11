@@ -1,5 +1,7 @@
+# cspell:ignore sessionmaker autoflush libpq vercel VERCEL BAWAR
 import os
 import ssl
+import threading
 
 from sqlalchemy import create_engine, inspect
 from sqlalchemy import text
@@ -11,12 +13,12 @@ def normalize_database_url(url: str) -> str:
         url = url.replace("postgres://", "postgresql+pg8000://", 1)
     elif url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+pg8000://", 1)
-    
+
     # pg8000 does not accept standard libpq query params like sslmode, channel_binding, etc.
     # We strip query params for pg8000 and pass SSL context via connect_args.
     if url.startswith("postgresql+pg8000://") and "?" in url:
         url = url.split("?")[0]
-        
+
     return url
 
 
@@ -27,15 +29,15 @@ def resolve_database_url() -> str:
 
     if not raw_url:
         if is_vercel:
-            # /tmp is the only writable directory in Vercel serverless functions.
-            # Fall back to SQLite there so the function can start and serve requests.
             return "sqlite:////tmp/cashbook.db"
-        raw_url = "sqlite:///./cashbook.db"
+        root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        db_file = os.path.join(root_dir, "cashbook.db").replace("\\", "/")
+        return f"sqlite:///{db_file}"
 
     database_url = normalize_database_url(raw_url)
     if is_production and database_url.startswith("sqlite"):
-        # Log a warning but don't raise — allow the function to start.
         import logging
+
         logging.getLogger("cashbook").warning(
             "DATABASE_URL is not set or points to SQLite on Vercel production. "
             "Configure a Neon/Postgres connection string."
@@ -48,11 +50,14 @@ DATABASE_URL = resolve_database_url()
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 IS_PG8000 = DATABASE_URL.startswith("postgresql+pg8000")
 
-engine_options = {"pool_pre_ping": True}
+engine_options = {"pool_pre_ping": True, "pool_recycle": 240}
 if IS_SQLITE:
     engine_options["connect_args"] = {"check_same_thread": False}
 elif IS_PG8000:
-    engine_options["connect_args"] = {"ssl_context": ssl.create_default_context()}
+    engine_options["connect_args"] = {
+        "ssl_context": ssl.create_default_context(),
+        "timeout": 30,
+    }
 
 engine = create_engine(DATABASE_URL, **engine_options)
 
@@ -60,7 +65,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-def ensure_sqlite_schema():
+def ensure_sqlite_schema(bind_engine=None):
     """Add columns introduced after the first local database version.
 
     SQLite create_all does not alter existing tables, so this keeps older local
@@ -69,8 +74,14 @@ def ensure_sqlite_schema():
     if not IS_SQLITE:
         return
 
-    with engine.begin() as conn:
-        tables = {row[0] for row in conn.execute(text("select name from sqlite_master where type='table'"))}
+    target_engine = bind_engine or engine
+    with target_engine.begin() as conn:
+        tables = {
+            row[0]
+            for row in conn.execute(
+                text("select name from sqlite_master where type='table'")
+            )
+        }
 
         def columns(table):
             if table not in tables:
@@ -103,10 +114,26 @@ def ensure_sqlite_schema():
         transaction_cols = columns("transactions")
         if "transactions" in tables:
             if "type" in transaction_cols:
-                conn.execute(text("update transactions set transaction_type = type where transaction_type is null or transaction_type = ''"))
-            conn.execute(text("update transactions set converted_afn = coalesce(nullif(cash_in_afn, 0), cash_out_afn, 0) where converted_afn is null or converted_afn = 0"))
-            conn.execute(text("update transactions set transaction_no = 'TX-' || replace(date, '-', '') || '-' || printf('%04d', id) where transaction_no is null or transaction_no = ''"))
-            conn.execute(text("update transactions set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"))
+                conn.execute(
+                    text(
+                        "update transactions set transaction_type = type where transaction_type is null or transaction_type = ''"
+                    )
+                )
+            conn.execute(
+                text(
+                    "update transactions set converted_afn = coalesce(nullif(cash_in_afn, 0), cash_out_afn, 0) where converted_afn is null or converted_afn = 0"
+                )
+            )
+            conn.execute(
+                text(
+                    "update transactions set transaction_no = 'TX-' || replace(date, '-', '') || '-' || printf('%04d', id) where transaction_no is null or transaction_no = ''"
+                )
+            )
+            conn.execute(
+                text(
+                    "update transactions set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"
+                )
+            )
 
         for column_sql in [
             "company_phone VARCHAR(100) DEFAULT ''",
@@ -135,19 +162,36 @@ def ensure_sqlite_schema():
         if "users" in tables:
             user_cols = columns("users")
             if "created_at" in user_cols:
-                conn.execute(text("update users set created_at = coalesce(created_at, created_date, CURRENT_TIMESTAMP)"))
+                conn.execute(
+                    text(
+                        "update users set created_at = coalesce(created_at, created_date, CURRENT_TIMESTAMP)"
+                    )
+                )
             if "updated_at" in user_cols:
-                conn.execute(text("update users set updated_at = coalesce(updated_at, created_at, created_date, CURRENT_TIMESTAMP)"))
+                conn.execute(
+                    text(
+                        "update users set updated_at = coalesce(updated_at, created_at, created_date, CURRENT_TIMESTAMP)"
+                    )
+                )
 
         if "accounts" in tables:
-            conn.execute(text("update accounts set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"))
+            conn.execute(
+                text(
+                    "update accounts set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"
+                )
+            )
         if "settings" in tables:
-            conn.execute(text("update settings set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"))
+            conn.execute(
+                text(
+                    "update settings set updated_at = coalesce(updated_at, created_at, CURRENT_TIMESTAMP)"
+                )
+            )
 
 
-def ensure_user_schema():
+def ensure_user_schema(bind_engine=None):
     """Keep deployed user tables aligned with the current auth model."""
-    inspector = inspect(engine)
+    target_engine = bind_engine or engine
+    inspector = inspect(target_engine)
     if "users" not in inspector.get_table_names():
         return
 
@@ -159,43 +203,179 @@ def ensure_user_schema():
         ("updated_at", timestamp_type),
         ("must_change_password", boolean_type),
         ("password_changed_at", timestamp_type),
+        ("assigned_group_id", "INTEGER"),
+        ("assigned_branch_id", "INTEGER"),
     ]
 
-    with engine.begin() as conn:
+    with target_engine.begin() as conn:
         for name, sql_type in additions:
             if name not in user_columns:
                 conn.execute(text(f"alter table users add column {name} {sql_type}"))
                 user_columns.add(name)
 
-        created_source = "created_date" if "created_date" in user_columns else "CURRENT_TIMESTAMP"
+        created_source = (
+            "created_date" if "created_date" in user_columns else "CURRENT_TIMESTAMP"
+        )
         if "created_at" in user_columns:
-            conn.execute(text(f"update users set created_at = coalesce(created_at, {created_source}, CURRENT_TIMESTAMP)"))
+            conn.execute(
+                text(
+                    f"update users set created_at = coalesce(created_at, {created_source}, CURRENT_TIMESTAMP)"
+                )
+            )
         if "updated_at" in user_columns:
-            conn.execute(text(f"update users set updated_at = coalesce(updated_at, created_at, {created_source}, CURRENT_TIMESTAMP)"))
+            conn.execute(
+                text(
+                    f"update users set updated_at = coalesce(updated_at, created_at, {created_source}, CURRENT_TIMESTAMP)"
+                )
+            )
 
 
-def ensure_payroll_schema():
+def ensure_payroll_schema(bind_engine=None):
     """Add payroll columns to existing local/deployed tables."""
-    inspector = inspect(engine)
+    target_engine = bind_engine or engine
+    inspector = inspect(target_engine)
     tables = set(inspector.get_table_names())
-    with engine.begin() as conn:
+    with target_engine.begin() as conn:
         if "transactions" in tables:
-            transaction_columns = {column["name"] for column in inspector.get_columns("transactions")}
+            transaction_columns = {
+                column["name"] for column in inspector.get_columns("transactions")
+            }
             for name, sql_type in [
                 ("employee_id", "INTEGER"),
                 ("salary_month", "DATE"),
                 ("payroll_kind", "VARCHAR(20)"),
+                ("branch_id", "INTEGER"),
             ]:
                 if name not in transaction_columns:
-                    conn.execute(text(f"alter table transactions add column {name} {sql_type}"))
+                    conn.execute(
+                        text(f"alter table transactions add column {name} {sql_type}")
+                    )
 
         if "employees" in tables:
-            employee_columns = {column["name"] for column in inspector.get_columns("employees")}
+            employee_columns = {
+                column["name"] for column in inspector.get_columns("employees")
+            }
             if "avatar_url" not in employee_columns:
-                conn.execute(text("alter table employees add column avatar_url TEXT DEFAULT ''"))
+                conn.execute(
+                    text("alter table employees add column avatar_url TEXT DEFAULT ''")
+                )
+            if "joining_date" not in employee_columns:
+                conn.execute(text("alter table employees add column joining_date DATE"))
+            if "employment_end_date" not in employee_columns:
+                conn.execute(
+                    text("alter table employees add column employment_end_date DATE")
+                )
 
-        if "salary_payments" in tables:
-            salary_payment_columns = {column["name"] for column in inspector.get_columns("salary_payments")}
-            for name in ["previous_carry_forward_balance", "total_payable_salary", "carry_forward_balance"]:
-                if name not in salary_payment_columns:
-                    conn.execute(text(f"alter table salary_payments add column {name} FLOAT DEFAULT 0"))
+
+def ensure_company_schema(bind_engine=None):
+    """Ensure company_id column exists on accounts, transactions, employees, and settings tables."""
+    target_engine = bind_engine or engine
+    inspector = inspect(target_engine)
+    tables = set(inspector.get_table_names())
+    with target_engine.begin() as conn:
+        for table in ["accounts", "transactions", "employees", "settings"]:
+            if table in tables:
+                cols = {c["name"] for c in inspector.get_columns(table)}
+                if "company_id" not in cols:
+                    conn.execute(
+                        text(
+                            f"alter table {table} add column company_id VARCHAR(100) DEFAULT 'bawar-star'"
+                        )
+                    )
+
+    Base.metadata.create_all(bind=target_engine)
+
+
+# ---------------------------------------------------------------------------
+# Dynamic Multi-Tenant Engine Cache & Request Session Resolver
+# ---------------------------------------------------------------------------
+engines = {}
+_engine_lock = threading.Lock()
+_initialized_db_urls = set()
+
+
+def get_tenant_db_url(company_id: str) -> str:
+    if not DATABASE_URL.startswith("sqlite"):
+        return DATABASE_URL
+
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if company_id in ("sky-ariana", "cashbook_sky_prod", "sky"):
+        db_file = os.path.join(root_dir, "cashbook_skyariana.db").replace("\\", "/")
+    else:
+        db_file = os.path.join(root_dir, "cashbook.db").replace("\\", "/")
+    return f"sqlite:///{db_file}"
+
+
+def get_tenant_session(request=None, company_id=None):
+    if not company_id:
+        if request and hasattr(request, "headers"):
+            company_id = request.headers.get("X-Company-Id", "bawar-star")
+        else:
+            company_id = "bawar-star"
+
+    # On PostgreSQL, all companies share the same database and connection URL.
+    # We always return SessionLocal() to prevent opening duplicate TCP connection pools.
+    if (
+        not IS_SQLITE
+        or company_id in ("bawar-star", "cashbook_bawar_prod", "bawar", "all")
+        or not company_id
+    ):
+        return SessionLocal()
+
+    if company_id not in engines:
+        with _engine_lock:
+            if company_id not in engines:
+                db_url = get_tenant_db_url(company_id)
+                tenant_engine_options = {"pool_pre_ping": True, "pool_recycle": 240}
+                if db_url.startswith("sqlite"):
+                    tenant_engine_options["connect_args"] = {"check_same_thread": False}
+                elif db_url.startswith("postgresql+pg8000"):
+                    tenant_engine_options["connect_args"] = {
+                        "ssl_context": ssl.create_default_context(),
+                        "timeout": 30,
+                    }
+
+                tenant_engine = create_engine(db_url, **tenant_engine_options)
+                engines[company_id] = tenant_engine
+
+                if db_url not in _initialized_db_urls:
+                    _initialized_db_urls.add(db_url)
+                    Base.metadata.create_all(bind=tenant_engine)
+                    ensure_sqlite_schema(bind_engine=tenant_engine)
+                    ensure_user_schema(bind_engine=tenant_engine)
+                    ensure_payroll_schema(bind_engine=tenant_engine)
+
+                    from . import models
+
+                    TenantSession = sessionmaker(
+                        autocommit=False, autoflush=False, bind=tenant_engine
+                    )
+                    db_temp = TenantSession()
+                    try:
+                        if not db_temp.query(models.Setting).first():
+                            db_temp.add(
+                                models.Setting(
+                                    company_name="SKY ARIANA LTD",
+                                    default_currency="USD",
+                                    print_footer_text="Prepared by SKY ARIANA LTD",
+                                )
+                            )
+                            db_temp.commit()
+                    except Exception:
+                        db_temp.rollback()
+                    finally:
+                        db_temp.close()
+
+    target_engine = engines[company_id]
+    TenantSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=target_engine
+    )
+    return TenantSessionLocal()
+
+
+def get_db(request=None):
+    db = get_tenant_session(request)
+    try:
+        yield db
+    finally:
+        db.close()

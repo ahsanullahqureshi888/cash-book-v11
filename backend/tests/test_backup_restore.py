@@ -91,7 +91,9 @@ class BackupRestoreCompatibilityTests(unittest.TestCase):
         self.assertEqual(2, self.db.query(models.Transaction).count())
 
         settings = crud.get_settings(self.db)
-        employee = self.db.query(models.Employee).filter_by(full_name="Legacy Worker").one()
+        employee = (
+            self.db.query(models.Employee).filter_by(full_name="Legacy Worker").one()
+        )
         salary_payment = self.db.query(models.SalaryPayment).one()
 
         self.assertEqual("Legacy Bawar", settings.company_name)

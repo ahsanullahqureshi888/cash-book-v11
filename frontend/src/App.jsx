@@ -1,13 +1,17 @@
 import { lazy, startTransition, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import Sidebar from './components/Sidebar';
-import Topbar from './components/Topbar';
+import { Analytics } from '@vercel/analytics/react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import AppShell from './components/layout/AppShell';
 import ReceiptModal from './components/ReceiptModal';
 import ConfirmDialog from './components/ConfirmDialog';
-import ToastNotification from './components/ToastNotification';
-import Dashboard from './pages/Dashboard';
+import { useToast } from './components/ToastProvider';
+import SearchModal from './components/SearchModal';
 import CashBook from './pages/CashBook';
 import LoginScreen from './pages/LoginScreen';
 import SecuritySetup from './pages/SecuritySetup';
+import LiquidMobileDashboard from './components/mobile/LiquidMobileDashboard';
+import Dashboard from './pages/Dashboard';
+import MultiAccountDashboard from './components/MultiAccountDashboard';
 import { api, setAuthToken } from './services/api';
 import { isLegacyUpdateDateError, withoutTransactionDate } from './services/transactionCompatibility';
 import { currency, csvCell, dateLabel, jalaliDateLabel, todayInputValue } from './utils/format';
@@ -15,16 +19,21 @@ import { buildPrintReport, reportDateRange, waitForCondition, waitForPrintReady,
 import { buildCashBookRows, CASH_BOOK_PAGE_SIZE, currentMonthDateRange, filterCashBookRows, monthDateRangeForDate, summarizeCashBookRows } from './utils/transactions';
 import { employeeSalarySnapshot, salaryMonthStart } from './utils/payroll';
 import useDebouncedValue from './hooks/useDebouncedValue';
-import { Analytics } from '@vercel/analytics/react';
+import { transactionSchema } from './utils/validation';
+import { useCompany } from './context/CompanyContext';
 
 const AccountLedger = lazy(() => import('./pages/AccountLedger'));
+const BawarStarLedger = lazy(() => import('./pages/BawarStarLedger'));
 const Accounts = lazy(() => import('./pages/Accounts'));
 const Reports = lazy(() => import('./pages/Reports'));
 const BackupRestore = lazy(() => import('./pages/BackupRestore'));
 const CurrencyConverter = lazy(() => import('./pages/CurrencyConverter'));
 const Settings = lazy(() => import('./pages/Settings'));
 const EmployeesSalary = lazy(() => import('./pages/EmployeesSalary'));
+const EmployeeLedgerPage = lazy(() => import('./pages/EmployeeLedgerPage'));
+const PlasticErpDashboard = lazy(() => import('./pages/PlasticErpDashboard'));
 const GlassPrintPreview = lazy(() => import('./components/GlassPrintPreview'));
+
 
 const appTranslations = {
   English: {
@@ -94,9 +103,33 @@ const emptyCashForm = (type) => ({
 });
 
 export default function App() {
-  const [activeView, setActiveView] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { showToast } = useToast();
+
+  const activeView = location.pathname === '/' ? 'dashboard' : location.pathname.substring(1);
+  const setActiveView = (view) => {
+    if (view === 'dashboard') navigate('/');
+    else navigate(`/${view}`);
+  };
+
+  const getPageTitle = () => {
+    const path = location.pathname;
+    if (path === '/cashbook') return 'Cash Book';
+    if (path === '/salary') return 'Employees & Salary';
+    if (path === '/ledger') return 'Ledger';
+    if (path === '/bawar-star') return 'Bawar Star Ledger';
+    if (path === '/accounts') return 'Accounts';
+    if (path === '/reports') return 'Reports';
+    if (path === '/settings') return 'Settings';
+    if (path === '/backup') return 'Backup';
+    if (path === '/converter') return 'Converter';
+    return 'Dashboard';
+  };
+
   const [theme, setTheme] = useState(() => localStorage.getItem('cashbook-theme') || 'dark');
-  const [companyName, setCompanyName] = useState('BAWAR STAR PLASTIC INDUSTRY');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [companyName, setCompanyName] = useState('Cashbook Of All companies');
   const [companyPhone, setCompanyPhone] = useState('');
   const [companyEmail, setCompanyEmail] = useState('');
   const [companyWebsite, setCompanyWebsite] = useState('');
@@ -113,16 +146,16 @@ export default function App() {
     const safeLang = ['English', 'Dari', 'Pashto'].includes(lang) ? lang : 'English';
     const dict = appTranslations[safeLang];
     if (dict && Object.prototype.hasOwnProperty.call(dict, key)) {
-      return dict[key];
+      return Reflect.get(dict, key);
     }
     const defaultDict = appTranslations['English'];
     if (defaultDict && Object.prototype.hasOwnProperty.call(defaultDict, key)) {
-      return defaultDict[key];
+      return Reflect.get(defaultDict, key);
     }
     return key;
   };
   const [dateDisplayFormat, setDateDisplayFormat] = useState('dual');
-  const [printFooterText, setPrintFooterText] = useState('Prepared by BAWAR STAR PLASTIC INDUSTRY');
+  const [printFooterText, setPrintFooterText] = useState('Prepared by Cashbook Of All companies');
   const [autoLogoutMinutes, setAutoLogoutMinutes] = useState(30);
   const [summary, setSummary] = useState({ cash_in_afn: 0, cash_out_afn: 0, afn_balance: 0, usd_in: 0, usd_out: 0, usd_balance: 0, today_transactions: 0, monthly_transactions: 0 });
   const [transactions, setTransactions] = useState([]);
@@ -164,7 +197,6 @@ export default function App() {
   const [printStatus, setPrintStatus] = useState('idle');
   const [printError, setPrintError] = useState('');
   const [confirm, setConfirm] = useState(null);
-  const [toast, setToast] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
   const [lastBackupAt, setLastBackupAt] = useState(() => localStorage.getItem('cashbook-last-backup-at') || '');
   const [isLoading, setIsLoading] = useState(true);
@@ -185,7 +217,12 @@ export default function App() {
   const printContextRef = useRef(null);
 
   useEffect(() => {
-    document.body.classList.toggle('light', theme === 'light');
+    const isDark = theme === 'dark';
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.classList.toggle('light', !isDark);
+    document.documentElement.setAttribute('data-theme', theme);
+    document.body.classList.toggle('dark', isDark);
+    document.body.classList.toggle('light', !isDark);
     localStorage.setItem('cashbook-theme', theme);
   }, [theme]);
 
@@ -197,10 +234,20 @@ export default function App() {
     initializeAuth();
   }, []);
 
+  const { currentCompany } = useCompany();
+
+  useEffect(() => {
+    if (currentCompany) {
+      setCompanyName(currentCompany.name);
+      setCurrencyCode(currentCompany.currency || 'AFN');
+      setCompanyLogo(currentCompany.logo || '');
+    }
+  }, [currentCompany]);
+
   useEffect(() => {
     if (currentUser && !passwordChangeRequired) loadAll();
     if (currentUser?.role === 'Administrator' && !passwordChangeRequired) reloadManagedUsers();
-  }, [currentUser, passwordChangeRequired]);
+  }, [currentUser, passwordChangeRequired, currentCompany?.id]);
 
   useEffect(() => {
     if (currentUser && activeView === 'settings') refreshDiagnostics();
@@ -211,6 +258,17 @@ export default function App() {
       setActiveView('cashbook');
     }
   }, [activeTransactionType]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (activeView !== 'cashbook') {
@@ -303,11 +361,38 @@ export default function App() {
     }
   }
 
-  function showToast(message, type = 'success') {
-    setToast({ message, type });
-    window.clearTimeout(showToast.timer);
-    showToast.timer = window.setTimeout(() => setToast(null), 2500);
-  }
+
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setAuthToken('');
+      try {
+        localStorage.removeItem('cashbook-session-token');
+        localStorage.removeItem('cashbook-current-user');
+      } catch {}
+      setCurrentUser(null);
+      setPasswordChangeRequired(false);
+      setIsLoading(false);
+    };
+
+    const handleCompanySwitched = () => {
+      // Clear frontend cached state before reloading for newly active tenant
+      setSummary({ total_cash_in: 0, total_cash_out: 0, afn_balance: 0 });
+      setTransactions([]);
+      setAccounts([]);
+      setEmployees([]);
+      setSelectedAccount(null);
+      setLedger(null);
+      loadAll();
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    window.addEventListener('company_switched', handleCompanySwitched);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+      window.removeEventListener('company_switched', handleCompanySwitched);
+    };
+  }, []);
 
   async function initializeAuth() {
     setAuthLoading(true);
@@ -336,7 +421,11 @@ export default function App() {
       setAuthToken('');
       localStorage.removeItem('cashbook-session-token');
       localStorage.removeItem('cashbook-current-user');
-      setPageError(error.message);
+      if (error.message && (error.message.includes('401') || error.message.includes('Could not validate credentials'))) {
+        setPageError('Session expired. Please enter your credentials to log in.');
+      } else {
+        setPageError(error.message);
+      }
       setCurrentUser(null);
       setPasswordChangeRequired(false);
       setIsLoading(false);
@@ -346,8 +435,6 @@ export default function App() {
   }
 
   async function onLogin(payload) {
-    // Neon Auth path: LoginScreen already called api.neonAuthLogin() and
-    // setAuthToken(). We receive the completed response, skip the API call.
     const response = payload._neonAuthResponse
       ? payload._neonAuthResponse
       : await api.login(payload);
@@ -390,7 +477,6 @@ export default function App() {
     try {
       await api.logout();
     } catch {
-      // Keep local logout reliable if the API is temporarily unavailable.
     }
     setAuthToken('');
     localStorage.removeItem('cashbook-current-user');
@@ -441,11 +527,10 @@ export default function App() {
   }
 
   async function submitTransaction(form, type) {
-    if (!form.account_name.trim() || !form.detail.trim()) {
-      return `${type === 'cash_in' ? 'Cash In' : 'Cash Out'} requires name and detail.`;
-    }
-    if (Number(form.cash_amount || 0) <= 0 && Number(form.usd_amount || 0) <= 0) {
-      return 'Enter an AFN or USD amount greater than zero.';
+    const validation = transactionSchema.validate(form, type);
+    if (!validation.isValid) {
+      const errorMsg = Object.values(validation.errors)[0];
+      return errorMsg;
     }
     try {
       setTransactionSavingType(type);
@@ -731,7 +816,7 @@ export default function App() {
 
     try {
       if (isLoadingRef.current) {
-        await waitForCondition(() => !isLoadingRef.current, { timeoutMs: 8000 });
+        await waitForCondition(() => !isLoadingRef.current, { timeoutMs: 60000 });
       }
 
       let context = printContextRef.current;
@@ -740,7 +825,7 @@ export default function App() {
       if (context.activeView === 'reports') {
         const data = await withTimeout(
           runReport({ throwOnError: true }),
-          10000,
+          60000,
           'The report request timed out. Check the backend and try again.'
         );
         context = { ...context, reportData: data };
@@ -749,7 +834,7 @@ export default function App() {
       if (context.activeView === 'ledger' && context.selectedAccount && !context.ledger) {
         const ledgerData = await withTimeout(
           api.getLedger(context.selectedAccount.id),
-          10000,
+          60000,
           'The ledger request timed out. Check the backend and try again.'
         );
         setLedger(ledgerData);
@@ -773,7 +858,159 @@ export default function App() {
     setPrintError('');
     try {
       await waitForPrintReady({ root: printDocumentRef.current, timeoutMs: 4000 });
-      window.print();
+
+      const reportTitle = printReport?.title || 'Cash Book Report';
+      const printWin = window.open('', '_blank', 'width=1100,height=850');
+
+      if (!printWin) {
+        window.print();
+        setPrintStatus('ready');
+        return;
+      }
+
+      const docHtml = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <title>${reportTitle}</title>
+          <style>
+            @page {
+              size: A4 landscape;
+              margin: 8mm 10mm;
+            }
+            *, *:before, *:after {
+              box-sizing: border-box !important;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              background: #ffffff !important;
+              color: #0f172a !important;
+              margin: 0 !important;
+              padding: 10px !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .print-document, .print-container {
+              width: 100% !important;
+              max-width: none !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              box-shadow: none !important;
+              border: none !important;
+              transform: none !important;
+            }
+            img, .company-logo img, .print-document-header img, .print-banner img {
+              max-height: 48px !important;
+              max-width: 140px !important;
+              object-fit: contain !important;
+              display: inline-block !important;
+            }
+            .print-document-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 2px solid #0f172a;
+              padding-bottom: 10px;
+              margin-bottom: 12px;
+            }
+            .print-company-strip {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              background: #f1f5f9;
+              border: 1px solid #cbd5e1;
+              padding: 6px 12px;
+              border-radius: 6px;
+              margin-bottom: 10px;
+              font-size: 10pt;
+            }
+            .print-summary-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 8px;
+              margin: 10px 0 14px 0;
+            }
+            .print-summary-grid > div {
+              background: #f8fafc;
+              border: 1px solid #e2e8f0;
+              border-radius: 6px;
+              padding: 8px 10px;
+              font-size: 9pt;
+            }
+            table.print-data-table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              margin-top: 8px !important;
+              font-size: 8.5pt !important;
+            }
+            table.print-data-table th {
+              background-color: #0f172a !important;
+              color: #ffffff !important;
+              padding: 6px 8px !important;
+              font-size: 8pt !important;
+              text-transform: uppercase !important;
+              border: 1px solid #0f172a !important;
+            }
+            table.print-data-table td {
+              padding: 5px 8px !important;
+              border-bottom: 1px solid #e2e8f0 !important;
+              border-right: 1px solid #f1f5f9 !important;
+            }
+            table.print-data-table tr:nth-child(even) td {
+              background-color: #f8fafc !important;
+            }
+            .print-money {
+              font-family: ui-monospace, monospace !important;
+              text-align: right !important;
+              font-weight: 600 !important;
+            }
+            .income-amount { color: #059669 !important; }
+            .expense-amount { color: #dc2626 !important; }
+            .print-signature-grid {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 20px;
+              text-align: center;
+              margin-top: 25px;
+              padding-top: 10px;
+            }
+            .signature-line-placeholder {
+              border-top: 1px solid #94a3b8;
+              height: 20px;
+            }
+            .signature-label {
+              font-size: 8pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              color: #475467;
+            }
+            .print-document-footer {
+              display: flex;
+              justify-content: space-between;
+              font-size: 8pt;
+              color: #64748b;
+              margin-top: 15px;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 6px;
+            }
+            .no-print { display: none !important; }
+          </style>
+        </head>
+        <body>
+          ${printDocumentRef.current.outerHTML}
+        </body>
+        </html>
+      `;
+
+      printWin.document.write(docHtml);
+      printWin.document.close();
+      printWin.focus();
+      await waitForPrintReady({ root: printWin.document.body, timeoutMs: 3000 });
+      printWin.print();
     } catch (error) {
       setPrintError(error.message || 'The print dialog could not be opened.');
       setPrintStatus('error');
@@ -1056,9 +1293,9 @@ export default function App() {
   const printReceipt = async () => {
     if (!receipt) return;
     const content = 
-      '<html><head><title>Receipt</title><style>' + printStyles() + '</style></head>' +
+      '<!DOCTYPE html><html><head><title>Receipt - ' + (receipt.transaction_no || receipt.id) + '</title><style>' + printStyles() + '</style></head>' +
       '<body>' + receiptHtml(receipt) + '</body></html>';
-    const win = window.open('', '_blank', 'width=900,height=700');
+    const win = window.open('', '_blank', 'width=950,height=800');
     if (!win) {
       showToast('Allow popups to print the receipt.', 'error');
       return;
@@ -1080,19 +1317,108 @@ export default function App() {
   };
 
   const printStyles = () => `
-    @page{size:A5 portrait;margin:12mm}
-    *{box-sizing:border-box}
-    body{font-family:Arial,sans-serif;margin:0;color:#101828;background:#fff;font-size:12px}
-    .receipt-sheet{border:1.5px solid #1d2939;padding:18px;min-height:175mm;position:relative}
-    .receipt-header{display:flex;justify-content:space-between;gap:20px;padding-bottom:14px;border-bottom:2px solid #1d2939}
-    .receipt-header h1{font-size:20px;margin:0 0 5px}.receipt-header p,.receipt-header h2{margin:2px 0}
-    .receipt-meta{text-align:right;line-height:1.6}
-    .type-badge{display:inline-block;margin:16px 0 10px;padding:6px 10px;border:1px solid #101828;font-weight:700;text-transform:uppercase}
-    table{width:100%;border-collapse:collapse}th,td{border:1px solid #98a2b3;padding:9px;text-align:left}
-    th{width:34%;background:#f2f4f7}.amount-row td{font-size:16px;font-weight:700}
-    .signature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:54px;text-align:center}
-    .signature{padding-top:8px;border-top:1px solid #344054}
-    .receipt-footer{position:absolute;bottom:14px;left:18px;right:18px;padding-top:8px;border-top:1px solid #d0d5dd;text-align:center;color:#475467}
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    *, *:before, *:after { box-sizing: border-box !important; margin: 0; padding: 0; }
+    html, body {
+      width: 210mm !important;
+      height: 100% !important;
+      max-height: 297mm !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      background: #fff !important;
+      color: #0f172a !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 9px;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    no-print, nav, sidebar, button, .print-hidden, .no-print { display: none !important; }
+    .payment-voucher-print, .receipt-print-wrapper, .print-wrapper-2up {
+      width: 100% !important;
+      max-width: 200mm !important;
+      height: 268mm !important;
+      max-height: 268mm !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+      margin: 0 auto !important;
+      padding: 3mm 4mm !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      page-break-before: avoid !important;
+      page-break-after: avoid !important;
+      page-break-inside: avoid !important;
+      break-before: avoid !important;
+      break-after: avoid !important;
+      break-inside: avoid !important;
+    }
+    .voucher-card {
+      height: 126mm !important;
+      max-height: 126mm !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+      border: 1.5px solid #0f172a !important;
+      border-radius: 6px !important;
+      padding: 8px 12px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      background: #fff !important;
+      position: relative !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .voucher-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin-bottom: 6px; }
+    .company-brand { display: flex; align-items: center; gap: 8px; }
+    .company-logo-img { height: 32px; max-width: 90px; object-fit: contain; border-radius: 4px; }
+    .company-logo-icon { width: 32px; height: 32px; background: #0f172a; color: #38bdf8; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .company-name { font-size: 13px; font-weight: 900; color: #0f172a; letter-spacing: -0.02em; text-transform: uppercase; }
+    .company-contact { font-size: 8px; color: #475467; font-weight: 600; margin-top: 1px; }
+    .voucher-meta { text-align: right; }
+    .copy-badge { display: inline-block; font-size: 7px; font-weight: 800; color: #1e293b; background: #e2e8f0; border: 1px solid #94a3b8; padding: 1px 5px; border-radius: 3px; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 2px; }
+    .voucher-title { font-size: 11px; font-weight: 900; color: #1e3a8a; text-transform: uppercase; letter-spacing: -0.01em; margin: 1px 0; }
+    .meta-row { font-size: 8.5px; color: #334155; }
+
+    .voucher-body { flex: 1; display: flex; flex-direction: column; gap: 6px; justify-content: space-between; margin-top: 4px; }
+    
+    .info-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; }
+    .grid-pair { display: flex; flex-direction: column; min-width: 0; }
+    .grid-label { font-size: 7px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.04em; margin-bottom: 1px; }
+    .grid-value { font-size: 9.5px; color: #0f172a; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .font-bold { font-weight: 700; }
+    .font-semibold { font-weight: 600; }
+    .uppercase { text-transform: uppercase; }
+    .category-tag { color: #2563eb; text-transform: uppercase; }
+
+    .detail-box { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; flex: 1; min-height: 38px; }
+    .detail-content { font-size: 9.5px; font-weight: 600; color: #1e293b; line-height: 1.35; }
+
+    .amount-highlight-box { display: grid; grid-template-columns: 1fr 1fr 1fr; background: #0f172a; color: #fff; border-radius: 6px; padding: 6px 10px; margin: 2px 0; }
+    .amount-col { display: flex; flex-direction: column; }
+    .border-left { border-left: 1px solid #334155; padding-left: 10px; }
+    .amount-label { font-size: 7px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; }
+    .amount-val { font-size: 12.5px; font-weight: 900; font-family: ui-monospace, monospace; margin-top: 1px; }
+    .amount-subval { font-size: 10px; font-weight: 800; font-family: ui-monospace, monospace; margin-top: 1px; color: #f1f5f9; }
+    .text-emerald { color: #34d399; }
+    .text-blue { color: #60a5fa; }
+
+    .verification-strip { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 5px; padding: 4px 8px; font-size: 7.5px; color: #475467; margin-top: 2px; }
+    .verification-tag { font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .note-box { font-size: 8.5px; background: #fffbebf; border: 1px solid #fde68a; border-radius: 5px; padding: 4px 8px; color: #92400e; }
+    .note-content { font-weight: 600; }
+
+    .signature-section { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #cbd5e1; }
+    .signature-block { display: flex; flex-direction: column; align-items: center; }
+    .sig-line { width: 100%; border-top: 1px solid #64748b; height: 16px; margin-bottom: 2px; }
+    .sig-label { font-size: 8px; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    .cut-divider { height: 5mm !important; max-height: 5mm !important; display: flex !important; align-items: center !important; justify-content: center !important; border-bottom: 1.5px dashed #94a3b8 !important; position: relative !important; margin: 1mm 0 !important; flex-shrink: 0 !important; }
+    .cut-label { font-size: 6.5px; font-weight: 800; color: #64748b; background: #fff; padding: 0 5px; letter-spacing: 0.08em; text-transform: uppercase; }
   `;
 
   const escapeHtml = (value) => String(value ?? '')
@@ -1102,37 +1428,119 @@ export default function App() {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 
-  const receiptHtml = (tx) => 
-    '<main class="receipt-sheet">' +
-      '<header class="receipt-header">' +
-        '<div>' +
-          '<h1>' + escapeHtml(companyName) + '</h1>' +
-          '<p>' + escapeHtml(companyAddress) + '</p>' +
-          '<p>' + escapeHtml(companyPhone) + '</p>' +
-        '</div>' +
-        '<div class="receipt-meta">' +
-          '<h2>RECEIPT / VOUCHER</h2>' +
-          '<div><strong>No:</strong> ' + escapeHtml(tx.transaction_no || String(tx.id).slice(0, 8)) + '</div>' +
-          '<div><strong>Date:</strong> ' + escapeHtml(dateDisplayFormat === 'gregorian' ? dateLabel(tx.date) : dateDisplayFormat === 'persian' ? jalaliDateLabel(tx.date) : `${jalaliDateLabel(tx.date)} | ${dateLabel(tx.date)}`) + '</div>' +
-        '</div>' +
-      '</header>' +
-      '<div class="type-badge">' + (tx.transaction_type === 'cash_in' ? 'Cash Receipt' : 'Payment Voucher') + '</div>' +
-      '<table>' +
-        '<tr><th>Account Name</th><td>' + escapeHtml(tx.account_name) + '</td></tr>' +
-        '<tr><th>Details</th><td>' + escapeHtml(tx.detail) + '</td></tr>' +
-        '<tr class="amount-row"><th>Amount AFN</th><td>' + escapeHtml(tx.transaction_type === 'cash_in' ? currency(tx.cash_in_afn) : currency(tx.cash_out_afn)) + '</td></tr>' +
-        '<tr><th>Amount USD</th><td>' + escapeHtml(tx.transaction_type === 'cash_in' ? currency(tx.usd_in, 'USD') : currency(tx.usd_out, 'USD')) + '</td></tr>' +
-        '<tr><th>Exchange Rate</th><td>' + escapeHtml(tx.exchange_rate) + '</td></tr>' +
-        '<tr><th>Payment Method</th><td>' + escapeHtml(tx.payment_method || 'cash') + '</td></tr>' +
-        '<tr><th>Note</th><td>' + escapeHtml(tx.note || '-') + '</td></tr>' +
-      '</table>' +
-      '<div class="signature-grid">' +
-        '<div class="signature">Prepared By</div>' +
-        '<div class="signature">Received By</div>' +
-        '<div class="signature">Authorized By</div>' +
-      '</div>' +
-      '<footer class="receipt-footer">' + escapeHtml(printFooterText) + '</footer>' +
-    '</main>';
+  const renderSingleVoucher = (tx, copyLabel) => {
+    const isCashIn = tx.transaction_type === 'cash_in';
+    const afnVal = isCashIn ? tx.cash_in_afn : tx.cash_out_afn;
+    const usdVal = isCashIn ? tx.usd_in : tx.usd_out;
+    const formattedDate = dateDisplayFormat === 'gregorian' 
+      ? dateLabel(tx.date) 
+      : dateDisplayFormat === 'persian' 
+        ? jalaliDateLabel(tx.date) 
+        : `${jalaliDateLabel(tx.date)} | ${dateLabel(tx.date)}`;
+
+    const logoHtml = companyLogo 
+      ? `<img src="${escapeHtml(companyLogo)}" alt="Logo" class="company-logo-img" />`
+      : `<div class="company-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+        </div>`;
+
+    return `
+      <div class="voucher-card">
+        <div class="voucher-header">
+          <div class="company-brand">
+            ${logoHtml}
+            <div>
+              <h1 class="company-name">${escapeHtml(companyName || 'BAWAR STAR PLASTIC INDUSTRY')}</h1>
+              <p class="company-contact">${escapeHtml(companyPhone || '+93 700 345 630')} ${companyEmail ? ' | ' + escapeHtml(companyEmail) : ''}</p>
+            </div>
+          </div>
+          <div class="voucher-meta">
+            <div class="copy-badge">${escapeHtml(copyLabel)}</div>
+            <h2 class="voucher-title">${isCashIn ? 'RECEIPT VOUCHER' : 'PAYMENT VOUCHER'}</h2>
+            <div class="meta-row"><strong>Voucher No:</strong> <span class="font-mono">${escapeHtml(tx.transaction_no || String(tx.id).slice(0, 8))}</span></div>
+            <div class="meta-row"><strong>Date:</strong> ${escapeHtml(formattedDate)}</div>
+          </div>
+        </div>
+
+        <div class="voucher-body">
+          <div class="info-grid">
+            <div class="grid-pair">
+              <span class="grid-label">Account Name / Party</span>
+              <span class="grid-value font-bold">${escapeHtml(tx.account_name || 'General Account')}</span>
+            </div>
+            <div class="grid-pair">
+              <span class="grid-label">Category</span>
+              <span class="grid-value font-semibold category-tag">${escapeHtml(String(tx.category || 'General').replaceAll('_', ' '))}</span>
+            </div>
+            <div class="grid-pair">
+              <span class="grid-label">Payment Method</span>
+              <span class="grid-value font-semibold uppercase">${escapeHtml(tx.payment_method || 'CASH')}</span>
+            </div>
+            <div class="grid-pair">
+              <span class="grid-label">Ref / Doc No</span>
+              <span class="grid-value font-mono">${escapeHtml(tx.reference || '-')}</span>
+            </div>
+          </div>
+
+          <div class="detail-box">
+            <span class="grid-label">Details / Particulars Description</span>
+            <div class="detail-content">${escapeHtml(tx.detail || 'Standard cashbook voucher transaction record')}</div>
+          </div>
+
+          <div class="amount-highlight-box">
+            <div class="amount-col">
+              <span class="amount-label">AMOUNT AFN</span>
+              <strong class="amount-val text-emerald">${currency(afnVal, 'AFN')}</strong>
+            </div>
+            <div class="amount-col border-left">
+              <span class="amount-label">AMOUNT USD</span>
+              <strong class="amount-val text-blue">${currency(usdVal, 'USD')}</strong>
+            </div>
+            <div class="amount-col border-left">
+              <span class="amount-label">EXCHANGE RATE</span>
+              <span class="amount-subval">${tx.exchange_rate || '-'}</span>
+            </div>
+          </div>
+
+          ${tx.note ? `<div class="note-box"><span class="grid-label">Remarks / Notes:</span> <span class="note-content">${escapeHtml(tx.note)}</span></div>` : ''}
+
+          <div class="verification-strip">
+            <span><strong>System Record ID:</strong> ${escapeHtml(String(tx.id || '-'))} | <strong>Issuer:</strong> ${escapeHtml(currentUser?.full_name || 'System Accountant')}</span>
+            <span class="verification-tag">✓ AUDITED & VERIFIED</span>
+          </div>
+        </div>
+
+        <div class="signature-section">
+          <div class="signature-block">
+            <div class="sig-line"></div>
+            <span class="sig-label">Prepared By</span>
+          </div>
+          <div class="signature-block">
+            <div class="sig-line"></div>
+            <span class="sig-label">Receiver Signature</span>
+          </div>
+          <div class="signature-block">
+            <div class="sig-line"></div>
+            <span class="sig-label">Authorized Signature</span>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const receiptHtml = (tx) => `
+    <div class="payment-voucher-print print-wrapper-2up receipt-print-wrapper">
+      ${renderSingleVoucher(tx, 'OFFICE COPY')}
+      <div class="cut-divider">
+        <span class="cut-label">✂ CUT ALONG DOTTED LINE FOR CUSTOMER COPY</span>
+      </div>
+      ${renderSingleVoucher(tx, 'CUSTOMER COPY')}
+    </div>
+  `;
 
   function toggleTableFullscreen() {
     const node = tableRef.current;
@@ -1151,351 +1559,378 @@ export default function App() {
     setTableFullscreen(node.classList.contains('fullscreen-fallback'));
   }
 
+  if (authLoading) {
+    return <div className="login-loading">{t('Loading workspace...')}</div>;
+  }
+
   if (setupRequired && !currentUser) {
     return (
       <>
         <SecuritySetup mode="setup" onSetup={onSetupOwner} companyName={companyName} companyLogo={companyLogo} />
         {authLoading && <div className="login-loading">{t('Preparing secure setup...')}</div>}
         {pageError && <div className="login-loading error">{pageError}</div>}
-        <ToastNotification toast={toast} />
       </>
     );
   }
 
   if (currentUser && passwordChangeRequired) {
     return (
-      <>
-        <SecuritySetup mode="change" currentUser={currentUser} onChangePassword={onChangePassword} onLogout={onLogout} companyName={companyName} companyLogo={companyLogo} />
-        <ToastNotification toast={toast} />
-      </>
+      <SecuritySetup mode="change" currentUser={currentUser} onChangePassword={onChangePassword} onLogout={onLogout} companyName={companyName} companyLogo={companyLogo} />
     );
   }
 
   if (!currentUser) {
     return (
-      <>
-        <LoginScreen
-          users={loginUsers}
-          rememberedUsername={localStorage.getItem('cashbook-remembered-user') || ''}
-          onLogin={onLogin}
-          connectionError={pageError}
-          isPreparing={authLoading}
-          onRetryConnection={initializeAuth}
-          companyName={companyName}
-          companyLogo={companyLogo}
-        />
-        {authLoading && <div className="login-loading">{t('Preparing secure login...')}</div>}
-        <ToastNotification toast={toast} />
-      </>
+      <Routes>
+        <Route path="/mobile-liquid" element={<LiquidMobileDashboard />} />
+        <Route path="*" element={
+          <>
+            <LoginScreen
+              users={loginUsers}
+              rememberedUsername={localStorage.getItem('cashbook-remembered-user') || ''}
+              onLogin={onLogin}
+              connectionError={pageError}
+              isPreparing={authLoading}
+              onRetryConnection={initializeAuth}
+              companyName={companyName}
+              companyLogo={companyLogo}
+            />
+            {authLoading && <div className="login-loading">{t('Preparing secure login...')}</div>}
+          </>
+        } />
+      </Routes>
     );
   }
 
   return (
-    <div className={`app-shell ${theme}`}>
-      <Sidebar activeView={activeView} setView={setActiveView} onPrint={onPrint} onBackup={onBackup} onRestore={onImportClick} />
-      <main className="main-panel">
-        <Topbar
-          title={activeView === 'cashbook' ? 'Cash Book' : activeView === 'salary' ? 'Employees & Salary' : activeView.charAt(0).toUpperCase() + activeView.slice(1)}
-          onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          onPrint={onPrint}
-          currentUser={currentUser}
-          onLogout={onLogout}
+    <div className={`app-root relative overflow-hidden ${theme}`}>
+      {/* Background Spheres for macOS Glassmorphism */}
+      <div className="fixed top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-emerald-500/20 blur-[120px] pointer-events-none z-0" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-indigo-500/20 blur-[120px] pointer-events-none z-0" />
+      <div className="fixed top-[30%] left-[50%] w-[30vw] h-[30vw] rounded-full bg-violet-500/15 blur-[120px] pointer-events-none z-0" />
+      
+      <div className="relative z-10 w-full h-full">
+        <AppShell
           companyName={companyName}
           companyLogo={companyLogo}
+          title={getPageTitle()}
           theme={theme}
-        />
-        <Suspense fallback={<div className="loading-strip">{t('Loading workspace...')}</div>}>
-        <div>
-          {isLoading && <div className="loading-strip">{t('Loading latest cash book data...')}</div>}
-          {pageError && <div className="error-banner">{pageError}</div>}
-          {activeView === 'dashboard' && (
-            <Dashboard
-              summary={summary}
-              latestTransactions={latestTransactions}
-              onNavigate={setActiveView}
-              onBackup={onBackup}
-              onRestore={onImportClick}
-              onPrint={onPrint}
-              companyName={companyName}
-              companyLogo={companyLogo}
-              activeTransactionType={activeTransactionType}
-              setActiveTransactionType={setActiveTransactionType}
-            />
-          )}
-          {activeView === 'cashbook' && (
-            <CashBook
-              search={cashSearch}
-              setSearch={setCashSearch}
-              startDate={cashStartDate}
-              setStartDate={setCashMonthFromDate}
-              endDate={cashEndDate}
-              setEndDate={setCashEndDate}
-              typeFilter={cashTypeFilter}
-              setTypeFilter={setCashTypeFilter}
-              categoryFilter={cashCategoryFilter}
-              setCategoryFilter={setCashCategoryFilter}
-              paymentFilter={cashPaymentFilter}
-              setPaymentFilter={setCashPaymentFilter}
-              accountFilter={cashAccountFilter}
-              setAccountFilter={setCashAccountFilter}
-              language={language}
-              onClearFilters={() => {
-                setCashSearch('');
-                setCashStartDate(activeCashMonthRange.startDate);
-                setCashEndDate(activeCashMonthRange.endDate);
-                setCashTypeFilter('all');
-                setCashCategoryFilter('all');
-                setCashPaymentFilter('all');
-                setCashAccountFilter('');
-              }}
-              rows={visibleCashRows}
-              rowOffset={cashPageStart}
-              page={cashPage}
-              pageCount={cashPageCount}
-              totalRows={cashRows.length}
-              onPageChange={setCashPage}
-              totals={{
-                cashIn: currency(cashTotals.cashIn),
-                cashOut: currency(cashTotals.cashOut),
-                usdIn: currency(cashTotals.usdIn, 'USD'),
-                usdOut: currency(cashTotals.usdOut, 'USD')
-              }}
-              cashInForm={cashInForm}
-              setCashInForm={setCashInForm}
-              cashOutForm={cashOutForm}
-              accounts={accounts}
-              employees={employees}
-              selectedEmployee={selectedCashOutEmployee}
-              selectedEmployeeSalary={selectedEmployeeSalary}
-              onCashInAccountChange={(value) => onTransactionAccountChange('cash_in', value)}
-              onCashOutAccountChange={(value) => onTransactionAccountChange('cash_out', value)}
-              onCashInAccountSelect={(item) => onTransactionAccountSelect('cash_in', item)}
-              onCashOutAccountSelect={(item) => onTransactionAccountSelect('cash_out', item)}
-              onQuickAddEmployee={onCreateEmployee}
-              setCashOutForm={setCashOutForm}
-              cashInMessage={cashInMessage}
-              cashOutMessage={cashOutMessage}
-              savingType={transactionSavingType}
-              onCashInSubmit={onCashInSubmit}
-              onCashOutSubmit={onCashOutSubmit}
-              onClearCashIn={() => setCashInForm(emptyCashForm('cash_in'))}
-              onClearCashOut={() => setCashOutForm(emptyCashForm('cash_out'))}
-              onEditTransaction={onEditTransaction}
-              onDeleteTransaction={(id) => setConfirm({
-                title: 'Delete transaction',
-                message: 'This transaction will be permanently deleted.',
-                onConfirm: async () => {
-                  try {
-                    await api.deleteTransaction(id);
-                    setTransactions((current) => current.filter((transaction) => transaction.id !== id));
-                    setSummary(await api.getSummary());
-                    setConfirm(null);
-                    showToast('Transaction deleted.', 'success');
-                  } catch (error) {
-                    showToast(error.message, 'error');
-                  }
-                }
-              })}
-              onReceipt={setReceipt}
-              onToggleFullscreen={toggleTableFullscreen}
-              fullscreen={tableFullscreen}
-              tableRef={tableRef}
-              dateDisplayFormat={dateDisplayFormat}
-              onPrint={onPrint}
-              onExport={onExportCashBook}
-              onExportJson={onExportCashBookJson}
-              activeTransactionType={activeTransactionType}
-              setActiveTransactionType={setActiveTransactionType}
-            />
-          )}
-          {activeView === 'ledger' && (
-            <AccountLedger
-              accounts={accounts.filter((account) => !ledgerSearch || account.name.toLowerCase().includes(ledgerSearch.toLowerCase())).map((account) => ({
-                ...account,
-                balance: ledger && selectedAccount?.id === account.id ? ledger.final_balance_afn : account.opening_balance_afn
-              }))}
-              accountName={accountName}
-              setAccountName={setAccountName}
-              openingBalance={openingBalance}
-              setOpeningBalance={setOpeningBalance}
-              search={ledgerSearch}
-              setSearch={setLedgerSearch}
-              onCreateAccount={onCreateAccount}
-              selectedAccountName={selectedAccount?.name}
-              onSelectAccount={onSelectAccount}
-              ledgerTitle={selectedAccount ? `${selectedAccount.name} Ledger` : 'Selected Ledger'}
-              ledgerSummary={ledgerSummary}
-              rows={ledgerRows}
-              dateDisplayFormat={dateDisplayFormat}
-              onReceipt={(tx) => setReceipt(tx)}
-              onPrint={onPrint}
-              onExport={onExportLedger}
-            />
-          )}
-          {activeView === 'accounts' && (
-            <Accounts
-              accounts={accounts}
-              form={accountForm}
-              setForm={setAccountForm}
-              onSave={onSaveAccount}
-              onEdit={setAccountForm}
-              onDelete={onDeleteAccount}
-              search={accountSearch}
-              setSearch={setAccountSearch}
-            />
-          )}
-          {activeView === 'salary' && (
-            <EmployeesSalary
-              employees={employees}
-              transactions={transactions}
-              onCreateEmployee={onCreateEmployee}
-              onUpdateEmployee={onUpdateEmployee}
-              onOpenCashBook={() => setActiveView('cashbook')}
-              onSalaryPaymentSaved={onSalaryPaymentSaved}
-              companyName={companyName}
-              companyLogo={companyLogo}
-              currentUser={currentUser}
-              onEmployeeSalaryChanged={onEmployeeSalaryChanged}
-              onEmployeeAvatarChanged={onEmployeeAvatarChanged}
-              onEmployeeDeleted={onEmployeeDeleted}
-            />
-          )}
-          {activeView === 'reports' && (
-            <Reports
-              mode={reportMode}
-              setMode={(mode) => {
-                setReportMode(mode);
-                setReportData(null);
-              }}
-              startDate={reportStartDate}
-              setStartDate={setReportStartDate}
-              endDate={reportEndDate}
-              setEndDate={setReportEndDate}
-              dateDisplayFormat={dateDisplayFormat}
-              onRun={runReport}
-              data={reportData}
-              onPrint={onPrint}
-              onExport={() => {
-                const blob = new Blob([JSON.stringify(reportData || {}, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `${reportMode}-report.json`;
-                link.click();
-                URL.revokeObjectURL(url);
-              }}
-            />
-          )}
-          {activeView === 'converter' && (
-            <CurrencyConverter
-              direction={converterDirection}
-              setDirection={setConverterDirection}
-              amount={converterAmount}
-              setAmount={setConverterAmount}
-              rate={converterRate}
-              setRate={setConverterRate}
-              result={converterResult}
-              onSaveRate={async () => {
-                setExchangeRate(converterRate);
-                await onSaveSettings();
-                showToast('Default exchange rate saved.', 'success');
-              }}
-            />
-          )}
-          {activeView === 'settings' && (
-            <Settings
-              companyName={companyName}
-              setCompanyName={setCompanyName}
-              companyPhone={companyPhone}
-              setCompanyPhone={setCompanyPhone}
-              companyEmail={companyEmail}
-              setCompanyEmail={setCompanyEmail}
-              companyWebsite={companyWebsite}
-              setCompanyWebsite={setCompanyWebsite}
-              companyTaxNumber={companyTaxNumber}
-              setCompanyTaxNumber={setCompanyTaxNumber}
-              companyLogo={companyLogo}
-              setCompanyLogo={setCompanyLogo}
-              companyAddress={companyAddress}
-              setCompanyAddress={setCompanyAddress}
-              companyLicense={companyLicense}
-              setCompanyLicense={setCompanyLicense}
-              currencyCode={currencyCode}
-              setCurrencyCode={setCurrencyCode}
-              exchangeRate={exchangeRate}
-              setExchangeRate={setExchangeRate}
-              theme={theme}
-              setTheme={setTheme}
-              language={language}
-              setLanguage={setLanguage}
-              dateDisplayFormat={dateDisplayFormat}
-              setDateDisplayFormat={setDateDisplayFormat}
-              printFooterText={printFooterText}
-              setPrintFooterText={setPrintFooterText}
-              autoLogoutMinutes={autoLogoutMinutes}
-              setAutoLogoutMinutes={setAutoLogoutMinutes}
-              printHeader={printHeader}
-              setPrintHeader={setPrintHeader}
-              onSave={onSaveSettings}
-              onPrintPreview={onPrint}
-              onBackup={onBackup}
-              onImportClick={onImportClick}
-              onImportFile={onImportFile}
-              onClear={onClearAll}
-              fileRef={fileRef}
-              status={settingsStatus}
-              setSettingsStatus={setSettingsStatus}
-              lastBackup={lastBackupAt || 'Never'}
-              currentUser={currentUser}
-              users={managedUsers}
-              onReloadUsers={reloadManagedUsers}
-              onCreateUser={async (payload) => {
-                await api.createUser(payload);
-                await reloadManagedUsers();
-                showToast('User added successfully', 'success');
-              }}
-              onUpdateUser={async (id, payload) => {
-                await api.updateUser(id, payload);
-                await reloadManagedUsers();
-                showToast('User updated successfully', 'success');
-              }}
-              onResetUserPassword={async (id, payload) => {
-                const result = await api.resetUserPassword(id, payload);
-                showToast('Password reset.', 'success');
-                return result;
-              }}
-              onDeleteUser={(user) => setConfirm({
-                title: 'Delete user account',
-                message: 'Are you sure you want to delete this account?',
-                onConfirm: async () => {
-                  await api.deleteUser(user.id);
-                  setConfirm(null);
-                  await reloadManagedUsers();
-                  showToast('User deleted.', 'success');
-                }
-              })}
-              diagnostics={diagnostics}
-              onRefreshDiagnostics={refreshDiagnostics}
-            />
-          )}
-          {activeView === 'backup' && (
-            <BackupRestore
-              onBackup={onBackup}
-              onImportClick={onImportClick}
-              onImportFile={onImportFile}
-              onCsvImportClick={onCsvImportClick}
-              onCsvImportFile={onCsvImportFile}
-              onDownloadCsvTemplate={onDownloadCsvTemplate}
-              onClear={onClearAll}
-              fileRef={fileRef}
-              csvFileRef={csvFileRef}
-              status={settingsStatus}
-              lastBackup={lastBackupAt || 'Never'}
-            />
-          )}
-        </div>
-        </Suspense>
-      </main>
+          onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onPrint={onPrint}
+          onBackup={onBackup}
+          onRestore={onImportClick}
+          currentUser={currentUser}
+          onLogout={onLogout}
+          onSearchClick={() => setSearchOpen(true)}
+        >
+          <Suspense fallback={<div className="loading-strip">{t('Loading workspace...')}</div>}>
+            <>
+              {isLoading && <div className="loading-strip">{t('Loading latest cash book data...')}</div>}
+              {pageError && <div className="error-banner">{pageError}</div>}
+              <Routes>
+                <Route path="/" element={
+                  <Dashboard
+                    summary={summary}
+                    latestTransactions={latestTransactions}
+                    transactions={transactions}
+                    onNavigate={setActiveView}
+                    onBackup={onBackup}
+                    onRestore={onImportClick}
+                    onPrint={onPrint}
+                    activeTransactionType={activeTransactionType}
+                    setActiveTransactionType={setActiveTransactionType}
+                    isLoading={isLoading}
+                    currentUser={currentUser}
+                    companyName={companyName}
+                  />
+                } />
+                <Route path="/cashbook" element={
+                  <CashBook
+                    summary={summary}
+                    transactions={transactions}
+                    search={cashSearch}
+                    setSearch={setCashSearch}
+                    startDate={cashStartDate}
+                    setStartDate={setCashMonthFromDate}
+                    endDate={cashEndDate}
+                    setEndDate={setCashEndDate}
+                    typeFilter={cashTypeFilter}
+                    setTypeFilter={setCashTypeFilter}
+                    categoryFilter={cashCategoryFilter}
+                    setCategoryFilter={setCashCategoryFilter}
+                    paymentFilter={cashPaymentFilter}
+                    setPaymentFilter={setCashPaymentFilter}
+                    accountFilter={cashAccountFilter}
+                    setAccountFilter={setCashAccountFilter}
+                    language={language}
+                    onClearFilters={() => {
+                      setCashSearch('');
+                      setCashStartDate(activeCashMonthRange.startDate);
+                      setCashEndDate(activeCashMonthRange.endDate);
+                      setCashTypeFilter('all');
+                      setCashCategoryFilter('all');
+                      setCashPaymentFilter('all');
+                      setCashAccountFilter('');
+                    }}
+                    rows={visibleCashRows}
+                    rowOffset={cashPageStart}
+                    page={cashPage}
+                    pageCount={cashPageCount}
+                    totalRows={cashRows.length}
+                    onPageChange={setCashPage}
+                    totals={{
+                      cashIn: currency(cashTotals.cashIn),
+                      cashOut: currency(cashTotals.cashOut),
+                      usdIn: currency(cashTotals.usdIn, 'USD'),
+                      usdOut: currency(cashTotals.usdOut, 'USD')
+                    }}
+                    cashInForm={cashInForm}
+                    setCashInForm={setCashInForm}
+                    cashOutForm={cashOutForm}
+                    accounts={accounts}
+                    employees={employees}
+                    selectedEmployee={selectedCashOutEmployee}
+                    selectedEmployeeSalary={selectedEmployeeSalary}
+                    onCashInAccountChange={(value) => onTransactionAccountChange('cash_in', value)}
+                    onCashOutAccountChange={(value) => onTransactionAccountChange('cash_out', value)}
+                    onCashInAccountSelect={(item) => onTransactionAccountSelect('cash_in', item)}
+                    onCashOutAccountSelect={(item) => onTransactionAccountSelect('cash_out', item)}
+                    onQuickAddEmployee={onCreateEmployee}
+                    setCashOutForm={setCashOutForm}
+                    cashInMessage={cashInMessage}
+                    cashOutMessage={cashOutMessage}
+                    savingType={transactionSavingType}
+                    onCashInSubmit={onCashInSubmit}
+                    onCashOutSubmit={onCashOutSubmit}
+                    onClearCashIn={() => setCashInForm(emptyCashForm('cash_in'))}
+                    onClearCashOut={() => setCashOutForm(emptyCashForm('cash_out'))}
+                    onEditTransaction={onEditTransaction}
+                    onDeleteTransaction={(id) => setConfirm({
+                      title: 'Delete transaction',
+                      message: 'This transaction will be permanently deleted.',
+                      onConfirm: async () => {
+                        try {
+                          await api.deleteTransaction(id);
+                          setTransactions((current) => current.filter((transaction) => transaction.id !== id));
+                          setSummary(await api.getSummary());
+                          setConfirm(null);
+                          showToast('Transaction deleted.', 'success');
+                        } catch (error) {
+                          showToast(error.message, 'error');
+                        }
+                      }
+                    })}
+                    onReceipt={setReceipt}
+                    onToggleFullscreen={toggleTableFullscreen}
+                    fullscreen={tableFullscreen}
+                    tableRef={tableRef}
+                    dateDisplayFormat={dateDisplayFormat}
+                    onPrint={onPrint}
+                    onExport={onExportCashBook}
+                    onExportJson={onExportCashBookJson}
+                    activeTransactionType={activeTransactionType}
+                    setActiveTransactionType={setActiveTransactionType}
+                    isLoading={isLoading}
+                  />
+                } />
+                <Route path="/ledger" element={
+                  <AccountLedger
+                    accounts={accounts.filter((account) => !ledgerSearch || account.name.toLowerCase().includes(ledgerSearch.toLowerCase())).map((account) => ({
+                      ...account,
+                      balance: ledger && selectedAccount?.id === account.id ? ledger.final_balance_afn : account.opening_balance_afn
+                    }))}
+                    accountName={accountName}
+                    setAccountName={setAccountName}
+                    openingBalance={openingBalance}
+                    setOpeningBalance={setOpeningBalance}
+                    search={ledgerSearch}
+                    setSearch={setLedgerSearch}
+                    onCreateAccount={onCreateAccount}
+                    selectedAccountName={selectedAccount?.name}
+                    onSelectAccount={onSelectAccount}
+                    ledgerTitle={selectedAccount ? `${selectedAccount.name} Ledger` : 'Selected Ledger'}
+                    ledgerSummary={ledgerSummary}
+                    rows={ledgerRows}
+                    dateDisplayFormat={dateDisplayFormat}
+                    onReceipt={(tx) => setReceipt(tx)}
+                    onPrint={onPrint}
+                    onExport={onExportLedger}
+                  />
+                } />
+                <Route path="/bawar-star" element={
+                  <BawarStarLedger />
+                } />
+                <Route path="/accounts" element={
+                  <Accounts
+                    accounts={accounts}
+                    form={accountForm}
+                    setForm={setAccountForm}
+                    onSave={onSaveAccount}
+                    onEdit={setAccountForm}
+                    onDelete={onDeleteAccount}
+                    search={accountSearch}
+                    setSearch={setAccountSearch}
+                  />
+                } />
+                <Route path="/salary" element={
+                  <EmployeesSalary
+                    employees={employees}
+                    transactions={transactions}
+                    onCreateEmployee={onCreateEmployee}
+                    onUpdateEmployee={onUpdateEmployee}
+                    onOpenCashBook={() => navigate('/cashbook')}
+                    onSalaryPaymentSaved={onSalaryPaymentSaved}
+                    companyName={companyName}
+                    companyLogo={companyLogo}
+                    currentUser={currentUser}
+                    onEmployeeSalaryChanged={onEmployeeSalaryChanged}
+                    onEmployeeAvatarChanged={onEmployeeAvatarChanged}
+                    onEmployeeDeleted={onEmployeeDeleted}
+                  />
+                } />
+                <Route path="/employees/:employeeId/ledger" element={
+                  <EmployeeLedgerPage
+                    currentUser={currentUser}
+                    companyName={companyName}
+                    companyLogo={companyLogo}
+                  />
+                } />
+                <Route path="/employees" element={<Navigate to="/salary" replace />} />
+                <Route path="/reports" element={
+                  <Reports
+                    transactions={transactions}
+                    accounts={accounts}
+                    employees={employees}
+                    companyName={companyName}
+                    companyLogo={companyLogo}
+                    companyAddress={companyAddress}
+                    companyPhone={companyPhone}
+                    companyEmail={companyEmail}
+                    currentUser={currentUser}
+                    dateDisplayFormat={dateDisplayFormat}
+                    currencyCode={currencyCode}
+                  />
+                } />
+                <Route path="/settings" element={
+                  <Settings
+                    companyName={companyName}
+                    setCompanyName={setCompanyName}
+                    companyPhone={companyPhone}
+                    setCompanyPhone={setCompanyPhone}
+                    companyEmail={companyEmail}
+                    setCompanyEmail={setCompanyEmail}
+                    companyWebsite={companyWebsite}
+                    setCompanyWebsite={setCompanyWebsite}
+                    companyTaxNumber={companyTaxNumber}
+                    setCompanyTaxNumber={setCompanyTaxNumber}
+                    companyLogo={companyLogo}
+                    setCompanyLogo={setCompanyLogo}
+                    companyAddress={companyAddress}
+                    setCompanyAddress={setCompanyAddress}
+                    companyLicense={companyLicense}
+                    setCompanyLicense={setCompanyLicense}
+                    currencyCode={currencyCode}
+                    setCurrencyCode={setCurrencyCode}
+                    exchangeRate={exchangeRate}
+                    setExchangeRate={setExchangeRate}
+                    theme={theme}
+                    setTheme={setTheme}
+                    language={language}
+                    setLanguage={setLanguage}
+                    dateDisplayFormat={dateDisplayFormat}
+                    setDateDisplayFormat={setDateDisplayFormat}
+                    printFooterText={printFooterText}
+                    setPrintFooterText={setPrintFooterText}
+                    autoLogoutMinutes={autoLogoutMinutes}
+                    setAutoLogoutMinutes={setAutoLogoutMinutes}
+                    printHeader={printHeader}
+                    setPrintHeader={setPrintHeader}
+                    onSave={onSaveSettings}
+                    onPrintPreview={onPrint}
+                    onBackup={onBackup}
+                    onImportClick={onImportClick}
+                    onImportFile={onImportFile}
+                    onClear={onClearAll}
+                    fileRef={fileRef}
+                    status={settingsStatus}
+                    setSettingsStatus={setSettingsStatus}
+                    lastBackup={lastBackupAt || 'Never'}
+                    currentUser={currentUser}
+                    users={managedUsers}
+                    onReloadUsers={reloadManagedUsers}
+                    onCreateUser={async (payload) => {
+                      await api.createUser(payload);
+                      await reloadManagedUsers();
+                      showToast('User added successfully', 'success');
+                    }}
+                    onUpdateUser={async (id, payload) => {
+                      await api.updateUser(id, payload);
+                      await reloadManagedUsers();
+                      showToast('User updated successfully', 'success');
+                    }}
+                    onResetUserPassword={async (id, payload) => {
+                      const result = await api.resetUserPassword(id, payload);
+                      showToast('Password reset.', 'success');
+                      return result;
+                    }}
+                    onDeleteUser={(user) => setConfirm({
+                      title: 'Delete user account',
+                      message: 'Are you sure you want to delete this account?',
+                      onConfirm: async () => {
+                        await api.deleteUser(user.id);
+                        setConfirm(null);
+                        await reloadManagedUsers();
+                        showToast('User deleted.', 'success');
+                      }
+                    })}
+                    diagnostics={diagnostics}
+                    onRefreshDiagnostics={refreshDiagnostics}
+                  />
+                } />
+                <Route path="/converter" element={
+                  <CurrencyConverter
+                    direction={converterDirection}
+                    setDirection={setConverterDirection}
+                    amount={converterAmount}
+                    setAmount={setConverterAmount}
+                    rate={converterRate}
+                    setRate={setConverterRate}
+                    result={converterResult}
+                    onSaveRate={async () => {
+                      setExchangeRate(converterRate);
+                      await onSaveSettings();
+                      showToast('Default exchange rate saved.', 'success');
+                    }}
+                  />
+                } />
+                <Route path="/backup" element={
+                  <BackupRestore
+                    onBackup={onBackup}
+                    onImportClick={onImportClick}
+                    onImportFile={onImportFile}
+                    onCsvImportClick={onCsvImportClick}
+                    onCsvImportFile={onCsvImportFile}
+                    onDownloadCsvTemplate={onDownloadCsvTemplate}
+                    onExcelSuccess={loadAll}
+                    onClear={onClearAll}
+                    fileRef={fileRef}
+                    csvFileRef={csvFileRef}
+                    status={settingsStatus}
+                    lastBackup={lastBackupAt || 'Never'}
+                  />
+                } />
+                <Route path="/exports" element={
+                  currentCompany?.id === 'sky-ariana'
+                    ? <MultiAccountDashboard />
+                    : <Navigate to="/" replace />
+                } />
+                <Route path="/plastic-erp" element={<PlasticErpDashboard />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+
+            </>
+          </Suspense>
+        </AppShell>
       <ReceiptModal transaction={receipt} companyName={companyName} dateDisplayFormat={dateDisplayFormat} onClose={() => setReceipt(null)} onPrint={printReceipt} />
       {printPreviewOpen && <Suspense fallback={<div className="loading-strip">{t('Loading print studio...')}</div>}><GlassPrintPreview
         open={printPreviewOpen}
@@ -1518,9 +1953,18 @@ export default function App() {
         }}
         onLogout={onLogout}
       /></Suspense>}
+      <SearchModal
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        accounts={accounts}
+        transactions={transactions}
+        setView={setActiveView}
+        setSelectedAccount={setSelectedAccount}
+        setCashSearch={setCashSearch}
+      />
       <ConfirmDialog open={!!confirm} title={confirm?.title} message={confirm?.message} onCancel={() => setConfirm(null)} onConfirm={confirm?.onConfirm} />
-      <ToastNotification toast={toast} />
       <Analytics />
+      </div>
     </div>
   );
 }

@@ -1,0 +1,97 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  backend-test:
+    name: Backend Lint & Test
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: backend
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest black || pip install black pytest fastapi httpx sqlalchemy pydantic pg8000 PyJWT cryptography bcrypt python-multipart openpyxl
+
+      - name: Lint with Black
+        run: |
+          black --check backend/ --exclude "/\.venv/" || true
+
+      - name: Run Backend Tests
+        run: |
+          pytest backend/tests
+
+  frontend-test:
+    name: Frontend Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: frontend
+        run: |
+          npm ci || npm install
+
+      - name: Build Web Bundle
+        working-directory: frontend
+        run: |
+          npm run build
+
+  auto-deploy:
+    name: Auto-Deploy Distribution
+    needs: [backend-test, frontend-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Deploy Frontend to Vercel
+        continue-on-error: true
+        if: env.VERCEL_TOKEN != ''
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: frontend
+          vercel-args: '--prod'
+
+      - name: Trigger Backend Webhook Deploy
+        continue-on-error: true
+        if: env.DEPLOY_WEBHOOK_URL != ''
+        env:
+          DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+        run: |
+          curl -X POST "${{ secrets.DEPLOY_WEBHOOK_URL }}" -H "Content-Type: application/json" -d '{"event":"ci_deploy_success"}'

@@ -1,0 +1,139 @@
+// Prisma ORM Database Schema for Decoupled Transport & Logistics Accounting
+// Multi-Tenant Isolation: SKY ARIANA LTD (Transport/Freight) vs Standard Retail Tenants
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TenantType {
+  LOGISTICS_FREIGHT
+  STANDARD_RETAIL
+}
+
+enum ContainerSize {
+  SIZE_20FT_STD
+  SIZE_40FT_STD
+  SIZE_40FT_HC
+  SIZE_45FT_HC
+  LCL
+}
+
+enum PaymentMethod {
+  HAWALA_TRANSFER
+  DUBAI_CASH_DROP
+  BANK_WIRE
+  CASH_KABUL
+}
+
+model Tenant {
+  id               String                 @id @default(uuid())
+  name             String                 // "SKY ARIANA LTD"
+  code             String                 @unique // "SKY-BBB"
+  type             TenantType             @default(LOGISTICS_FREIGHT)
+  licenseNo        String                 // "2401-2198"
+  primaryCurrency  String                 @default("USD")
+  dbName           String                 @unique // "cashbook_skyariana_prod"
+  accounts         ClientAccount[]
+  shipmentInvoices FreightShipmentInvoice[]
+  hawalaReceipts   HawalaPaymentReceipt[]
+  ledgerEntries    TransportLedgerEntry[]
+
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+}
+
+model ClientAccount {
+  id                 String                 @id @default(uuid())
+  tenantId           String
+  tenant             Tenant                 @relation(fields: [tenantId], references: [id])
+  accountNumber      String                 @unique
+  accountName        String                 // "HAJI IBRAHIM - DANISH AGHA"
+  accountNameDari    String?                // "حاجی ابراهیم او دانش بهای"
+  city               String                 // "Kandahar"
+  country            String                 @default("Afghanistan")
+  currentBalanceUSD  Decimal                @default(0.00) @db.Decimal(14, 2)
+  ledgerEntries      TransportLedgerEntry[]
+
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+}
+
+model FreightShipmentInvoice {
+  id                   String                 @id @default(uuid())
+  tenantId             String
+  tenant               Tenant                 @relation(fields: [tenantId], references: [id])
+  invoiceNo            String                 @unique // "INV-2026-002"
+  shipmentDate         DateTime
+  shipper              String                 // "NAJEB-AMIN LTD"
+  consignee            String                 // "MIDA ENTERPRISES"
+  blNumber             String                 // "JADSUHN5A33481"
+  commodity            String                 // "2300 CNT GREEN RAISINS"
+  containerQuantity    Int                    @default(1)
+  ratePerContainerUSD  Decimal                @db.Decimal(12, 2)
+  totalFreightCostUSD  Decimal                @db.Decimal(14, 2)
+  containers           ContainerItem[]
+  ledgerEntries        TransportLedgerEntry[]
+
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+}
+
+model ContainerItem {
+  id          String                 @id @default(uuid())
+  invoiceId   String
+  invoice     FreightShipmentInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  containerNo String                 // "RXTU4545407"
+  sizeType    ContainerSize          @default(SIZE_40FT_HC)
+  sealNo      String?
+}
+
+model HawalaPaymentReceipt {
+  id              String                 @id @default(uuid())
+  tenantId        String
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id])
+  receiptNo       String                 @unique // "HAW-7950568"
+  paymentDate     DateTime
+  amountUSD       Decimal                @db.Decimal(14, 2)
+  method          PaymentMethod          @default(HAWALA_TRANSFER)
+  depositedBy     String                 // "Danish Agha" / "Haji Ibrahim"
+  hawalaAgentName String?                // "Mohammad Adras"
+  hawalaRefNo     String?                // "7950568"
+  cityLocation    String                 // "Dubai"
+  notesDari       String?                // "نقدی په دوبی کی دانش بیای راته جعمه کړی"
+  ledgerEntries   TransportLedgerEntry[]
+
+  createdAt       DateTime               @default(now())
+}
+
+model TransportLedgerEntry {
+  id                  String                  @id @default(uuid())
+  tenantId            String
+  tenant              Tenant                  @relation(fields: [tenantId], references: [id])
+  accountId           String
+  account             ClientAccount           @relation(fields: [accountId], references: [id])
+  sn                  Int
+  date                DateTime
+  shipper             String
+  consignee           String
+  commodityInvoice    String
+  blContainerNo       String
+  containerQty        Int                     @default(0)
+  ratePerContainerUSD Decimal                 @default(0.00) @db.Decimal(12, 2)
+  creditUSD           Decimal                 @default(0.00) @db.Decimal(14, 2) // Invoice Charges
+  debitUSD            Decimal                 @default(0.00) @db.Decimal(14, 2) // Cash Deposits
+  runningBalanceUSD   Decimal                 @db.Decimal(14, 2)
+  notesDari           String?
+
+  shipmentInvoiceId   String?
+  shipmentInvoice     FreightShipmentInvoice? @relation(fields: [shipmentInvoiceId], references: [id])
+
+  hawalaReceiptId     String?
+  hawalaReceipt       HawalaPaymentReceipt?   @relation(fields: [hawalaReceiptId], references: [id])
+
+  createdAt           DateTime                @default(now())
+}

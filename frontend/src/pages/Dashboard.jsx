@@ -7,180 +7,341 @@ import {
   FileText,
   Landmark,
   Printer,
-  RefreshCcw,
-  WalletCards
+  WalletCards,
+  ChevronDown,
+  ArrowRight,
+  TrendingUp,
+  Receipt,
+  CheckCircle2,
+  ListFilter
 } from 'lucide-react';
-import GlassCard from '../components/GlassCard';
-import CompanyLogo from '../components/CompanyLogo';
-import { currency, currencyTone } from '../utils/format';
+import { useState, useMemo } from 'react';
+import { NavLink } from 'react-router-dom';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import SimpleCashChart from '../components/SimpleCashChart';
+import { currency, dateLabel } from '../utils/format';
 
-const companyFallback = 'BAWAR STAR PLASTIC INDUSTRY';
+const companyFallback = 'Cashbook Of All Companies';
 
-const afnMetricItems = [
-  { label: 'Total Cash In', key: 'cash_in_afn', icon: ArrowDownLeft, intent: 'in' },
-  { label: 'Total Cash Out', key: 'cash_out_afn', icon: ArrowUpRight, intent: 'out' },
-  { label: 'Available Balance', key: 'afn_balance', icon: WalletCards, intent: 'balance' },
-  { label: "Today's Cash In", key: 'today_cash_in', icon: CalendarDays, intent: 'in' },
-  { label: "Today's Cash Out", key: 'today_cash_out', icon: CalendarDays, intent: 'out' },
-  { label: "This Month's Cash In", key: 'monthly_cash_in', icon: CalendarRange, intent: 'in' },
-  { label: "This Month's Cash Out", key: 'monthly_cash_out', icon: CalendarRange, intent: 'out' }
-];
-
-const usdMetricItems = [
-  { label: 'Total Cash In', key: 'usd_in', icon: ArrowDownLeft, intent: 'in' },
-  { label: 'Total Cash Out', key: 'usd_out', icon: ArrowUpRight, intent: 'out' },
-  { label: 'Available Balance', key: 'usd_balance', icon: WalletCards, intent: 'balance' }
-];
-
-const quickActions = [
-  { label: 'Ledger', view: 'ledger', icon: Landmark },
-  { label: 'Reports', view: 'reports', icon: FileText }
-];
-
-const formatCount = (value) => Number(value || 0).toLocaleString('en-US');
-
-const signedCurrency = (value, type = 'cash_in') => {
-  const amount = Math.abs(Number(value || 0));
-  return `${type === 'cash_in' ? '+' : '-'}${currency(amount)}`;
-};
-
-const resolveMetricTone = (value, intent) => {
-  if (intent === 'balance') return currencyTone(value);
-  if (Number(value || 0) === 0) return 'neutral';
-  return intent === 'out' ? 'danger' : 'success';
-};
-
-function EntryStat({ icon: Icon, label, value }) {
-  return (
-    <article className="dashboard-entry-stat">
-      <span className="dashboard-entry-icon" aria-hidden="true"><Icon size={20} /></span>
-      <div>
-        <span>{label}</span>
-        <strong>{value}</strong>
-      </div>
-    </article>
-  );
+function getInitials(name) {
+  if (!name) return 'AQ';
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
-function FinancialMetricCard({ item, code, summary }) {
-  const Icon = item.icon;
-  const value = Number(summary[item.key] || 0);
-  const tone = resolveMetricTone(value, item.intent);
-
-  return (
-    <article className={`financial-metric-card financial-metric-${tone}`}>
-      <div className="financial-metric-card-header">
-        <span className="financial-metric-icon" aria-hidden="true"><Icon size={18} /></span>
-        <span>{item.label}</span>
-      </div>
-      <strong>{currency(value, code)}</strong>
-    </article>
-  );
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
 }
 
-function CurrencySummary({ title, code, items, summary }) {
+function MetricCard({ title, value, icon: Icon, color, subtext }) {
+  const colorStyles = {
+    emerald: { bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+    rose: { bg: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
+    blue: { bg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' },
+    violet: { bg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400' }
+  };
+  const currentStyle = colorStyles[color] || colorStyles.blue;
+
   return (
-    <section className="currency-summary-section" aria-label={title}>
-      <div className="currency-summary-header">
-        <div>
-          <span className="dashboard-section-kicker">{code}</span>
-          <h3>{title}</h3>
+    <div className="glass-card p-3.5 sm:p-5 rounded-2xl flex flex-col gap-1 border border-slate-200/60 dark:border-slate-800">
+      <div className="flex items-center gap-2">
+        <div className={`p-1.5 rounded-lg ${currentStyle.bg} flex items-center justify-center shrink-0`}>
+          <Icon size={15} />
         </div>
+        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">{title}</span>
       </div>
-      <div className="currency-metric-grid">
-        {items.map((item) => (
-          <FinancialMetricCard key={item.key} item={item} code={code} summary={summary} />
-        ))}
+      <div className="mt-0.5">
+        <strong className="text-base sm:text-2xl font-black font-mono tracking-tight text-slate-900 dark:text-white tabular-nums truncate block">{value}</strong>
+        {subtext && <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">{subtext}</p>}
       </div>
-    </section>
+    </div>
+  );
+}
+
+function QuickActions({ activeTransactionType, setActiveTransactionType, onNavigate, onPrint, onBackup }) {
+  return (
+    <div className="glass-card dashboard-actions-card">
+      <div className="actions-header">
+        <span className="actions-title">Quick Actions & Shortcuts</span>
+      </div>
+      <div className="actions-buttons-grid">
+        <button
+          type="button"
+          className={`btn-action btn-action-cash-in ${activeTransactionType === 'cash_in' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTransactionType(activeTransactionType === 'cash_in' ? null : 'cash_in');
+            onNavigate('cashbook');
+          }}
+        >
+          <ArrowDownLeft size={16} /> <span>Add Cash In</span>
+        </button>
+
+        <button
+          type="button"
+          className={`btn-action btn-action-cash-out ${activeTransactionType === 'cash_out' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTransactionType(activeTransactionType === 'cash_out' ? null : 'cash_out');
+            onNavigate('cashbook');
+          }}
+        >
+          <ArrowUpRight size={16} /> <span>Add Cash Out</span>
+        </button>
+
+        <button
+          type="button"
+          className="btn-action"
+          onClick={() => onNavigate('ledger')}
+        >
+          <Landmark size={16} /> <span>Account Ledger</span>
+        </button>
+
+        <button
+          type="button"
+          className="btn-action"
+          onClick={() => onNavigate('reports')}
+        >
+          <FileText size={16} /> <span>Financial Reports</span>
+        </button>
+
+        <button
+          type="button"
+          className="btn-action"
+          onClick={onPrint}
+        >
+          <Printer size={16} /> <span>Print View</span>
+        </button>
+
+        <button
+          type="button"
+          className="btn-action"
+          onClick={onBackup}
+        >
+          <DatabaseBackup size={16} /> <span>Backup Data</span>
+        </button>
+      </div>
+    </div>
   );
 }
 
 export default function Dashboard({
-  summary,
-  latestTransactions,
+  summary = {},
+  latestTransactions = [],
+  transactions = [],
   onNavigate,
   onBackup,
   onRestore,
   onPrint,
-  companyName,
-  companyLogo,
   activeTransactionType,
-  setActiveTransactionType
+  setActiveTransactionType,
+  isLoading,
+  currentUser,
+  companyName
 }) {
+  const [selectedBranch, setSelectedBranch] = useState('consolidated');
   const displayCompanyName = companyName || companyFallback;
+  const userName = currentUser?.full_name || currentUser?.username || 'Ahsanullah';
+  const userInitials = getInitials(userName);
+  const greeting = getGreeting();
+
+  // Sort newest transactions first
+  const sortedTransactions = useMemo(() => {
+    return [...transactions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [transactions]);
+
+  const recentTransactions = useMemo(() => {
+    return sortedTransactions.slice(0, 8);
+  }, [sortedTransactions]);
+
+  // Calculations using backend summary with fallback
+  const cashInAfn = Number(summary.cash_in_afn || summary.total_cash_in || 0);
+  const cashOutAfn = Number(summary.cash_out_afn || summary.total_cash_out || 0);
+  const currentBalance = summary.afn_balance !== undefined ? Number(summary.afn_balance) : (cashInAfn - cashOutAfn);
+  const totalTxCount = transactions.length || summary.today_transactions || 0;
+
+  const signedCurrency = (value, type = 'cash_in') => {
+    const amount = Math.abs(Number(value || 0));
+    return `${type === 'cash_in' ? '+' : '-'}${currency(amount)}`;
+  };
 
   return (
-    <>
-      <GlassCard className="hero-card dashboard-overview-card">
-        <div className="dashboard-overview-content">
-          <div className="dashboard-company-summary">
-            <CompanyLogo logo={companyLogo} name={displayCompanyName} size="lg" />
-            <div>
-              <p className="eyebrow">Cash Management Dashboard</p>
-              <h3>{displayCompanyName}</h3>
-              <p>Manage daily cash-in, cash-out, account ledgers, currency balances, backups, and printable accounting reports in one place.</p>
-            </div>
+    <div className="dashboard-page flex flex-col gap-4 sm:gap-6 w-full pb-28 sm:pb-8">
+      {/* 1. Compact Welcome Banner */}
+      <div className="dashboard-welcome-card glass-card p-3 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="welcome-avatar-block flex items-center gap-3">
+          <div className="welcome-avatar w-10 h-10 rounded-xl bg-indigo-600 text-white font-black flex items-center justify-center text-xs sm:text-sm shadow-sm shrink-0">
+            {userInitials}
           </div>
-          <div className="dashboard-entry-stats" aria-label="Cash book entry counts">
-            <EntryStat icon={CalendarDays} label="Today's Entries" value={formatCount(summary.today_transactions)} />
-            <EntryStat icon={CalendarRange} label="This Month's Entries" value={formatCount(summary.monthly_transactions)} />
+          <div className="welcome-info min-w-0">
+            <p className="text-[11px] text-slate-500 font-medium leading-none">{greeting},</p>
+            <h2 className="welcome-greeting text-sm sm:text-lg font-black text-slate-900 dark:text-white truncate">{userName}</h2>
+            <p className="welcome-subtext text-[10px] sm:text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+              <span className="truncate">{displayCompanyName}</span> &bull; <span className="status-badge-inline text-[10px] text-emerald-600 font-bold">Up to date</span>
+            </p>
           </div>
         </div>
-      </GlassCard>
 
-      <GlassCard className="dashboard-metrics-panel dashboard-financial-summary">
-        <CurrencySummary title="AFN Cash Flow" code="AFN" items={afnMetricItems} summary={summary} />
-        <CurrencySummary title="USD Cash Flow" code="USD" items={usdMetricItems} summary={summary} />
-      </GlassCard>
-
-      <div className="dashboard-grid">
-        <GlassCard className="dashboard-actions-card">
-          <div className="card-header"><h3>Quick Actions</h3></div>
-          <div className="action-toolbar" role="toolbar" aria-label="Quick actions">
-            <button
-              className={`toolbar-btn toolbar-primary success ${activeTransactionType === 'cash_in' ? 'active' : ''}`}
-              onClick={() => setActiveTransactionType(activeTransactionType === 'cash_in' ? null : 'cash_in')}
-            >
-              <ArrowDownLeft size={17} /> Add Cash In
-            </button>
-            <button
-              className={`toolbar-btn toolbar-primary danger ${activeTransactionType === 'cash_out' ? 'active' : ''}`}
-              onClick={() => setActiveTransactionType(activeTransactionType === 'cash_out' ? null : 'cash_out')}
-            >
-              <ArrowUpRight size={17} /> Add Cash Out
-            </button>
-            {quickActions.map(({ label, view, icon: Icon }) => (
-              <button className="toolbar-btn" key={view} onClick={() => onNavigate(view)}>
-                <Icon size={17} /> {label}
-              </button>
-            ))}
-            <button className="toolbar-btn" onClick={onPrint}><Printer size={17} /> Print</button>
-            <button className="toolbar-btn" onClick={onBackup}><DatabaseBackup size={17} /> Backup</button>
-            <button className="toolbar-btn" onClick={onRestore}><RefreshCcw size={17} /> Restore</button>
+        <div className="welcome-stats flex items-center gap-2 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/80">
+          <div className="stat-pill px-2.5 py-1 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2 text-xs">
+            <CalendarDays size={13} className="text-indigo-500 shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-[8px] uppercase font-bold text-slate-400">Today</span>
+              <strong className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{summary.today_transactions || 0} entries</strong>
+            </div>
           </div>
-        </GlassCard>
-        <GlassCard className="recent-activity-card">
-          <div className="card-header"><h3>Recent Cash Book Activity</h3></div>
-          <div className="activity-list-compact">
-            {!latestTransactions.length ? <div className="activity-row-compact">No transactions recorded yet. Add a Cash In or Cash Out entry to start the cash book.</div> : latestTransactions.map((tx) => {
+          <div className="stat-pill px-2.5 py-1 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2 text-xs">
+            <CalendarRange size={13} className="text-indigo-500 shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-[8px] uppercase font-bold text-slate-400">This Month</span>
+              <strong className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{summary.monthly_transactions || 0} entries</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Primary 4-Card Responsive Metric Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <MetricCard
+          title="Total Cash In (AFN)"
+          value={currency(cashInAfn, 'AFN')}
+          icon={ArrowDownLeft}
+          color="emerald"
+          subtext={`${totalTxCount} total transactions`}
+        />
+        <MetricCard
+          title="Total Cash Out (AFN)"
+          value={currency(cashOutAfn, 'AFN')}
+          icon={ArrowUpRight}
+          color="rose"
+          subtext="Verified accurate balance"
+        />
+        <MetricCard
+          title="Current AFN Balance"
+          value={currency(currentBalance, 'AFN')}
+          icon={WalletCards}
+          color="blue"
+          subtext={currentBalance >= 0 ? "Positive Net Balance" : "Negative Net Balance"}
+        />
+        <MetricCard
+          title="Total Transactions"
+          value={totalTxCount}
+          icon={TrendingUp}
+          color="violet"
+          subtext="Recorded in database"
+        />
+      </div>
+
+      {/* 3. Quick Action Buttons */}
+      <QuickActions
+        activeTransactionType={activeTransactionType}
+        setActiveTransactionType={setActiveTransactionType}
+        onNavigate={onNavigate}
+        onPrint={onPrint}
+        onBackup={onBackup}
+      />
+
+      {/* 4. Recent Transactions & Cashflow Split */}
+      <div className="dashboard-main-split">
+        {/* Recent Transactions Card */}
+        <div className="recent-transactions-card">
+          <div className="card-header flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <h3 className="card-title">Recent Transactions</h3>
+              <span className="record-count-badge">{recentTransactions.length} items</span>
+            </div>
+            <NavLink to="/cashbook" className="view-all-link">
+              <span>View all</span>
+              <ArrowRight size={14} />
+            </NavLink>
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="recent-table-wrapper">
+            <table className="recent-transactions-table">
+              <thead>
+                <tr>
+                  <th>Account Name</th>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th className="text-right">Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentTransactions.map((tx) => {
+                  const isCashIn = tx.transaction_type === 'cash_in';
+                  const amount = isCashIn ? tx.cash_in_afn : tx.cash_out_afn;
+                  return (
+                    <tr key={tx.id}>
+                      <td className="account-cell">
+                        <strong className="account-name">{tx.account_name || 'General'}</strong>
+                        {tx.detail && <span className="account-detail">{tx.detail}</span>}
+                      </td>
+                      <td className="date-cell">{dateLabel(tx.date)}</td>
+                      <td>
+                        <span className={`badge-type ${isCashIn ? 'badge-cash-in' : 'badge-cash-out'}`}>
+                          {isCashIn ? 'Cash In' : 'Cash Out'}
+                        </span>
+                      </td>
+                      <td className={`amount-cell text-right ${isCashIn ? 'amount-in' : 'amount-out'}`}>
+                        {signedCurrency(amount, tx.transaction_type)}
+                      </td>
+                      <td>
+                        <span className="badge-status">
+                          <CheckCircle2 size={12} />
+                          <span>Completed</span>
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {recentTransactions.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="empty-state-cell">
+                      No transactions recorded yet. Click "Add Cash In" or "Add Cash Out" to create an entry.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card List View (<760px) */}
+          <div className="recent-mobile-cards">
+            {recentTransactions.map((tx) => {
               const isCashIn = tx.transaction_type === 'cash_in';
               const amount = isCashIn ? tx.cash_in_afn : tx.cash_out_afn;
               return (
-                <div className="activity-row-compact" key={tx.id}>
-                  <div>
-                    <strong>{tx.account_name}</strong>
-                    <p>{tx.detail}</p>
+                <div key={tx.id} className="mobile-tx-card">
+                  <div className="mobile-tx-header">
+                    <strong>{tx.account_name || 'General'}</strong>
+                    <span className={`badge-type ${isCashIn ? 'badge-cash-in' : 'badge-cash-out'}`}>
+                      {isCashIn ? 'Cash In' : 'Cash Out'}
+                    </span>
                   </div>
-                  <div className={`activity-amount ${isCashIn ? 'balance-positive' : 'balance-negative'}`}>
-                    {signedCurrency(amount, tx.transaction_type)}
+                  <div className="mobile-tx-body">
+                    <span>{dateLabel(tx.date)}</span>
+                    <strong className={isCashIn ? 'amount-in' : 'amount-out'}>
+                      {signedCurrency(amount, tx.transaction_type)}
+                    </strong>
                   </div>
                 </div>
               );
             })}
           </div>
-        </GlassCard>
+        </div>
+
+        {/* Chronological Cash Flow Chart */}
+        <div className="glass-card cash-flow-chart-card">
+          <div className="card-header">
+            <h3 className="card-title">Chronological Cash Flow</h3>
+          </div>
+          <div className="chart-body">
+            <SimpleCashChart transactions={sortedTransactions} />
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -98,16 +98,20 @@ def _get_or_create_local_user(db: Session, claims: dict) -> models.User:
        is managed by Neon Auth – the local record is just a bridge.
     """
     email: str = claims.get("email", "").strip().lower()
-    name: str = claims.get("name", "") or claims.get("preferred_username", "") or email.split("@")[0]
+    name: str = (
+        claims.get("name", "")
+        or claims.get("preferred_username", "")
+        or email.split("@")[0]
+    )
     sub: str = claims.get("sub", "")  # Neon Auth user ID
 
     if not email:
-        raise HTTPException(status_code=401, detail="Neon Auth token missing email claim")
+        raise HTTPException(
+            status_code=401, detail="Neon Auth token missing email claim"
+        )
 
     # Try email match first
-    user = db.query(models.User).filter(
-        models.User.username == email
-    ).first()
+    user = db.query(models.User).filter(models.User.username == email).first()
 
     if not user:
         # Try matching by neon_auth_sub if we stored it (future-proofing).
@@ -179,7 +183,14 @@ def neon_login(authorization: str | None = Header(default=None)):
             expires_at=now + timedelta(days=1),
         )
         db.add(session)
-        audit(db, "neon_auth_login", "success", user.username, user.id, "Login via Neon Auth")
+        audit(
+            db,
+            "neon_auth_login",
+            "success",
+            user.username,
+            user.id,
+            "Login via Neon Auth",
+        )
         db.commit()
         db.refresh(user)
 

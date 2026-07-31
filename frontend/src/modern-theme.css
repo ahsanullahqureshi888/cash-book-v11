@@ -1,0 +1,506 @@
+/* Modern Minimalist SaaS Theme Overrides (Linear, Stripe & Qonto style) */
+
+:root {
+  color-scheme: dark;
+  --gold: #6366f1; /* Indigo-500 */
+  --gold-light: rgba(99, 102, 241, 0.15);
+  --gold-dark: #4f46e5;
+  --gold-glow: rgba(99, 102, 241, 0.2);
+  --gold-text: #e0e7ff;
+  --glass-bg: rgba(9, 9, 11, 0.8) !important;
+  --glass-border: rgba(39, 39, 42, 0.5) !important;
+  
+  --bg: #09090b !important;
+  --surface: #18181b !important;
+  --surface-strong: #27272a !important;
+  --text: #fafafa !important;
+  --text-soft: #a1a1aa !important;
+  --accent: #4f46e5 !important;
+  --accent-2: #6366f1 !important;
+  --success: #10b981 !important;
+  --danger: #ef4444 !important;
+  --border: rgba(39, 39, 42, 0.6) !important;
+  --border-muted: rgba(39, 39, 42, 0.4) !important;
+  --border-soft: rgba(39, 39, 42, 0.3) !important;
+  --accent-focus: rgba(99, 102, 241, 0.25) !important;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+}
+
+body.light {
+  color-scheme: light;
+  --gold: #4f46e5 !important; /* Indigo-600 */
+  --gold-light: rgba(79, 70, 229, 0.08) !important;
+  --gold-dark: #3730a3 !important;
+  --gold-glow: rgba(79, 70, 229, 0.12) !important;
+  --gold-text: #3730a3 !important;
+  --glass-bg: rgba(255, 255, 255, 0.85) !important;
+  --glass-border: rgba(228, 228, 231, 0.7) !important;
+
+  --bg: #fafafa !important;
+  --surface: #ffffff !important;
+  --surface-strong: #f4f4f5 !important;
+  --text: #09090b !important;
+  --text-soft: #71717a !important;
+  --accent: #4f46e5 !important;
+  --accent-2: #4338ca !important;
+  --success: #10b981 !important;
+  --danger: #ef4444 !important;
+  --border: rgba(228, 228, 231, 0.7) !important;
+  --border-muted: rgba(244, 244, 245, 0.9) !important;
+  --border-soft: rgba(244, 244, 245, 0.7) !important;
+  --accent-focus: rgba(79, 70, 229, 0.2) !important;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Sidebar overrides */
+.sidebar {
+  border-right: 1px solid var(--glass-border) !important;
+  background: var(--glass-bg) !important;
+  box-shadow: none !important;
+}
+
+body.light .sidebar {
+  background: #ffffff !important;
+}
+
+.brand-icon {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+.nav-btn.active {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06) !important;
+  font-weight: 500 !important;
+}
+
+.nav-btn:hover:not(.active) {
+  background: var(--surface-strong) !important;
+}
+
+/* Buttons */
+.primary-btn {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+}
+
+.primary-btn:hover {
+  background: var(--accent-2) !important;
+}
+
+.secondary-btn {
+  background: var(--surface-strong) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.secondary-btn:hover {
+  background: var(--border-muted) !important;
+}
+
+/* Table modernizations */
+.accounting-table {
+  border-spacing: 0 !important;
+  width: 100% !important;
+}
+
+.accounting-table th {
+  background: var(--surface-strong) !important;
+  color: var(--text-soft) !important;
+  font-weight: 500 !important;
+  font-size: 0.76rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding: 10px 14px !important;
+}
+
+.accounting-table td {
+  padding: 12px 14px !important;
+  border-bottom: 1px solid var(--border-muted) !important;
+  color: var(--text) !important;
+  font-size: 0.88rem !important;
+}
+
+.accounting-table tbody tr:hover {
+  background: rgba(99, 102, 241, 0.03) !important;
+}
+
+body.light .accounting-table tbody tr:nth-child(even) {
+  background: #fafafa !important;
+}
+
+body.light .accounting-table tbody tr:hover {
+  background: rgba(79, 70, 229, 0.02) !important;
+}
+
+/* Monospace fonts for numbers */
+.accounting-table .col-amount,
+.accounting-table .money-cell,
+.accounting-table .col-date,
+.accounting-table .col-rate,
+.accounting-table .col-tx {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.02em !important;
+}
+
+.accounting-table .col-amount {
+  text-align: right !important;
+}
+
+/* Dashboard summary overrides */
+.dashboard-section-heading {
+  border-bottom: 1px solid var(--border-muted) !important;
+}
+
+.dashboard-section-heading h3 {
+  font-weight: 600 !important;
+}
+
+.financial-metric-card {
+  border: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+  box-shadow: var(--shadow) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.financial-metric-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Semantic Badges/Pills for Cash In/Out */
+.balance-positive,
+.financial-metric-success {
+  color: #10B981 !important; /* Emerald 500 */
+}
+
+body.light .balance-positive,
+body.light .financial-metric-success {
+  color: #059669 !important; /* Emerald 600 */
+}
+
+.balance-negative,
+.financial-metric-danger {
+  color: #EF4444 !important; /* Red 500 */
+}
+
+body.light .balance-negative,
+body.light .financial-metric-danger {
+  color: #DC2626 !important; /* Red 600 */
+}
+
+/* Category badging */
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.badge-salary { background: rgba(59, 130, 246, 0.12) !important; color: #60a5fa !important; border: 1px solid rgba(59, 130, 246, 0.2) !important; }
+.badge-rent { background: rgba(168, 85, 247, 0.12) !important; color: #c084fc !important; border: 1px solid rgba(168, 85, 247, 0.2) !important; }
+.badge-expense { background: rgba(245, 158, 11, 0.12) !important; color: #fbbf24 !important; border: 1px solid rgba(245, 158, 11, 0.2) !important; }
+.badge-other { background: rgba(107, 114, 128, 0.12) !important; color: #9ca3af !important; border: 1px solid rgba(107, 114, 128, 0.2) !important; }
+
+body.light .badge-salary { background: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #dbeafe !important; }
+body.light .badge-rent { background: #faf5ff !important; color: #6b21a8 !important; border: 1px solid #f3e8ff !important; }
+body.light .badge-expense { background: #fffbeb !important; color: #b45309 !important; border: 1px solid #fef3c7 !important; }
+body.light .badge-other { background: #f9fafb !important; color: #4b5563 !important; border: 1px solid #e5e7eb !important; }
+
+/* Pulsating skeleton loader rules */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+}
+
+.skeleton-box {
+  background: var(--surface-strong) !important;
+  border-radius: 6px !important;
+  display: block !important;
+}
+
+/* Toggle buttons styling */
+.transaction-mode-toggle {
+  display: flex !important;
+  background: var(--surface-strong) !important;
+  padding: 4px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border) !important;
+}
+
+.transaction-mode-toggle button {
+  padding: 6px 16px !important;
+  font-size: 0.84rem !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+  background: transparent !important;
+  color: var(--text-soft) !important;
+}
+
+.transaction-mode-toggle button.active.cash-in {
+  background: var(--glass-bg) !important;
+  color: #10B981 !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
+}
+
+.transaction-mode-toggle button.active.cash-out {
+  background: var(--glass-bg) !important;
+  color: #EF4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Sleek Topbar Search Input */
+.topbar-search-wrapper {
+  flex: 1;
+  max-width: 320px;
+  margin: 0 20px;
+}
+
+.topbar-search-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 38px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.topbar-search-input-container:hover {
+  border-color: var(--accent);
+}
+
+.topbar-search-input-container .search-icon {
+  color: var(--text-soft);
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.topbar-search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.86rem;
+  color: var(--text);
+  width: 100%;
+  pointer-events: none;
+}
+
+.search-kbd {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: inherit;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+/* Cmd+K Search Modal Styling */
+.search-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 10vh;
+}
+
+.search-modal-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  max-width: 540px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.search-modal-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.search-modal-header .search-icon {
+  color: var(--text-soft);
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.search-modal-header input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.96rem;
+  color: var(--text);
+  width: 100%;
+}
+
+.search-modal-results {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.search-modal-section-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  font-weight: 600;
+  padding: 8px 12px 4px;
+}
+
+.search-modal-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: none;
+}
+
+.search-modal-item:hover,
+.search-modal-item.active {
+  background: var(--surface-strong);
+}
+
+.search-modal-item-title {
+  font-weight: 500;
+  font-size: 0.88rem;
+}
+
+.search-modal-item-subtitle {
+  font-size: 0.76rem;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
+.search-modal-item-meta {
+  font-size: 0.76rem;
+  color: var(--text-soft);
+  font-family: monospace;
+}
+
+.search-modal-footer {
+  padding: 10px 16px;
+  background: var(--surface-strong);
+  border-top: 1px solid var(--border-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-soft);
+}
+
+.search-modal-footer-shortcuts {
+  display: flex;
+  gap: 12px;
+}
+
+.search-modal-footer-shortcut kbd {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+/* ==========================================================================
+   ULTRA-PREMIUM OBSIDIAN DARK GLASS POLISH (WOW FACTOR)
+   ========================================================================== */
+html.dark, body.dark, :root.dark, [data-theme="dark"], .app-root.dark {
+  --bg: #090e1a !important;
+  --surface: rgba(15, 23, 42, 0.75) !important;
+  --surface-strong: rgba(30, 41, 59, 0.85) !important;
+  --text: #f8fafc !important;
+  --text-soft: #94a3b8 !important;
+  --border: rgba(255, 255, 255, 0.08) !important;
+  --border-muted: rgba(255, 255, 255, 0.05) !important;
+  background-color: #090e1a !important;
+  color: #f8fafc !important;
+}
+
+/* Ensure Sidebar turns sleek dark obsidian in all dark modes */
+html.dark .app-sidebar, body.dark .app-sidebar, :root.dark .app-sidebar, [data-theme="dark"] .app-sidebar, .app-root.dark .app-sidebar {
+  background: linear-gradient(180deg, rgba(9, 14, 28, 0.96), rgba(15, 23, 42, 0.94)) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Ensure TopHeader turns sleek dark in all dark modes */
+html.dark .app-topbar, body.dark .app-topbar, :root.dark .app-topbar, [data-theme="dark"] .app-topbar, .app-root.dark .app-topbar {
+  background: rgba(9, 14, 28, 0.88) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Ensure Cards have rich dark glass look */
+html.dark .glass-card, body.dark .glass-card, :root.dark .glass-card, [data-theme="dark"] .glass-card, .app-root.dark .glass-card {
+  background: rgba(15, 23, 42, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+/* Ensure tables in dark mode have dark headers and sleek row hover */
+html.dark .accounting-table th, body.dark .accounting-table th, :root.dark .accounting-table th, [data-theme="dark"] .accounting-table th, .app-root.dark .accounting-table th {
+  background: rgba(30, 41, 59, 0.6) !important;
+  color: #94a3b8 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+html.dark .accounting-table td, body.dark .accounting-table td, :root.dark .accounting-table td, [data-theme="dark"] .accounting-table td, .app-root.dark .accounting-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  color: #f8fafc !important;
+}
+html.dark .accounting-table tbody tr:hover, body.dark .accounting-table tbody tr:hover, :root.dark .accounting-table tbody tr:hover, [data-theme="dark"] .accounting-table tbody tr:hover, .app-root.dark .accounting-table tbody tr:hover {
+  background: rgba(56, 189, 248, 0.05) !important;
+}
+
+/* Ensure User Profile area in sidebar turns sleek dark */
+html.dark .sidebar-user-card, body.dark .sidebar-user-card, :root.dark .sidebar-user-card, [data-theme="dark"] .sidebar-user-card, .app-root.dark .sidebar-user-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+html.dark .sidebar-user-card:hover, body.dark .sidebar-user-card:hover, :root.dark .sidebar-user-card:hover, [data-theme="dark"] .sidebar-user-card:hover, .app-root.dark .sidebar-user-card:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Fix chart tooltips */
+html.dark .recharts-default-tooltip, body.dark .recharts-default-tooltip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+  border-radius: 10px !important;
+}
+

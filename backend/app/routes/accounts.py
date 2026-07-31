@@ -5,7 +5,11 @@ from .. import crud, schemas
 from ..auth_dependencies import require_authenticated_request
 from ..database import SessionLocal
 
-router = APIRouter(prefix="/api/accounts", tags=["accounts"], dependencies=[Depends(require_authenticated_request)])
+router = APIRouter(
+    prefix="/api/accounts",
+    tags=["accounts"],
+    dependencies=[Depends(require_authenticated_request)],
+)
 
 
 def get_db():
@@ -23,7 +27,11 @@ def read_accounts(db: Session = Depends(get_db)):
 
 @router.get("/search", response_model=list[schemas.AccountRead])
 def search_accounts(name: str = "", db: Session = Depends(get_db)):
-    return [account for account in crud.list_accounts(db) if name.lower() in account.name.lower()]
+    return [
+        account
+        for account in crud.list_accounts(db)
+        if name.lower() in account.name.lower()
+    ]
 
 
 @router.get("/{account_id}", response_model=schemas.AccountRead)
@@ -43,7 +51,9 @@ def create_account(payload: schemas.AccountCreate, db: Session = Depends(get_db)
 
 
 @router.put("/{account_id}", response_model=schemas.AccountRead)
-def update_account(account_id: int, payload: schemas.AccountUpdate, db: Session = Depends(get_db)):
+def update_account(
+    account_id: int, payload: schemas.AccountUpdate, db: Session = Depends(get_db)
+):
     account = crud.get_account(db, account_id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")

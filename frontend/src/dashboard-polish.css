@@ -1,0 +1,171 @@
+/* Loaded after index.css so these refinements remain the final dashboard layer. */
+.topbar{padding:18px 22px!important;border-radius:22px!important;align-items:center!important}.topbar-title-block{gap:14px!important}.topbar h2{font-size:clamp(1.75rem,2.4vw,2.25rem)!important}.topbar .eyebrow{font-size:.76rem!important;text-transform:uppercase!important;letter-spacing:.08em!important}.topbar-title-block small{font-size:.86rem!important}.topbar-actions{flex:0 1 auto!important;gap:8px!important}.time-chip,.signed-in-user,.topbar .primary-btn,.topbar .ghost-btn,.topbar .danger-btn{min-height:48px!important;border-radius:12px!important}.time-chip{min-width:205px!important;padding:9px 13px!important}.signed-in-user{min-width:160px!important;padding:9px 13px!important}.topbar .primary-btn,.topbar .ghost-btn,.topbar .danger-btn{min-width:auto!important;padding:0 14px!important;font-size:.9rem!important}
+.dashboard-overview-card,.dashboard-financial-summary{border-radius:22px!important}.dashboard-overview-card{padding:18px 20px 20px!important}.dashboard-financial-summary{padding:18px 20px 20px!important;gap:18px!important}.dashboard-section-heading{display:flex;align-items:end;justify-content:space-between;gap:20px;padding-bottom:14px;margin-bottom:18px;border-bottom:1px solid rgba(193,208,229,.72)}.dashboard-section-heading>div>span{color:var(--cash-blue);font-size:.72rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.dashboard-section-heading h3{margin:3px 0 0;color:var(--cash-text);font-size:1.12rem}.dashboard-section-heading p{margin:0;color:var(--cash-muted);font-size:.82rem;font-weight:650}.dashboard-overview-content{grid-template-columns:minmax(0,1fr) minmax(270px,340px);gap:20px}.dashboard-company-summary{gap:16px}.dashboard-company-summary h3{font-size:clamp(1.25rem,1.7vw,1.65rem)!important}.dashboard-company-summary p:not(.eyebrow){max-width:650px;font-size:.96rem!important;line-height:1.5!important}.dashboard-entry-stats{gap:10px}.dashboard-entry-stat{min-height:84px;padding:13px;border-radius:15px}.dashboard-entry-stat strong{margin-top:3px;font-size:clamp(1.65rem,2.2vw,2rem)}
+.currency-summary-section{gap:10px}.currency-summary-section+.currency-summary-section{padding-top:16px}.currency-metric-grid{grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px}.financial-metric-card{min-height:104px;gap:12px;padding:14px;border-radius:13px}.financial-metric-icon{width:32px;height:32px;border-radius:9px}.financial-metric-card-header>span:last-child{font-size:.83rem}.financial-metric-card strong{font-size:clamp(1.05rem,1.5vw,1.4rem)}body:not(.light) .dashboard-section-heading h3{color:#f8fafc}body:not(.light) .dashboard-section-heading{border-color:rgba(148,163,184,.22)}
+@media(max-width:720px){.dashboard-section-heading{align-items:flex-start;flex-direction:column;gap:5px}.dashboard-overview-content{grid-template-columns:1fr}.dashboard-entry-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:480px){.dashboard-entry-stats{grid-template-columns:1fr}}
+
+/* Employees & Salary: remove the stretched blank column and prioritize the directory. */
+.salary-workspace{gap:14px}.salary-workspace-header{padding:20px 24px!important}.salary-workspace-header h3{font-size:1.35rem}.salary-tabs{padding:6px}.salary-tabs button{min-height:42px;padding:0 18px;border-radius:11px}.salary-stat-grid{gap:12px}.salary-stat{min-height:118px;padding:18px}.salary-stat p{margin:12px 0 5px}.salary-stat strong{font-size:clamp(23px,1.8vw,30px)}
+.salary-overview-grid{grid-template-columns:minmax(260px,320px) minmax(0,1fr);align-items:start;gap:14px}.salary-overview-grid>.salary-panel:first-child{position:sticky;top:18px}.salary-panel{padding:18px}.salary-panel-heading{margin-bottom:14px}.salary-panel-wide{min-height:0}.salary-employee-list{gap:8px}.salary-employee-row{display:grid;grid-template-columns:auto minmax(220px,1fr) minmax(120px,auto) auto;gap:12px;padding:12px 14px;border-radius:14px}.salary-balance{margin-left:0}.salary-row-actions{display:grid;grid-template-columns:repeat(2,minmax(88px,auto));gap:6px}.salary-list-pay{min-height:36px!important;margin-left:0!important;padding:7px 10px!important;font-size:.78rem!important}.salary-row-actions .salary-list-pay:first-child{color:#fff!important;border-color:#2563eb!important;background:#2563eb!important}.salary-delete-btn{background:rgba(254,226,226,.45)!important}.salary-avatar{width:40px;height:40px;flex-basis:40px}.salary-employee-row>div:nth-child(2)>strong{font-size:.94rem}.salary-employee-row span{font-size:.76rem;line-height:1.35}
+@media(max-width:1250px){.salary-overview-grid{grid-template-columns:1fr}.salary-overview-grid>.salary-panel:first-child{position:static}.salary-employee-row{grid-template-columns:auto minmax(200px,1fr) auto}.salary-row-actions{grid-column:2/-1;display:flex;justify-content:flex-start}}
+@media(max-width:720px){.salary-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.salary-employee-row{grid-template-columns:auto minmax(0,1fr)}.salary-balance{grid-column:2;text-align:left}.salary-row-actions{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,1fr)}.salary-list-pay{width:100%}.salary-workspace-header{padding:18px!important}}
+@media(max-width:430px){.salary-stat-grid{grid-template-columns:1fr}.salary-row-actions{grid-template-columns:1fr}}
+
+/* ==================================================
+   AUTHORITATIVE MOBILE TOPBAR FIX FOR IPHONE & TABLETS
+   ================================================== */
+@media (max-width: 1023px) {
+  .time-chip,
+  header.app-topbar .time-chip,
+  .topbar .time-chip {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-topbar,
+  header.app-topbar,
+  .topbar {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    max-height: 60px !important;
+    padding: 0 14px !important;
+    gap: 10px !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 45 !important;
+    border-radius: 0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  .topbar-search,
+  .topbar-search-wrapper,
+  .topbar-search-input-container {
+    display: none !important;
+  }
+
+  .time-chip,
+  .signed-in-user {
+    display: none !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .app-topbar,
+  header.app-topbar,
+  .topbar {
+    padding: 0 12px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+    gap: 8px !important;
+  }
+
+  .branch-dropdown-pill {
+    display: none !important;
+  }
+
+  .header-titles .eyebrow,
+  .topbar .eyebrow {
+    display: none !important;
+  }
+
+  .topbar-title-area {
+    gap: 8px !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    overflow: hidden !important;
+  }
+
+  .header-titles {
+    min-width: 0 !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+  }
+
+  .topbar-title-row {
+    gap: 0 !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .header-titles .page-title,
+  .topbar h2,
+  .page-title {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+  }
+
+  .topbar-actions {
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+  }
+
+  .mobile-menu-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 11px !important;
+    background: rgba(148, 163, 184, 0.12) !important;
+    border: 1px solid rgba(148, 163, 184, 0.22) !important;
+    color: #1e293b !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    flex-shrink: 0 !important;
+  }
+
+  body.dark .mobile-menu-btn,
+  :root.dark .mobile-menu-btn {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #f8fafc !important;
+  }
+
+  .mobile-menu-btn:active {
+    transform: scale(0.94) !important;
+  }
+
+  .topbar-buttons {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  .topbar-buttons .ghost-btn.icon-btn,
+  .topbar .ghost-btn.icon-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    min-width: 38px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 11px !important;
+  }
+}
+

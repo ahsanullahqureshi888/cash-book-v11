@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cashbook-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./cashbook.db
+      - PYTHONPATH=/app
+    volumes:
+      - backend_data:/app
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cashbook-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  backend_data:
