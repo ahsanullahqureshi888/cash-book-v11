@@ -1,6 +1,16 @@
 import { formatApiErrorDetail } from './errorFormatting.js';
 
-// We default to relative paths for same-origin routing, but allow localStorage or VITE_API_URL overrides for mobile APKs.
+const isCapacitor = () => {
+  if (typeof window === 'undefined') return false;
+  return (
+    Boolean(window.Capacitor?.isNativePlatform?.()) ||
+    window.location.protocol === 'capacitor:' ||
+    window.location.protocol === 'file:' ||
+    (window.location.hostname === 'localhost' && !import.meta.env?.DEV)
+  );
+};
+
+// We default to relative paths for web same-origin routing, but use https://cashbook-v11.vercel.app for mobile APKs.
 const getDynamicApiBaseUrl = () => {
   if (typeof localStorage !== 'undefined') {
     const customUrl = localStorage.getItem('cashbook_api_url');
@@ -8,6 +18,9 @@ const getDynamicApiBaseUrl = () => {
   }
   if (import.meta.env?.VITE_API_URL) {
     return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+  }
+  if (isCapacitor()) {
+    return 'https://cashbook-v11.vercel.app';
   }
   return import.meta.env?.PROD ? '' : '';
 };
