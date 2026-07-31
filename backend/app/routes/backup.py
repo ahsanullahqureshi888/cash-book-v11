@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, File, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
@@ -34,12 +34,16 @@ def export_backup(db: Session = Depends(get_db)):
 
 
 @router.post("/import", dependencies=[Depends(require_administrator_request)])
-def import_backup(payload: dict, replace_all: bool = False, db: Session = Depends(get_db)):
+def import_backup(
+    payload: dict, replace_all: bool = False, db: Session = Depends(get_db)
+):
     try:
         return crud.import_backup(db, payload, replace_all=replace_all)
     except (KeyError, TypeError, ValueError, ValidationError) as error:
         db.rollback()
-        raise HTTPException(status_code=422, detail=f"Backup restore failed: {error}") from error
+        raise HTTPException(
+            status_code=422, detail=f"Backup restore failed: {error}"
+        ) from error
 
 
 @router.post("/import-csv", dependencies=[Depends(require_administrator_request)])
@@ -50,6 +54,33 @@ def import_csv(payload: CsvImportRequest, db: Session = Depends(get_db)):
         return crud.import_cashbook_csv(db, payload.content, payload.filename)
     except CsvImportError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.post(
+    "/import-master-excel", dependencies=[Depends(require_administrator_request)]
+)
+async def import_master_excel(
+    file: UploadFile = File(...), db: Session = Depends(get_db)
+):
+    filename = file.filename or "master-excel.xlsx"
+    if not (filename.lower().endswith(".xlsx") or filename.lower().endswith(".xls")):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file format. Only .xlsx and .xls files are supported.",
+        )
+
+    contents = await file.read()
+    if len(contents) > 50 * 1024 * 1024:
+        raise HTTPException(
+            status_code=413, detail="Excel file size exceeds 50MB limit."
+        )
+
+    try:
+        return crud.import_master_excel(db, contents, filename)
+    except Exception as error:
+        raise HTTPException(
+            status_code=422, detail=f"Master Excel import failed: {error}"
+        ) from error
 
 
 @router.delete("/clear-all", dependencies=[Depends(require_administrator_request)])
@@ -66,7 +97,9 @@ def create_snapshot(db: Session, backup_type: str) -> models.BackupSnapshot:
     )
     db.add(snapshot)
     cutoff = datetime.utcnow() - timedelta(days=30)
-    db.query(models.BackupSnapshot).filter(models.BackupSnapshot.created_at < cutoff).delete()
+    db.query(models.BackupSnapshot).filter(
+        models.BackupSnapshot.created_at < cutoff
+    ).delete()
     db.commit()
     db.refresh(snapshot)
     return snapshot
@@ -75,20 +108,32 @@ def create_snapshot(db: Session, backup_type: str) -> models.BackupSnapshot:
 @router.post("/snapshot", dependencies=[Depends(require_administrator_request)])
 def manual_snapshot(db: Session = Depends(get_db)):
     snapshot = create_snapshot(db, "manual")
-    return {"ok": True, "backup_name": snapshot.backup_name, "created_at": snapshot.created_at}
+    return {
+        "ok": True,
+        "backup_name": snapshot.backup_name,
+        "created_at": snapshot.created_at,
+    }
 
 
 @router.get("/daily")
-def daily_snapshot(authorization: str | None = Header(default=None), db: Session = Depends(get_db)):
+def daily_snapshot(
+    authorization: str | None = Header(default=None), db: Session = Depends(get_db)
+):
     cron_secret = os.getenv("CRON_SECRET")
     if not cron_secret or authorization != f"Bearer {cron_secret}":
         raise HTTPException(status_code=401, detail="Invalid cron authorization")
     snapshot = create_snapshot(db, "daily")
-    return {"ok": True, "backup_name": snapshot.backup_name, "created_at": snapshot.created_at}
+    return {
+        "ok": True,
+        "backup_name": snapshot.backup_name,
+        "created_at": snapshot.created_at,
+    }
 
 
 @router.get("/export-system")
-def export_system_backup(authorization: str | None = Header(default=None), db: Session = Depends(get_db)):
+def export_system_backup(
+    authorization: str | None = Header(default=None), db: Session = Depends(get_db)
+):
     cron_secret = os.getenv("CRON_SECRET")
     if not cron_secret or authorization != f"Bearer {cron_secret}":
         raise HTTPException(status_code=401, detail="Invalid cron authorization")
@@ -98,20 +143,39 @@ def export_system_backup(authorization: str | None = Header(default=None), db: S
 
 @router.get("/snapshots", dependencies=[Depends(require_administrator_request)])
 def list_snapshots(db: Session = Depends(get_db)):
-    rows = db.query(models.BackupSnapshot).order_by(models.BackupSnapshot.created_at.desc()).limit(30).all()
+    rows = (
+        db.query(models.BackupSnapshot)
+        .order_by(models.BackupSnapshot.created_at.desc())
+        .limit(30)
+        .all()
+    )
     return [
-        {"id": row.id, "backup_name": row.backup_name, "backup_type": row.backup_type, "created_at": row.created_at}
+        {
+            "id": row.id,
+            "backup_name": row.backup_name,
+            "backup_type": row.backup_type,
+            "created_at": row.created_at,
+        }
         for row in rows
     ]
 
 
-@router.post("/snapshots/{snapshot_id}/restore", dependencies=[Depends(require_administrator_request)])
+@router.post(
+    "/snapshots/{snapshot_id}/restore",
+    dependencies=[Depends(require_administrator_request)],
+)
 def restore_snapshot(snapshot_id: int, db: Session = Depends(get_db)):
-    snapshot = db.query(models.BackupSnapshot).filter(models.BackupSnapshot.id == snapshot_id).first()
+    snapshot = (
+        db.query(models.BackupSnapshot)
+        .filter(models.BackupSnapshot.id == snapshot_id)
+        .first()
+    )
     if not snapshot:
         raise HTTPException(status_code=404, detail="Backup snapshot not found")
     try:
         return crud.import_backup(db, json.loads(snapshot.payload), replace_all=True)
     except (KeyError, TypeError, ValueError, ValidationError) as error:
         db.rollback()
-        raise HTTPException(status_code=422, detail=f"Backup restore failed: {error}") from error
+        raise HTTPException(
+            status_code=422, detail=f"Backup restore failed: {error}"
+        ) from error

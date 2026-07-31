@@ -5,7 +5,11 @@ from .. import crud, schemas
 from ..auth_dependencies import require_authenticated_request
 from ..database import SessionLocal
 
-router = APIRouter(prefix="/api/settings", tags=["settings"], dependencies=[Depends(require_authenticated_request)])
+router = APIRouter(
+    prefix="/api/settings",
+    tags=["settings"],
+    dependencies=[Depends(require_authenticated_request)],
+)
 
 
 def get_db():

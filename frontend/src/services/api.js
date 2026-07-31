@@ -1,7 +1,51 @@
 import { formatApiErrorDetail } from './errorFormatting.js';
 
-export const API_BASE = import.meta.env?.PROD ? '' : (import.meta.env?.VITE_API_URL || 'http://localhost:8000');
-let authToken = localStorage.getItem('cashbook-session-token') || '';
+// We default to relative paths when hosted on Vercel, but use https://cashbook-v11.vercel.app for mobile APKs and all other hosts.
+export const getDynamicApiBaseUrl = () => {
+  if (typeof localStorage !== 'undefined') {
+    const customUrl = localStorage.getItem('cashbook_api_url');
+    if (customUrl) return customUrl.replace(/\/+$/, '');
+  }
+  if (import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname || '';
+    if (host.endsWith('vercel.app')) {
+      return import.meta.env?.PROD ? '' : '';
+    }
+  }
+  return 'https://cashbook-v11.vercel.app';
+};
+export const API_BASE = getDynamicApiBaseUrl();
+export const getApiBaseUrl = getDynamicApiBaseUrl;
+
+export function setApiBaseUrl(url) {
+  if (typeof localStorage !== 'undefined') {
+    if (url) localStorage.setItem('cashbook_api_url', url.trim());
+    else localStorage.removeItem('cashbook_api_url');
+  }
+}
+
+export async function testConnection(targetUrl) {
+  const base = (targetUrl || getDynamicApiBaseUrl()).replace(/\/+$/, '');
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  try {
+    const res = await fetch(`${base}/api/health`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      return { ok: false, status: res.status, message: `Server returned HTTP ${res.status}` };
+    }
+    const data = await res.json();
+    return { ok: true, status: 200, data, message: 'Server Connected (Online)' };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    return { ok: false, status: 0, message: err.name === 'AbortError' ? 'Connection timed out' : 'Failed to reach server' };
+  }
+}
+
+let authToken = typeof localStorage !== 'undefined' && localStorage.getItem ? (localStorage.getItem('cashbook-session-token') || '') : '';
 
 export function setAuthToken(token) {
   authToken = token || '';
@@ -19,22 +63,66 @@ export function setAuthToken(token) {
   }
 }
 
-async function request(path, options = {}) {
+async function request(path, options = {}, retries = 1) {
   let response;
   const isFormData = options.body instanceof FormData;
+  
+  // Add a 90-second timeout to accommodate cloud cold starts and complex report queries
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90000);
+  
+  const activeTenantId = (() => {
+    try {
+      return localStorage.getItem('activeTenantId') || localStorage.getItem('cashbook_active_company_id') || 'cashbook_bawar_prod';
+    } catch {
+      return 'cashbook_bawar_prod';
+    }
+  })();
+
   try {
-    response = await fetch(`${API_BASE}${path}`, {
+    const currentBase = getDynamicApiBaseUrl();
+    response = await fetch(`${currentBase}${path}`, {
+      signal: controller.signal,
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-        ...(authToken ? { 'X-Session-Token': authToken } : {}),
+        ...(authToken ? { 'X-Session-Token': authToken, 'Authorization': `Bearer ${authToken}` } : {}),
+        'X-Tenant-ID': activeTenantId,
+        'X-Company-Id': activeTenantId,
         ...(options.headers || {})
       },
       ...options
     });
   } catch (error) {
-    throw new Error(`Backend connection failed: ${error.message}`);
+    clearTimeout(timeoutId);
+    if (retries > 0 && (!options.method || options.method === 'GET') && error.name !== 'AbortError') {
+      await new Promise(r => setTimeout(r, 600));
+      return request(path, options, retries - 1);
+    }
+    if (error.name === 'AbortError') {
+      throw new Error('Backend connection timed out.');
+    }
+    throw new Error(`Failed to fetch from backend. Ensure the server is running.`);
+  } finally {
+    clearTimeout(timeoutId);
   }
+  
   if (!response.ok) {
+    if (retries > 0 && (!options.method || options.method === 'GET') && [502, 503, 504].includes(response.status)) {
+      await new Promise(r => setTimeout(r, 600));
+      return request(path, options, retries - 1);
+    }
+    if (response.status === 401) {
+      setAuthToken('');
+      try {
+        localStorage.removeItem('cashbook-session-token');
+        localStorage.removeItem('cashbook-current-user');
+      } catch {
+        // Ignore storage errors
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+      }
+    }
     const text = await response.text();
     let message = `Server error (${response.status}): `;
     try {
@@ -45,7 +133,7 @@ async function request(path, options = {}) {
       if (text.includes('<!doctype') || text.includes('<html')) {
         message += response.statusText || 'HTML Error Page';
       } else {
-        message += text.substring(0, 200) || response.statusText;
+        message += text.substring(0, 150) || response.statusText;
       }
     }
     throw new Error(message);
@@ -61,11 +149,15 @@ async function request(path, options = {}) {
     if (responseText.includes('<!doctype') || responseText.includes('<html')) {
       throw new Error(`Server returned HTML error. Status: ${response.status}. Check backend server.`);
     }
-    throw new Error(`Failed to parse response as JSON: ${error.message}. Response: ${responseText.substring(0, 100)}`);
+    throw new Error(`Failed to parse response as JSON. Status: ${response.status}.`);
   }
 }
 
 export const api = {
+  get: (path) => request(path),
+  post: (path, payload) => request(path, { method: 'POST', body: JSON.stringify(payload) }),
+  put: (path, payload) => request(path, { method: 'PUT', body: JSON.stringify(payload) }),
+  delete: (path) => request(path, { method: 'DELETE' }),
   health: () => request('/api/health'),
   status: () => request('/api/status'),
   healthDatabase: () => request('/health/database'),
@@ -93,6 +185,19 @@ export const api = {
   createSalaryPayment: (payload) => request('/api/employees/salary-payments', { method: 'POST', body: JSON.stringify(payload) }),
   updateSalaryPayment: (id, payload) => request(`/api/employees/salary-payments/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteSalaryPayment: (id) => request(`/api/employees/salary-payments/${id}`, { method: 'DELETE' }),
+  getEmployeeSalaryLedger: (id, params = {}) => {
+    const query = new URLSearchParams();
+    if (params.from_date) query.append('from_date', params.from_date);
+    if (params.to_date) query.append('to_date', params.to_date);
+    if (params.currency) query.append('currency', params.currency);
+    if (params.branch_id) query.append('branch_id', params.branch_id);
+    if (params.page) query.append('page', params.page);
+    if (params.page_size) query.append('page_size', params.page_size);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/api/employees/${id}/salary-ledger${queryString}`);
+  },
+  getEmployeeSalaryAdjustments: (id) => request(`/api/employees/${id}/adjustments`),
+  createEmployeeSalaryAdjustment: (id, payload) => request(`/api/employees/${id}/adjustments`, { method: 'POST', body: JSON.stringify(payload) }),
   getEmployeeSalaryHistory: (id) => request(`/api/employees/${id}/salary-history`),
   changeEmployeeSalary: (id, payload) => request(`/api/employees/${id}/salary-history`, { method: 'POST', body: JSON.stringify(payload) }),
   getSalaryChangeReport: () => request('/api/employees/salary-changes'),
@@ -122,7 +227,14 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ content, filename })
   }),
-  clearAll: () => request('/api/backup/clear-all', { method: 'DELETE' }),
+  importMasterExcel: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request('/api/import-master-excel', {
+      method: 'POST',
+      body: formData
+    });
+  },
   uploadMedia: (file) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -138,5 +250,15 @@ export const api = {
   neonAuthLogin: (jwtToken) => request('/api/auth/neon-login', {
     method: 'POST',
     headers: { Authorization: `Bearer ${jwtToken}` },
+  }),
+  // Bawar Star Manufacturing Ledger API Methods
+  getBawarStarSummary: (partnerId) => request(`/api/tenants/bawar-star/ledger-summary/${partnerId}`),
+  getBawarStarTransactions: (partnerId) => request(`/api/tenants/bawar-star/transactions/${partnerId}`),
+  createBawarStarTransaction: (payload) => request('/api/tenants/bawar-star/transactions', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
+  deleteBawarStarTransaction: (id) => request(`/api/tenants/bawar-star/transactions/${id}`, {
+    method: 'DELETE'
   }),
 };

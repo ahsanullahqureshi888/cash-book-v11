@@ -33,7 +33,10 @@ class SecurityBoundaryTests(unittest.TestCase):
             if not isinstance(route, APIRoute) or route.path in public_paths:
                 continue
             if route.path.startswith(protected_prefixes):
-                dependency_names = {dependency.call.__name__ for dependency in route.dependant.dependencies}
+                dependency_names = {
+                    dependency.call.__name__
+                    for dependency in route.dependant.dependencies
+                }
                 self.assertIn(
                     "require_authenticated_request",
                     dependency_names,
@@ -42,9 +45,13 @@ class SecurityBoundaryTests(unittest.TestCase):
 
     def test_backup_routes_require_admin_except_cron(self):
         for route in app.routes:
-            if not isinstance(route, APIRoute) or not route.path.startswith("/api/backup"):
+            if not isinstance(route, APIRoute) or not route.path.startswith(
+                "/api/backup"
+            ):
                 continue
-            dependency_names = {dependency.call.__name__ for dependency in route.dependant.dependencies}
+            dependency_names = {
+                dependency.call.__name__ for dependency in route.dependant.dependencies
+            }
             if route.path in ("/api/backup/daily", "/api/backup/export-system"):
                 self.assertNotIn("require_administrator_request", dependency_names)
             else:
