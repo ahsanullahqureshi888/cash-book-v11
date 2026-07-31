@@ -1,7 +1,7 @@
 import { formatApiErrorDetail } from './errorFormatting.js';
 
 // We default to relative paths when hosted on Vercel, but use https://cashbook-v11.vercel.app for mobile APKs and all other hosts.
-const getDynamicApiBaseUrl = () => {
+export const getDynamicApiBaseUrl = () => {
   if (typeof localStorage !== 'undefined') {
     const customUrl = localStorage.getItem('cashbook_api_url');
     if (customUrl) return customUrl.replace(/\/+$/, '');
@@ -18,10 +18,30 @@ const getDynamicApiBaseUrl = () => {
   return 'https://cashbook-v11.vercel.app';
 };
 export const API_BASE = getDynamicApiBaseUrl();
+export const getApiBaseUrl = getDynamicApiBaseUrl;
+
 export function setApiBaseUrl(url) {
   if (typeof localStorage !== 'undefined') {
-    if (url) localStorage.setItem('cashbook_api_url', url);
+    if (url) localStorage.setItem('cashbook_api_url', url.trim());
     else localStorage.removeItem('cashbook_api_url');
+  }
+}
+
+export async function testConnection(targetUrl) {
+  const base = (targetUrl || getDynamicApiBaseUrl()).replace(/\/+$/, '');
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  try {
+    const res = await fetch(`${base}/api/health`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      return { ok: false, status: res.status, message: `Server returned HTTP ${res.status}` };
+    }
+    const data = await res.json();
+    return { ok: true, status: 200, data, message: 'Server Connected (Online)' };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    return { ok: false, status: 0, message: err.name === 'AbortError' ? 'Connection timed out' : 'Failed to reach server' };
   }
 }
 
