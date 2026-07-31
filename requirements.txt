@@ -9,4 +9,5 @@ pg8000>=1.31.2
 PyJWT>=2.8.0
 python-jose[cryptography]>=3.3.0
 cryptography>=41.0.0
+pandas>=2.0.0
 eval-type-backport>=0.2.0
