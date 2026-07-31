@@ -12,7 +12,7 @@ export const getDynamicApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname || '';
     if (host.endsWith('vercel.app')) {
-      return '';
+      return import.meta.env?.PROD ? '' : '';
     }
   }
   return 'https://cashbook-v11.vercel.app';
