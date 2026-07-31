@@ -1,0 +1,4 @@
+- [x] Install npm dependencies in `frontend` directory
+- [x] Build web assets (`npm run build`)
+- [x] Run Capacitor sync for Android
+- [x] Verify `:capacitor-android` project resolution
