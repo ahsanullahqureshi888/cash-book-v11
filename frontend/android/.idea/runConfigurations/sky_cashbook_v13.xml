@@ -1,5 +1,6 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="sky-cashbook-v13" type="AndroidRunConfigurationType" factoryName="Android App" editBeforeRun="true" focusToolWindowBeforeRun="true">
+  <configuration default="false" name="sky-cashbook-v13" type="AndroidRunConfigurationType" factoryName="Android App" editBeforeRun="true" activateToolWindowBeforeRun="false" focusToolWindowBeforeRun="true">
+    <module name="android.app" />
     <option name="ANDROID_RUN_CONFIGURATION_SCHEMA_VERSION" value="1" />
     <option name="DEPLOY" value="true" />
     <option name="DEPLOY_APK_FROM_BUNDLE" value="false" />
@@ -17,7 +18,7 @@
     <option name="RESTORE_FILE" value="" />
     <option name="RESTORE_FRESH_INSTALL_ONLY" value="false" />
     <option name="CLEAR_LOGCAT" value="false" />
-    <option name="SHOW_LOGCAT_AUTOMATICALLY" value="false" />
+    <option name="SHOW_LOGCAT_AUTOMATICALLY" value="true" />
     <option name="TARGET_SELECTION_MODE" value="DEVICE_AND_SNAPSHOT_COMBO_BOX" />
     <option name="DEBUGGER_TYPE" value="Auto" />
     <Auto>
@@ -26,7 +27,7 @@
       <option name="WORKING_DIR" value="" />
       <option name="TARGET_LOGGING_CHANNELS" value="lldb process:gdb-remote packets" />
       <option name="SHOW_OPTIMIZED_WARNING" value="true" />
-      <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+      <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="true" />
     </Auto>
     <Hybrid>
       <option name="USE_JAVA_AWARE_DEBUGGER" value="false" />

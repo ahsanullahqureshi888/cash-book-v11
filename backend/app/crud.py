@@ -1963,7 +1963,7 @@ def dashboard_summary(db: Session, branch_id: int | None = None) -> dict:
     # Handle both boolean and integer is_active representation
     active_employees = (
         db.query(models.Employee)
-        .filter(or_(models.Employee.is_active == True, models.Employee.is_active == 1))
+        .filter(models.Employee.status == "active")
         .count()
     )
 

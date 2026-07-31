@@ -40,8 +40,8 @@ def _parse_int_val(val) -> int:
         return 1
 
 
-@router.post("/import-master-excel")
-async def import_master_excel(
+@router.post("/import-transport-excel")
+async def import_transport_excel(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_admin: models.User = Depends(require_administrator_request),
@@ -600,8 +600,8 @@ def delete_transport_transaction(
     return {"message": "Transaction record deleted successfully", "id": transaction_id}
 
 
-@router.get("/summary", response_model=schemas.GrandSummaryResponse)
-def get_grand_summary(
+@router.get("/transport-summary", response_model=schemas.GrandSummaryResponse)
+def get_transport_grand_summary(
     request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_authenticated_request),
