@@ -1,6 +1,7 @@
 import React from 'react';
+import { withTranslation } from 'react-i18next';
 
-export default class ErrorBoundary extends React.Component {
+class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -48,6 +49,8 @@ export default class ErrorBoundary extends React.Component {
   };
 
   render() {
+    const t = this.props.t || ((key, def) => def || key);
+
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
@@ -105,7 +108,7 @@ export default class ErrorBoundary extends React.Component {
               color: 'var(--text, #fafafa)',
               lineHeight: '1.2'
             }}>
-              Something went wrong
+              {t('errorBoundary.somethingWentWrong', 'Something went wrong')}
             </h1>
             
             <p style={{
@@ -114,7 +117,7 @@ export default class ErrorBoundary extends React.Component {
               color: 'var(--text-soft, #a1a1aa)',
               marginBottom: '32px'
             }}>
-              This section could not be displayed. Try again or refresh the application.
+              {t('errorBoundary.sectionCouldNotBeDisplayed', 'This section could not be displayed. Try again or refresh the application.')}
             </p>
 
             <div style={{
@@ -140,7 +143,7 @@ export default class ErrorBoundary extends React.Component {
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
               >
-                Refresh Page
+                {t('errorBoundary.refreshPage', 'Refresh Page')}
               </button>
 
               <button
@@ -159,7 +162,7 @@ export default class ErrorBoundary extends React.Component {
                   transition: 'all 0.2s ease'
                 }}
               >
-                Reset Workspace & Go Home
+                {t('errorBoundary.resetWorkspace', 'Reset Workspace & Go Home')}
               </button>
               
               <button
@@ -178,7 +181,7 @@ export default class ErrorBoundary extends React.Component {
                   transition: 'all 0.2s ease'
                 }}
               >
-                Try Again
+                {t('errorBoundary.tryAgain', 'Try Again')}
               </button>
             </div>
 
@@ -198,7 +201,7 @@ export default class ErrorBoundary extends React.Component {
                   color: '#ef4444',
                   outline: 'none'
                 }}>
-                  Error Details & Stack Trace
+                  {t('errorBoundary.errorDetails', 'Error Details & Stack Trace')}
                 </summary>
                 <pre style={{
                   fontSize: '0.72rem',
@@ -235,3 +238,6 @@ export default class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
+export default withTranslation()(ErrorBoundary);
+

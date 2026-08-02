@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import SimpleCashChart from '../components/SimpleCashChart';
 import { currency, signedCurrency, dateLabel } from '../utils/format';
@@ -38,6 +39,13 @@ function getGreeting() {
   return 'Good evening';
 }
 
+function getMetricStyle(c, styles) {
+  if (c === 'emerald') return styles.emerald;
+  if (c === 'rose') return styles.rose;
+  if (c === 'violet') return styles.violet;
+  return styles.blue;
+}
+
 function MetricCard({ title, value, icon: Icon, color, subtext }) {
   const colorStyles = {
     emerald: { bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
@@ -45,7 +53,7 @@ function MetricCard({ title, value, icon: Icon, color, subtext }) {
     blue: { bg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' },
     violet: { bg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400' }
   };
-  const currentStyle = colorStyles[color] || colorStyles.blue;
+  const currentStyle = getMetricStyle(color, colorStyles);
 
   return (
     <div className="glass-card p-3.5 sm:p-5 rounded-2xl flex flex-col gap-1 border border-slate-200/60 dark:border-slate-800">
@@ -64,10 +72,12 @@ function MetricCard({ title, value, icon: Icon, color, subtext }) {
 }
 
 function QuickActions({ activeTransactionType, setActiveTransactionType, onNavigate, onPrint, onBackup }) {
+  const { t } = useTranslation();
+
   return (
     <div className="glass-card dashboard-actions-card">
       <div className="actions-header">
-        <span className="actions-title">Quick Actions & Shortcuts</span>
+        <span className="actions-title">{t('dashboard.quickActions', 'Quick Actions & Shortcuts')}</span>
       </div>
       <div className="actions-buttons-grid">
         <button
@@ -78,7 +88,7 @@ function QuickActions({ activeTransactionType, setActiveTransactionType, onNavig
             onNavigate('cashbook');
           }}
         >
-          <ArrowDownLeft size={16} /> <span>Add Cash In</span>
+          <ArrowDownLeft size={16} /> <span>{t('dashboard.addCashIn', 'Add Cash In')}</span>
         </button>
 
         <button
@@ -89,7 +99,7 @@ function QuickActions({ activeTransactionType, setActiveTransactionType, onNavig
             onNavigate('cashbook');
           }}
         >
-          <ArrowUpRight size={16} /> <span>Add Cash Out</span>
+          <ArrowUpRight size={16} /> <span>{t('dashboard.addCashOut', 'Add Cash Out')}</span>
         </button>
 
         <button
@@ -97,7 +107,7 @@ function QuickActions({ activeTransactionType, setActiveTransactionType, onNavig
           className="btn-action bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300 font-bold"
           onClick={() => onNavigate('employees')}
         >
-          <UsersRound size={16} className="text-indigo-600 dark:text-indigo-400" /> <span>Employees & Salaries</span>
+          <UsersRound size={16} className="text-indigo-600 dark:text-indigo-400" /> <span>{t('dashboard.employeesSalaries', 'Employees & Salaries')}</span>
         </button>
 
         <button
@@ -105,7 +115,7 @@ function QuickActions({ activeTransactionType, setActiveTransactionType, onNavig
           className="btn-action"
           onClick={() => onNavigate('accounts')}
         >
-          <Users size={16} /> <span>Accounts</span>
+          <Users size={16} /> <span>{t('dashboard.accounts', 'Accounts')}</span>
         </button>
 
         <button
@@ -113,7 +123,7 @@ function QuickActions({ activeTransactionType, setActiveTransactionType, onNavig
           className="btn-action"
           onClick={() => onNavigate('ledger')}
         >
-          <Landmark size={16} /> <span>Account Ledger</span>
+          <Landmark size={16} /> <span>{t('dashboard.accountLedger', 'Account Ledger')}</span>
         </button>
 
         <button
@@ -121,7 +131,7 @@ function QuickActions({ activeTransactionType, setActiveTransactionType, onNavig
           className="btn-action"
           onClick={() => onNavigate('converter')}
         >
-          <RefreshCw size={16} /> <span>Currency Converter</span>
+          <RefreshCw size={16} /> <span>{t('dashboard.currencyConverter', 'Currency Converter')}</span>
         </button>
 
         <button
@@ -129,7 +139,7 @@ function QuickActions({ activeTransactionType, setActiveTransactionType, onNavig
           className="btn-action"
           onClick={() => onNavigate('reports')}
         >
-          <FileText size={16} /> <span>Financial Reports</span>
+          <FileText size={16} /> <span>{t('dashboard.financialReports', 'Financial Reports')}</span>
         </button>
 
         <button
@@ -137,7 +147,7 @@ function QuickActions({ activeTransactionType, setActiveTransactionType, onNavig
           className="btn-action"
           onClick={onPrint}
         >
-          <Printer size={16} /> <span>Print View</span>
+          <Printer size={16} /> <span>{t('dashboard.printView', 'Print View')}</span>
         </button>
 
         <button
@@ -145,7 +155,7 @@ function QuickActions({ activeTransactionType, setActiveTransactionType, onNavig
           className="btn-action"
           onClick={onBackup}
         >
-          <DatabaseBackup size={16} /> <span>Backup Data</span>
+          <DatabaseBackup size={16} /> <span>{t('dashboard.backupData', 'Backup Data')}</span>
         </button>
       </div>
     </div>
@@ -166,6 +176,7 @@ export default function Dashboard({
   currentUser,
   companyName
 }) {
+  const { t } = useTranslation();
   const [selectedBranch, setSelectedBranch] = useState('consolidated');
   const displayCompanyName = companyName || companyFallback;
   const userName = currentUser?.full_name || currentUser?.username || 'Ahsanullah';
@@ -211,7 +222,7 @@ export default function Dashboard({
             <p className="text-[11px] text-slate-500 font-medium leading-none">{greeting},</p>
             <h2 className="welcome-greeting text-sm sm:text-lg font-black text-slate-900 dark:text-white truncate">{userName}</h2>
             <p className="welcome-subtext text-[10px] sm:text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-              <span className="truncate">{displayCompanyName}</span> &bull; <span className="status-badge-inline text-[10px] text-emerald-600 font-bold">Up to date</span>
+              <span className="truncate">{displayCompanyName}</span> &bull; <span className="status-badge-inline text-[10px] text-emerald-600 font-bold">{t('dashboard.upToDate', 'Up to date')}</span>
             </p>
           </div>
         </div>
@@ -220,14 +231,14 @@ export default function Dashboard({
           <div className="stat-pill px-2.5 py-1 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2 text-xs">
             <CalendarDays size={13} className="text-indigo-500 shrink-0" />
             <div className="flex flex-col">
-              <span className="text-[8px] uppercase font-bold text-slate-400">Today</span>
+              <span className="text-[8px] uppercase font-bold text-slate-400">{t('dashboard.today', 'Today')}</span>
               <strong className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{todayCount} entries</strong>
             </div>
           </div>
           <div className="stat-pill px-2.5 py-1 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2 text-xs">
             <CalendarRange size={13} className="text-indigo-500 shrink-0" />
             <div className="flex flex-col">
-              <span className="text-[8px] uppercase font-bold text-slate-400">This Month</span>
+              <span className="text-[8px] uppercase font-bold text-slate-400">{t('dashboard.thisMonth', 'This Month')}</span>
               <strong className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{monthCount} entries</strong>
             </div>
           </div>
@@ -281,11 +292,11 @@ export default function Dashboard({
         <div className="recent-transactions-card">
           <div className="card-header flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <h3 className="card-title">Recent Transactions</h3>
+              <h3 className="card-title">{t('dashboard.recentTransactions', 'Recent Transactions')}</h3>
               <span className="record-count-badge">{recentTransactions.length} items</span>
             </div>
             <NavLink to="/cashbook" className="view-all-link">
-              <span>View all</span>
+              <span>{t('dashboard.viewAll', 'View all')}</span>
               <ArrowRight size={14} />
             </NavLink>
           </div>
@@ -295,11 +306,11 @@ export default function Dashboard({
             <table className="recent-transactions-table">
               <thead>
                 <tr>
-                  <th>Account Name</th>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th className="text-right">Amount</th>
-                  <th>Status</th>
+                  <th>{t('dashboard.accountName', 'Account Name')}</th>
+                  <th>{t('dashboard.date', 'Date')}</th>
+                  <th>{t('dashboard.type', 'Type')}</th>
+                  <th className="text-right">{t('dashboard.amount', 'Amount')}</th>
+                  <th>{t('dashboard.status', 'Status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -324,7 +335,7 @@ export default function Dashboard({
                       <td>
                         <span className="badge-status">
                           <CheckCircle2 size={12} />
-                          <span>Completed</span>
+                          <span>{t('dashboard.completed', 'Completed')}</span>
                         </span>
                       </td>
                     </tr>
@@ -333,7 +344,7 @@ export default function Dashboard({
                 {recentTransactions.length === 0 && (
                   <tr>
                     <td colSpan="5" className="empty-state-cell">
-                      No transactions recorded yet. Click "Add Cash In" or "Add Cash Out" to create an entry.
+                      {t('dashboard.noTransactions', 'No transactions recorded yet. Click "Add Cash In" or "Add Cash Out" to create an entry.')}
                     </td>
                   </tr>
                 )}
@@ -369,7 +380,7 @@ export default function Dashboard({
         {/* Chronological Cash Flow Chart */}
         <div className="glass-card cash-flow-chart-card">
           <div className="card-header">
-            <h3 className="card-title">Chronological Cash Flow</h3>
+            <h3 className="card-title">{t('dashboard.cashFlow', 'Chronological Cash Flow')}</h3>
           </div>
           <div className="chart-body">
             <SimpleCashChart transactions={sortedTransactions} />
@@ -379,3 +390,4 @@ export default function Dashboard({
     </div>
   );
 }
+

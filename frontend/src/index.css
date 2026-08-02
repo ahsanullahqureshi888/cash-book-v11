@@ -16,6 +16,17 @@
   }
 }
 
+/* Mobile APK Touch & Interaction Optimizations */
+html, body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+button, a, select, input {
+  touch-action: manipulation;
+}
+
 :root {
   color-scheme: dark;
   --gold: #38bdf8;

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ChevronRight,
   Search,
@@ -36,6 +37,7 @@ function unescapeText(str) {
 }
 
 export default function AccountLedger(props) {
+  const { t } = useTranslation();
   const visibleAccounts = props.accounts || [];
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -91,14 +93,14 @@ export default function AccountLedger(props) {
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-              <span>Account Ledger</span>
+              <span>{t('accountLedger.title', 'Account Ledger')}</span>
             </h2>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-xs">
-              {visibleAccounts.length} {visibleAccounts.length === 1 ? 'Account' : 'Accounts'}
+              {visibleAccounts.length} {visibleAccounts.length === 1 ? t('accountLedger.account', 'Account') : t('accountLedger.accounts', 'Accounts')}
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
-            Manage customer, vendor, and company account statements and running financial balances
+            {t('accountLedger.description', 'Manage customer, vendor, and company account statements and running financial balances')}
           </p>
         </div>
 
@@ -109,7 +111,7 @@ export default function AccountLedger(props) {
             onClick={() => setShowCreateForm(true)}
           >
             <Plus size={16} />
-            <span>New Account</span>
+            <span>{t('accountLedger.newAccount', 'New Account')}</span>
           </button>
 
           <button
@@ -118,7 +120,7 @@ export default function AccountLedger(props) {
             onClick={props.onPrint}
           >
             <Printer size={15} />
-            <span>Print Ledger</span>
+            <span>{t('accountLedger.printLedger', 'Print Ledger')}</span>
           </button>
 
           <button
@@ -127,7 +129,7 @@ export default function AccountLedger(props) {
             onClick={props.onExport}
           >
             <Download size={15} />
-            <span>Export Ledger</span>
+            <span>{t('accountLedger.exportLedger', 'Export Ledger')}</span>
           </button>
         </div>
       </header>
@@ -139,7 +141,7 @@ export default function AccountLedger(props) {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
                 <Plus size={18} className="text-amber-500" />
-                <span>Create New Account</span>
+                <span>{t('accountLedger.createNewAccount', 'Create New Account')}</span>
               </h3>
               <button
                 type="button"
@@ -159,7 +161,7 @@ export default function AccountLedger(props) {
             >
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Account / Company Name *
+                  {t('accountLedger.accountNameLabel', 'Account / Company Name *')}
                 </label>
                 <input
                   type="text"
@@ -174,7 +176,7 @@ export default function AccountLedger(props) {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Opening Balance (AFN)
+                  {t('accountLedger.openingBalanceLabel', 'Opening Balance (AFN)')}
                 </label>
                 <input
                   type="number"
@@ -185,7 +187,7 @@ export default function AccountLedger(props) {
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-600 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500 font-mono font-bold"
                 />
                 <span className="text-[11px] text-slate-500 mt-1 block">
-                  Positive balance = Credit / Deposit, Negative = Debit / Owed.
+                  {t('accountLedger.balanceHint', 'Positive balance = Credit / Deposit, Negative = Debit / Owed.')}
                 </span>
               </div>
 
@@ -195,19 +197,58 @@ export default function AccountLedger(props) {
                   onClick={() => setShowCreateForm(false)}
                   className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
                 >
-                  Cancel
+                  {t('accountLedger.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-md shadow-amber-500/20 transition-all"
                 >
-                  Save Account
+                  {t('accountLedger.saveAccount', 'Save Account')}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* MOBILE SWIPEABLE ACCOUNT PICKER CAROUSEL (Visible on mobile screens) */}
+      <div className="block md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2">
+        <div className="flex items-center justify-between text-xs px-1">
+          <span className="font-extrabold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-[10px]">{t('accountLedger.quickSwitch', 'Quick Switch Account')}</span>
+          <span className="text-[10px] font-bold text-amber-500">{visibleAccounts.length} {t('accountLedger.total', 'Total')}</span>
+        </div>
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-xs">
+          {visibleAccounts.map((acct) => {
+            const isActive = acct.name === props.selectedAccountName;
+            const cleanName = unescapeText(acct.name);
+            const bal = Number(acct.balance || acct.opening_balance_afn || 0);
+            return (
+              <button
+                key={`mob-acct-${acct.id}`}
+                type="button"
+                onClick={() => props.onSelectAccount(acct)}
+                className={`px-3 py-2 rounded-xl shrink-0 transition-all flex items-center gap-2 border text-left active:scale-95 ${
+                  isActive
+                    ? 'bg-amber-500 text-white font-extrabold border-amber-500 shadow-md shadow-amber-500/25'
+                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 font-semibold'
+                }`}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                  isActive ? 'bg-white text-amber-600' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+                }`}>
+                  {cleanName.slice(0, 1).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <span className="block truncate max-w-[100px] text-xs leading-tight">{cleanName}</span>
+                  <span className={`block text-[9px] font-mono font-bold ${isActive ? 'text-amber-100' : bal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                    {t('accountLedger.afn', 'AFN')} {bal.toLocaleString('en-US')}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* 2. TWO-COLUMN RESPONSIVE LAYOUT (SIDE-BY-SIDE FROM MD UPWARDS) */}
       <div className="account-ledger-layout flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
@@ -225,7 +266,7 @@ export default function AccountLedger(props) {
                   type="search"
                   value={props.search}
                   onChange={(e) => props.setSearch(e.target.value)}
-                  placeholder="Search accounts..."
+                  placeholder={t('accountLedger.searchPlaceholder', 'Search accounts...')}
                   className="w-full pl-10 pr-8 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all font-medium shadow-inner"
                 />
                 {props.search && (
@@ -250,7 +291,7 @@ export default function AccountLedger(props) {
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
-                  All ({visibleAccounts.length})
+                  {t('accountLedger.all', 'All')} ({visibleAccounts.length})
                 </button>
                 <button
                   type="button"
@@ -261,7 +302,7 @@ export default function AccountLedger(props) {
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
-                  Debits
+                  {t('accountLedger.debits', 'Debits')}
                 </button>
                 <button
                   type="button"
@@ -272,7 +313,7 @@ export default function AccountLedger(props) {
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
-                  Credits
+                  {t('accountLedger.credits', 'Credits')}
                 </button>
               </div>
             </div>
@@ -282,7 +323,7 @@ export default function AccountLedger(props) {
               {!filteredAccounts.length ? (
                 <div className="py-16 px-4 text-center text-slate-400 space-y-2">
                   <Users className="w-10 h-10 mx-auto opacity-30" />
-                  <p className="text-xs font-semibold">No accounts found</p>
+                  <p className="text-xs font-semibold">{t('accountLedger.noAccountsFound', 'No accounts found')}</p>
                 </div>
               ) : (
                 filteredAccounts.map((account) => {
@@ -319,13 +360,13 @@ export default function AccountLedger(props) {
                           <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded font-extrabold shrink-0 ${
                             isNegative ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400' : bal > 0 ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                           }`}>
-                            {isNegative ? 'Debit' : bal > 0 ? 'Credit' : 'Zero'}
+                            {isNegative ? t('accountLedger.debitBadge', 'Debit') : bal > 0 ? t('accountLedger.creditBadge', 'Credit') : t('accountLedger.zeroBadge', 'Zero')}
                           </span>
                         </div>
                         <div className="flex items-center justify-between mt-1 text-[11px] font-mono">
-                          <span className="text-slate-400 dark:text-slate-500 text-[10px] uppercase font-sans font-semibold">Balance</span>
+                          <span className="text-slate-400 dark:text-slate-500 text-[10px] uppercase font-sans font-semibold">{t('accountLedger.balance', 'Balance')}</span>
                           <span className={`font-extrabold tracking-tight ${isNegative ? 'text-amber-600 dark:text-amber-400' : bal > 0 ? 'text-emerald-600 dark:text-emerald-400 font-black' : 'text-slate-500'}`}>
-                            AFN {bal.toLocaleString('en-US')}
+                            {t('accountLedger.afn', 'AFN')} {bal.toLocaleString('en-US')}
                           </span>
                         </div>
                       </div>
@@ -351,23 +392,23 @@ export default function AccountLedger(props) {
                     <span className="w-8 h-8 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-sm">
                       {selectedAccountCleanName ? selectedAccountCleanName.slice(0, 1).toUpperCase() : '#'}
                     </span>
-                    <span>{selectedAccountCleanName ? `${selectedAccountCleanName} Statement` : 'Account Ledger Statement'}</span>
+                    <span>{selectedAccountCleanName ? `${selectedAccountCleanName} Statement` : t('accountLedger.title', 'Account Ledger') + ' Statement'}</span>
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                    Real-time transaction history and running financial balance
+                    {t('accountLedger.statementSub', 'Real-time transaction history and running financial balance')}
                   </p>
                 </div>
                 {props.selectedAccountName && (
                   <span className="self-start sm:self-auto px-3.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80 rounded-full text-xs font-extrabold flex items-center gap-2 shadow-xs">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Active Statement
+                    {t('accountLedger.activeStatement', 'Active Statement')}
                   </span>
                 )}
               </div>
               
               {/* MOBILE QUICK ACCOUNT SELECTOR (DROPDOWN FOR SMALL SCREENS) */}
               <div className="block md:hidden mb-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Select Account / Partner</label>
+                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">{t('accountLedger.selectAccountPartner', 'Select Account / Partner')}</label>
                 <select
                   value={props.selectedAccountName || ''}
                   onChange={(e) => {
@@ -390,7 +431,7 @@ export default function AccountLedger(props) {
                 {/* Opening Balance */}
                 <div className="p-4.5 bg-gradient-to-br from-slate-50 to-slate-100/80 dark:from-slate-800/90 dark:to-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-2 relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-600 transition-all">
                   <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider">Opening Balance</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider">{t('accountLedger.openingBalance', 'Opening Balance')}</span>
                     <span className="w-7 h-7 rounded-lg bg-slate-200/80 dark:bg-slate-700/80 flex items-center justify-center text-slate-600 dark:text-slate-300">
                       <Wallet className="w-3.5 h-3.5" />
                     </span>
@@ -403,7 +444,7 @@ export default function AccountLedger(props) {
                 {/* Total Cash In (Debit) */}
                 <div className="p-4.5 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent dark:from-emerald-950/40 dark:via-emerald-950/20 dark:to-transparent rounded-2xl border border-emerald-500/30 dark:border-emerald-500/20 shadow-sm space-y-2 relative overflow-hidden group hover:border-emerald-500/50 transition-all">
                   <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-300">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider">Total Debit (In)</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider">{t('accountLedger.totalDebit', 'Total Debit (In)')}</span>
                     <span className="w-7 h-7 rounded-lg bg-emerald-500/20 dark:bg-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                       <TrendingUp className="w-3.5 h-3.5" />
                     </span>
@@ -416,7 +457,7 @@ export default function AccountLedger(props) {
                 {/* Total Cash Out (Credit) */}
                 <div className="p-4.5 bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent dark:from-rose-950/40 dark:via-rose-950/20 dark:to-transparent rounded-2xl border border-rose-500/30 dark:border-rose-500/20 shadow-sm space-y-2 relative overflow-hidden group hover:border-rose-500/50 transition-all">
                   <div className="flex items-center justify-between text-rose-700 dark:text-rose-300">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider">Total Credit (Out)</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider">{t('accountLedger.totalCredit', 'Total Credit (Out)')}</span>
                     <span className="w-7 h-7 rounded-lg bg-rose-500/20 dark:bg-rose-500/25 flex items-center justify-center text-rose-600 dark:text-rose-400">
                       <TrendingDown className="w-3.5 h-3.5" />
                     </span>
@@ -429,7 +470,7 @@ export default function AccountLedger(props) {
                 {/* Final Balance */}
                 <div className="p-4.5 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent dark:from-amber-950/60 dark:via-amber-950/30 dark:to-transparent rounded-2xl border border-amber-500/40 dark:border-amber-500/30 shadow-md shadow-amber-500/5 space-y-2 relative overflow-hidden group hover:border-amber-500/60 transition-all">
                   <div className="flex items-center justify-between text-amber-800 dark:text-amber-300">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider">Final Net Balance</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider">{t('accountLedger.finalBalance', 'Final Net Balance')}</span>
                     <span className="w-7 h-7 rounded-lg bg-amber-500/20 dark:bg-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
                       <Scale className="w-3.5 h-3.5" />
                     </span>
@@ -446,11 +487,11 @@ export default function AccountLedger(props) {
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300 text-[11px]">
                   <Filter size={13} className="text-amber-500" />
-                  <span>Filters:</span>
+                  <span>{t('accountLedger.filters', 'Filters:')}</span>
                 </div>
 
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">From</span>
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">{t('accountLedger.fromDate', 'From')}</span>
                   <input
                     type="date"
                     value={fromDate}
@@ -463,7 +504,7 @@ export default function AccountLedger(props) {
                 <span className="text-slate-400 font-extrabold text-[11px]">TO</span>
 
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">To</span>
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">{t('accountLedger.toDate', 'To')}</span>
                   <input
                     type="date"
                     value={toDate}
@@ -479,9 +520,9 @@ export default function AccountLedger(props) {
                   className="px-3.5 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-bold shadow-inner"
                   aria-label="Filter by currency"
                 >
-                  <option value="all">All Currencies</option>
-                  <option value="afn">AFN Transactions</option>
-                  <option value="usd">USD Transactions</option>
+                  <option value="all">{t('accountLedger.allCurrencies', 'All Currencies')}</option>
+                  <option value="afn">{t('accountLedger.afnTransactions', 'AFN Transactions')}</option>
+                  <option value="usd">{t('accountLedger.usdTransactions', 'USD Transactions')}</option>
                 </select>
 
                 {hasFilters && (
@@ -490,7 +531,7 @@ export default function AccountLedger(props) {
                     onClick={handleResetFilters}
                     className="px-3 py-1.5 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl font-extrabold flex items-center gap-1.5 transition-colors border border-rose-200/60 dark:border-rose-800/60 shadow-xs"
                   >
-                    <RotateCcw size={13} /> Reset Filters
+                    <RotateCcw size={13} /> {t('accountLedger.resetFilters', 'Reset Filters')}
                   </button>
                 )}
               </div>
@@ -510,9 +551,9 @@ export default function AccountLedger(props) {
                     <Users size={36} className="opacity-60" />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-lg font-extrabold text-slate-800 dark:text-slate-200">No Account Selected</h4>
+                    <h4 className="text-lg font-extrabold text-slate-800 dark:text-slate-200">{t('accountLedger.noAccountSelected', 'No Account Selected')}</h4>
                     <p className="text-xs max-w-sm mx-auto text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                      Select an account from the left sidebar to view its complete statement, running balance, and real-time transaction history.
+                      {t('accountLedger.noAccountSelectedDesc', 'Select an account from the left sidebar to view its complete statement, running balance, and real-time transaction history.')}
                     </p>
                   </div>
                 </div>
@@ -526,3 +567,4 @@ export default function AccountLedger(props) {
     </div>
   );
 }
+

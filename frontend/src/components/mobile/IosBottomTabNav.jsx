@@ -30,7 +30,8 @@ export default function IosBottomTabNav() {
   const mainNavItems = [
     { path: '/', label: t('Home', 'Home'), icon: LayoutDashboard },
     { path: '/cashbook', label: t('Cash Book', 'Cash Book'), icon: BookOpen },
-    { path: '/employees', label: t('Employees', 'Employees'), icon: UsersRound },
+    { path: '/bawar-star', label: t('Bawar Star', 'Bawar Star'), icon: Factory },
+    { path: '/employees', label: t('Salary', 'Salary'), icon: UsersRound },
     { path: '/reports', label: t('Reports', 'Reports'), icon: BarChart3 },
   ];
 
@@ -59,8 +60,8 @@ export default function IosBottomTabNav() {
           <div className="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-slate-800/80 rounded-t-3xl p-5 shadow-2xl z-10 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">Workspace Menu</h3>
-                <p className="text-xs text-slate-500 font-medium">Quick access to all features</p>
+                <h3 className="text-base font-black text-slate-900 dark:text-white">{t('navigation.workspaceMenu', 'Workspace Menu')}</h3>
+                <p className="text-xs text-slate-500 font-medium">{t('navigation.quickAccessAllFeatures', 'Quick access to all features')}</p>
               </div>
               <button
                 type="button"

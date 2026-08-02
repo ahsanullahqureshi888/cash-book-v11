@@ -49,44 +49,43 @@ export function generateExportLedgerPrintHtml({
     const balanceStr = formatUSD(tx.balanceUSD);
     const balanceColor = tx.balanceUSD <= 0 ? 'text-emerald' : 'text-slate';
 
-    return `
-      <tr class="${isEven ? 'row-even' : 'row-odd'}">
-        <td class="col-sn">${escapeHtml(tx.sn || idx + 1)}</td>
-        <td class="col-date">${escapeHtml(tx.date || '-')}</td>
-        <td class="col-text font-bold">${escapeHtml(tx.shipper || '-')}</td>
-        <td class="col-text">${escapeHtml(tx.consignee || '-')}</td>
-        <td class="col-text">
-          <div class="font-bold">${escapeHtml(tx.commodityInvoice || '-')}</div>
-          ${tx.notes ? `<div class="sub-notes dir-rtl">${escapeHtml(tx.notes)}</div>` : ''}
-        </td>
-        <td class="col-text font-mono">
-          <div>${escapeHtml(tx.blContainer || '-')}</div>
-          ${tx.isSurrenderedBL ? `<span class="badge-surrendered">✓ SURRENDERED B/L</span>` : ''}
-        </td>
-        <td class="col-qty">${escapeHtml(tx.quantity > 0 ? tx.quantity : '-')}</td>
-        <td class="col-num text-amber">${escapeHtml(creditStr)}</td>
-        <td class="col-num text-emerald">${escapeHtml(debitStr)}</td>
-        <td class="col-num font-bold ${balanceColor}">${escapeHtml(balanceStr)}</td>
-      </tr>
-    `;
+    const notesHtml = tx.notes ? '<div class="sub-notes dir-rtl">' + escapeHtml(tx.notes) + '</div>' : '';
+    const surrenderedHtml = tx.isSurrenderedBL ? '<span class="badge-surrendered">✓ SURRENDERED B/L</span>' : '';
+
+    return [
+      '<tr class="' + (isEven ? 'row-even' : 'row-odd') + '">',
+      '  <td class="col-sn">' + escapeHtml(tx.sn || idx + 1) + '</td>',
+      '  <td class="col-date">' + escapeHtml(tx.date || '-') + '</td>',
+      '  <td class="col-text font-bold">' + escapeHtml(tx.shipper || '-') + '</td>',
+      '  <td class="col-text">' + escapeHtml(tx.consignee || '-') + '</td>',
+      '  <td class="col-text">',
+      '    <div class="font-bold">' + escapeHtml(tx.commodityInvoice || '-') + '</div>',
+      '    ' + notesHtml,
+      '  </td>',
+      '  <td class="col-text font-mono">',
+      '    <div>' + escapeHtml(tx.blContainer || '-') + '</div>',
+      '    ' + surrenderedHtml,
+      '  </td>',
+      '  <td class="col-qty">' + escapeHtml(tx.quantity > 0 ? tx.quantity : '-') + '</td>',
+      '  <td class="col-num text-amber">' + escapeHtml(creditStr) + '</td>',
+      '  <td class="col-num text-emerald">' + escapeHtml(debitStr) + '</td>',
+      '  <td class="col-num font-bold ' + balanceColor + '">' + escapeHtml(balanceStr) + '</td>',
+      '</tr>'
+    ].join('\n');
   }).join('');
 
   // Absolute URL resolution for print window context
   let logoSrc = resolveAvatarUrl(companyLogo);
   if (logoSrc && !logoSrc.startsWith('http') && !logoSrc.startsWith('data:')) {
-    logoSrc = `${window.location.origin}${logoSrc.startsWith('/') ? '' : '/'}${logoSrc}`;
+    logoSrc = window.location.origin + (logoSrc.startsWith('/') ? '' : '/') + logoSrc;
   }
 
   // SVG Fallback Logo Header
-  const svgLogoFallback = `<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="8" fill="#0F172A"/>
-    <path d="M12 28L20 12L28 28H23.5L20 20.5L16.5 28H12Z" fill="#38BDF8"/>
-    <circle cx="20" cy="14" r="2.5" fill="#F59E0B"/>
-  </svg>`;
+  const svgLogoFallback = '<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="8" fill="#0F172A"/><path d="M12 28L20 12L28 28H23.5L20 20.5L16.5 28H12Z" fill="#38BDF8"/><circle cx="20" cy="14" r="2.5" fill="#F59E0B"/></svg>';
 
   const logoHtml = logoSrc
-    ? `<img src="${logoSrc}" class="logo-img" alt="Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="logo-placeholder" style="display:none;">${svgLogoFallback}</div>`
-    : `<div class="logo-placeholder">${svgLogoFallback}</div>`;
+    ? '<img src="' + escapeHtml(logoSrc) + '" class="logo-img" alt="Logo" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';" /><div class="logo-placeholder" style="display:none;">' + svgLogoFallback + '</div>'
+    : '<div class="logo-placeholder">' + svgLogoFallback + '</div>';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -435,7 +434,7 @@ export function generateExportLedgerPrintHtml({
             <td colspan="6" style="text-align: right; text-transform: uppercase; font-size: 9.5px; letter-spacing: 0.05em; color: #cbd5e1;">
               TOTALS (${transactions.length} Activity Rows):
             </td>
-            <td style="text-align: center; font-family: monospace; color: #60a5fa; font-size: 11px;">${totals.totalContainers || 0}</td>
+            <td style="text-align: center; font-family: monospace; color: #60a5fa; font-size: 11px;">${escapeHtml(String(totals.totalContainers || 0))}</td>
             <td class="col-right" style="color: #fbbf24; font-size: 11px;">${formatUSD(totals.totalCredit)}</td>
             <td class="col-right" style="color: #34d399; font-size: 11px;">${formatUSD(totals.totalDebit)}</td>
             <td class="col-right" style="color: ${totals.netBalance <= 0 ? '#34d399' : '#f87171'}; font-size: 11px;">${formatUSD(totals.netBalance)}</td>
@@ -460,7 +459,7 @@ export function generateExportLedgerPrintHtml({
 
       <!-- DOCUMENT FOOTER STRIP -->
       <div class="footer">
-        <span>Official ${companyName} International Freight System • Computer Generated Document</span>
+        <span>Official ${escapeHtml(companyName)} International Freight System • Computer Generated Document</span>
         <span>Page 1 of 1</span>
       </div>
     </div>

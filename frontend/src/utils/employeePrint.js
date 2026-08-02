@@ -47,21 +47,21 @@ export function generateEmployeeLedgerPrintHtml({
 
     const rowBg = index % 2 === 0 ? 'bg-even' : 'bg-odd';
 
-    return `
-      <tr class="${rowBg}">
-        <td class="col-date">${escapeHtml(dateLabel(e.date))}</td>
-        <td class="col-period">${escapeHtml(e.period || '-')}</td>
-        <td class="col-type"><span class="badge ${badgeClass}">${escapeHtml(typeLabel)}</span></td>
-        <td class="col-desc">${escapeHtml(e.description || '-')}</td>
-        <td class="col-num text-blue">${escapeHtml(acc)}</td>
-        <td class="col-num text-green">${escapeHtml(pay)}</td>
-        <td class="col-num text-teal">${escapeHtml(bonus)}</td>
-        <td class="col-num text-red">${escapeHtml(deduct)}</td>
-        <td class="col-num text-amber">${escapeHtml(adj)}</td>
-        <td class="col-num text-bold ${e.running_balance < 0 ? 'text-negative' : ''}">${escapeHtml(bal)}</td>
-        <td class="col-ref">${escapeHtml(e.reference || '-')}</td>
-      </tr>
-    `;
+    return [
+      '<tr class="' + rowBg + '">',
+      '  <td class="col-date">' + escapeHtml(dateLabel(e.date)) + '</td>',
+      '  <td class="col-period">' + escapeHtml(e.period || '-') + '</td>',
+      '  <td class="col-type"><span class="badge ' + badgeClass + '">' + escapeHtml(typeLabel) + '</span></td>',
+      '  <td class="col-desc">' + escapeHtml(e.description || '-') + '</td>',
+      '  <td class="col-num text-blue">' + escapeHtml(acc) + '</td>',
+      '  <td class="col-num text-green">' + escapeHtml(pay) + '</td>',
+      '  <td class="col-num text-teal">' + escapeHtml(bonus) + '</td>',
+      '  <td class="col-num text-red">' + escapeHtml(deduct) + '</td>',
+      '  <td class="col-num text-amber">' + escapeHtml(adj) + '</td>',
+      '  <td class="col-num text-bold ' + (e.running_balance < 0 ? 'text-negative' : '') + '">' + escapeHtml(bal) + '</td>',
+      '  <td class="col-ref">' + escapeHtml(e.reference || '-') + '</td>',
+      '</tr>'
+    ].join('\n');
   }).join('');
 
   const summary = ledgerData?.summary || {};
@@ -279,7 +279,7 @@ export function generateEmployeeLedgerPrintHtml({
     </div>
     <div style="text-align: right;">
       <div style="font-size: 10px; color: #64748b;">Statement Currency</div>
-      <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${currency}</div>
+      <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${escapeHtml(currency)}</div>
     </div>
   </div>
 
@@ -287,19 +287,19 @@ export function generateEmployeeLedgerPrintHtml({
   <div class="kpi-grid">
     <div class="kpi-card accrued">
       <div class="kpi-title">Total Accrued</div>
-      <div class="kpi-value">${totalAccrued}</div>
+      <div class="kpi-value">${escapeHtml(totalAccrued)}</div>
     </div>
     <div class="kpi-card paid">
       <div class="kpi-title">Total Paid</div>
-      <div class="kpi-value">${totalPaid}</div>
+      <div class="kpi-value">${escapeHtml(totalPaid)}</div>
     </div>
     <div class="kpi-card adj">
       <div class="kpi-title">Total Adjustments</div>
-      <div class="kpi-value">${totalAdjustments}</div>
+      <div class="kpi-value">${escapeHtml(totalAdjustments)}</div>
     </div>
     <div class="kpi-card balance">
       <div class="kpi-title">Outstanding Balance</div>
-      <div class="kpi-value">${outstandingBalance}</div>
+      <div class="kpi-value">${escapeHtml(outstandingBalance)}</div>
     </div>
   </div>
 
@@ -334,7 +334,7 @@ export function generateEmployeeLedgerPrintHtml({
     </div>
     <div class="statement-footer">
       <div>Computer Generated Official Financial Record</div>
-      <div>${companyName}</div>
+      <div>${safeCompName}</div>
     </div>
   </div>
 

@@ -24,9 +24,117 @@ import AuditLedgerModule from '../components/plastic/AuditLedgerModule';
 import ResinProfitCalculator from '../components/plastic/ResinProfitCalculator';
 import CustomerAccountsModule from '../components/plastic/CustomerAccountsModule';
 
+const PLASTICORP_DICT = {
+  English: {
+    title: 'PlastiCorp Enterprise',
+    subtitle: 'Plastics Manufacturing Accounting, IoT PLC Telemetry & Predictive Procurement Engine',
+    branchKnd: 'Kandahar Injection Molding Plant',
+    branchHrt: 'Herat Extrusion Facility',
+    branchAll: 'All Plant Branches Combined',
+    hud: 'Executive P&L HUD',
+    customers: 'Customer AR & Risk',
+    calculator: 'Resin Calculator',
+    bom: 'BOM Builder',
+    scrap: 'Scrap Recovery',
+    iot: 'IoT Telemetry',
+    procurement: 'Predictive Runway',
+    reports: 'Financial Reports',
+    audit: 'Audit Ledger',
+    grossRevenue: 'Gross Manufacturing Revenue',
+    cogm: 'Cost of Goods Manufactured (COGM)',
+    grossProfit: 'Net Gross Profit Margin',
+    inventoryVal: 'Total 3-Stage Inventory Asset',
+    outputVol: 'Production Output Volume',
+    granulatorScrap: 'Granulator Scrap Recovery',
+    fleetStatus: 'Machine Fleet Status',
+    mfgErpVersion: 'Manufacturing ERP v2.4',
+    materialPowerLabor: 'Material + Power + Labor',
+    targetMargin: 'Target: 30.0%',
+    healthyProfit: 'Healthy Profit',
+    resinsWipSkus: 'Resins + WIP + Finished SKUs',
+    auditedAsset: 'Audited Asset',
+    outputVolDesc: 'Completed 120ml Bottles, 240ml Preforms, and 5L Canisters across active runs.',
+    granulatorScrapDesc: 'Granulated regrind fed back into warehouse inventory at internal valuation ($0.90/kg).',
+    fleetStatusDesc: 'Live OEE telemetry streaming from injection molding PLC stations.',
+  },
+  Pashto: {
+    title: 'پلاسټي کارپ تصدۍ (PlastiCorp)',
+    subtitle: 'د پلاسټیک تولیدي محاسبې، د IoT PLC ټیلیمټري او د خامو موادو د اټکل انګن',
+    branchKnd: 'د کندهار د انجکشن مولډینګ فابریکه',
+    branchHrt: 'د هرات د اکستروژن فابریکه',
+    branchAll: 'د ټولې فابریکې ګډې څانګې',
+    hud: 'اجرائیه مالی وضعیت',
+    customers: 'د پیرودونکو حسابونه او خطر',
+    calculator: 'د پلاسټیک موادو محاسب',
+    bom: 'د جوړښت بلډر (BOM)',
+    scrap: 'د زړو موادو بیرته راګرځول',
+    iot: 'د تجهیزاتو ټیلیمټري (IoT)',
+    procurement: 'د پیرودلو اټکل',
+    reports: 'مالي راپورونه',
+    audit: 'ارزونې او تفتیش دفتر',
+    grossRevenue: 'د تولید ټولو عایدات',
+    cogm: 'د تولید د ټولو توکو مصرف (COGM)',
+    grossProfit: 'خالص ګټه او سلنه',
+    inventoryVal: 'د دریو مرحلو ګدام پاتې شونې',
+    outputVol: 'د تولید شوو محصولاتو اندازه',
+    granulatorScrap: 'د تکراري پروسس پرزو بیا رغونه',
+    fleetStatus: 'د فعالو ماشینونو حالت',
+    mfgErpVersion: 'د تولید ERP ۲.۴ بڼه',
+    materialPowerLabor: 'مواد + برښنا + مزدوري',
+    targetMargin: 'هدف: ۳۰.۰٪',
+    healthyProfit: 'سالمې او سمې ګټې',
+    resinsWipSkus: 'رزین + نيمګړي + بشپړ شوي محصولات',
+    auditedAsset: 'ارزول شوې پاتې شونې',
+    outputVolDesc: 'د ۱۲۰ ملی لېتره بوتلونو، ۲۴۰ ملی لېتره پریفارمونو او ۵ لېتره ډبو تولید.',
+    granulatorScrapDesc: 'د زړو بیا پروسس شوو پلاستیکي موادو ګدام ته غوښتل.',
+    fleetStatusDesc: 'د انژکشن او تولیدي ماشینونو د PLC ژوندی جریان.',
+  },
+  Dari: {
+    title: 'تصدی پلاستیک کارپ (PlastiCorp)',
+    subtitle: 'حسابداری تولید پلاستیک، تیلمتری IoT PLC و سیستم پیش‌بینی تدارکات',
+    branchKnd: 'فابریکه زرق پلاستیک قندهار',
+    branchHrt: 'فابریکه اکستروژن هرات',
+    branchAll: 'تمام نمایندگی‌های فابریکه',
+    hud: 'داشبورد اجرایی سود و زیان',
+    customers: 'حساب‌های مشتریان و ریسک',
+    calculator: 'محاسبه‌گر رزین و پلاستیک',
+    bom: 'سازنده فارمول تولید (BOM)',
+    scrap: 'بازیافت و پروسس ضایعات',
+    iot: 'تیلمتری زنده تجهیزات (IoT)',
+    procurement: 'پیش‌بینی تدارکات مواد',
+    reports: 'گزارش‌های مالی',
+    audit: 'دفتر بررسی و تفتیش',
+    grossRevenue: 'عواید ناخالص تولیدی',
+    cogm: 'مصرف کالاهای ساخته‌شده (COGM)',
+    grossProfit: 'سود ناخالص و فیصدی',
+    inventoryVal: 'ارزش دارایی گدام ۳ مرحله‌ای',
+    outputVol: 'حجم کل محصولات تولیدشده',
+    granulatorScrap: 'بازیافت ضایعات آسیاب‌شده',
+    fleetStatus: 'وضعیت فعالیت ماشین‌آلات',
+    mfgErpVersion: 'ای‌ار‌پی تولید نسخه ۲.۴',
+    materialPowerLabor: 'مواد + برق + کارگر',
+    targetMargin: 'هدف: ۳۰.۰٪',
+    healthyProfit: 'سود مناسب',
+    resinsWipSkus: 'رزین + کالای نیمه‌ساخته + محصول نهایی',
+    auditedAsset: 'دارایی ارزیابی‌شده',
+    outputVolDesc: 'تولید بوتل‌های ۱۲۰ میلی‌لیتر، پریفرم‌های ۲۴۰ میلی‌لیتر و دبه‌های ۵ لیتر.',
+    granulatorScrapDesc: 'بازگشت ضایعات آسیاب‌شده به انبار با ارزش داخلی (۰.۹۰ دالر/کیلوگرم).',
+    fleetStatusDesc: 'جریان زنده داده‌های OEE از دستگاه‌های زرق پلاستیک.',
+  }
+};
+
+function getPlasticErpDict(l) {
+  if (l === 'Pashto') return PLASTICORP_DICT.Pashto;
+  if (l === 'Dari') return PLASTICORP_DICT.Dari;
+  return PLASTICORP_DICT.English;
+}
+
 export default function PlasticErpDashboard() {
   const [activeTab, setActiveTab] = useState('HUD');
   const [selectedBranch, setSelectedBranch] = useState('PLANT-KND');
+  const [lang, setLang] = useState(() => localStorage.getItem('cashbook_language') || 'English');
+
+  const dict = getPlasticErpDict(lang);
 
   const [kpi, setKpi] = useState({
     gross_revenue: 379750.00,
@@ -41,53 +149,70 @@ export default function PlasticErpDashboard() {
   });
 
   const dockItems = [
-    { id: 'HUD', label: 'Executive P&L HUD', icon: TrendingUp },
-    { id: 'CUSTOMERS', label: 'Customer AR & Risk', icon: Users },
-    { id: 'CALCULATOR', label: 'Resin Calculator', icon: Zap },
-    { id: 'BOM', label: 'BOM Builder', icon: Sliders },
-    { id: 'SCRAP', label: 'Scrap Recovery', icon: RefreshCw },
-    { id: 'IOT', label: 'IoT Telemetry', icon: Activity },
-    { id: 'PROCUREMENT', label: 'Predictive Runway', icon: ShoppingCart },
-    { id: 'REPORTS', label: 'Financial Reports', icon: FileText },
-    { id: 'AUDIT', label: 'Audit Ledger', icon: Shield },
+    { id: 'HUD', label: dict.hud, icon: TrendingUp },
+    { id: 'CUSTOMERS', label: dict.customers, icon: Users },
+    { id: 'CALCULATOR', label: dict.calculator, icon: Zap },
+    { id: 'BOM', label: dict.bom, icon: Sliders },
+    { id: 'SCRAP', label: dict.scrap, icon: RefreshCw },
+    { id: 'IOT', label: dict.iot, icon: Activity },
+    { id: 'PROCUREMENT', label: dict.procurement, icon: ShoppingCart },
+    { id: 'REPORTS', label: dict.reports, icon: FileText },
+    { id: 'AUDIT', label: dict.audit, icon: Shield },
   ];
 
-
-
   return (
-    <div className="-m-5 md:-m-6 h-[calc(100vh-64px)] w-[calc(100%+40px)] md:w-[calc(100%+48px)] flex flex-col bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-slate-100 font-sans relative p-3 sm:p-5 overflow-hidden no-print">
+    <div className="w-full max-w-full min-h-[calc(100vh-64px)] flex flex-col bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-slate-100 font-sans relative p-3 sm:p-5 overflow-x-hidden no-print rounded-2xl border border-slate-800/80 shadow-2xl">
       
-      {/* 1. TOP EXECUTIVE BAR & BRANCH SWITCHER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-900/80 backdrop-blur-2xl border border-white/15 shadow-2xl shrink-0 mb-4">
+      {/* 1. TOP EXECUTIVE BAR & BRANCH / LANGUAGE SWITCHER */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-slate-900/80 backdrop-blur-2xl border border-white/15 shadow-2xl shrink-0 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 text-white shadow-lg shrink-0">
-            <Building2 size={22} />
+            <Building2 size={24} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-black tracking-tight text-white uppercase">PlastiCorp Enterprise</h1>
-              <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold">
-                Manufacturing ERP v2.4
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">{dict.title}</h1>
+              <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold">
+                {dict.mfgErpVersion}
               </span>
             </div>
-            <p className="text-xs text-slate-400 font-medium">
-              Plastics Manufacturing Accounting, IoT PLC Telemetry & Predictive Procurement Engine
+            <p className="text-xs text-slate-400 font-medium leading-relaxed">
+              {dict.subtitle}
             </p>
           </div>
         </div>
 
-        {/* Branch Selector Switcher */}
-        <div className="flex items-center gap-3 bg-slate-950/90 px-3 py-1.5 rounded-xl border border-slate-800 shrink-0">
-          <Building2 size={16} className="text-cyan-400" />
-          <select
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-            className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer"
-          >
-            <option value="PLANT-KND" className="bg-slate-900 text-white">Kandahar Injection Molding Plant</option>
-            <option value="PLANT-HRT" className="bg-slate-900 text-white">Herat Extrusion Facility</option>
-            <option value="ALL" className="bg-slate-900 text-white">All Plant Branches Combined</option>
-          </select>
+        {/* Branch & Language Selector Controls */}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Language Switcher */}
+          <div className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800">
+            {['English', 'Pashto', 'Dari'].map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => { setLang(l); localStorage.setItem('cashbook_language', l); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  lang === l ? 'bg-cyan-500 text-slate-950 font-black shadow-md' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {l === 'English' ? 'EN' : l === 'Pashto' ? 'پښتو' : 'دری'}
+              </button>
+            ))}
+          </div>
+
+          {/* Branch Selector Switcher */}
+          <div className="flex items-center gap-2 bg-slate-950/90 px-3 py-1.5 rounded-xl border border-slate-800">
+            <Building2 size={16} className="text-cyan-400" />
+            <select
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer"
+            >
+              <option value="PLANT-KND" className="bg-slate-900 text-white">{dict.branchKnd}</option>
+              <option value="PLANT-HRT" className="bg-slate-900 text-white">{dict.branchHrt}</option>
+              <option value="ALL" className="bg-slate-900 text-white">{dict.branchAll}</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -100,11 +225,11 @@ export default function PlasticErpDashboard() {
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
           
           {/* Executive P&L Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             
             {/* Revenue */}
-            <div className="p-5 rounded-2xl bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-2 relative overflow-hidden group">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Gross Manufacturing Revenue</span>
+            <div className="p-5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-xl space-y-2 relative overflow-hidden group hover:border-cyan-500/40 transition-all">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{dict.grossRevenue}</span>
               <strong className="text-2xl font-mono font-black text-emerald-400 block">${kpi.gross_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
               <div className="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-800">
                 <span>30-Day Batch Sales</span>
@@ -113,60 +238,61 @@ export default function PlasticErpDashboard() {
             </div>
 
             {/* COGM */}
-            <div className="p-5 rounded-2xl bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-2 relative overflow-hidden group">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cost of Goods Manufactured (COGM)</span>
+            <div className="p-5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-xl space-y-2 relative overflow-hidden group hover:border-cyan-500/40 transition-all">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{dict.cogm}</span>
               <strong className="text-2xl font-mono font-black text-cyan-400 block">${kpi.cogm.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
               <div className="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-800">
-                <span>Material + Power + Labor</span>
+                <span>{dict.materialPowerLabor}</span>
                 <span className="text-cyan-400 font-bold">10k Units/Batch</span>
               </div>
             </div>
 
             {/* Gross Profit Margin */}
-            <div className="p-5 rounded-2xl bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-2 relative overflow-hidden group">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Net Gross Profit Margin</span>
+            <div className="p-5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-xl space-y-2 relative overflow-hidden group hover:border-cyan-500/40 transition-all">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{dict.grossProfit}</span>
               <strong className="text-2xl font-mono font-black text-amber-400 block">{kpi.gross_margin}% (${kpi.gross_profit.toLocaleString('en-US', { minimumFractionDigits: 2 })})</strong>
               <div className="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-800">
-                <span>Target: 30.0%</span>
-                <span className="text-emerald-400 font-bold">Healthy Profit</span>
+                <span>{dict.targetMargin}</span>
+                <span className="text-emerald-400 font-bold">{dict.healthyProfit}</span>
               </div>
             </div>
 
             {/* Inventory Asset */}
-            <div className="p-5 rounded-2xl bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-2 relative overflow-hidden group">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total 3-Stage Inventory Asset</span>
+            <div className="p-5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-xl space-y-2 relative overflow-hidden group hover:border-cyan-500/40 transition-all">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{dict.inventoryVal}</span>
               <strong className="text-2xl font-mono font-black text-purple-400 block">${kpi.inventory_val.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
               <div className="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-800">
-                <span>Resins + WIP + Finished SKUs</span>
-                <span className="text-purple-400 font-bold">Audited Asset</span>
+                <span>{dict.resinsWipSkus}</span>
+                <span className="text-purple-400 font-bold">{dict.auditedAsset}</span>
               </div>
             </div>
 
           </div>
 
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="p-5 rounded-2xl bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-3">
-              <h3 className="text-xs font-bold uppercase text-slate-300">Production Output Volume</h3>
-              <strong className="text-3xl font-mono font-black text-white">{kpi.total_units.toLocaleString()} Units</strong>
-              <p className="text-xs text-slate-400">Completed 120ml Bottles, 240ml Preforms, and 5L Canisters across active runs.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="p-5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-xl space-y-3 hover:border-cyan-500/40 transition-all">
+              <h3 className="text-xs font-black uppercase text-slate-300 tracking-wider">{dict.outputVol}</h3>
+              <strong className="text-3xl font-mono font-black text-white block">{kpi.total_units.toLocaleString()} Units</strong>
+              <p className="text-xs text-slate-400 font-medium leading-relaxed">{dict.outputVolDesc}</p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-3">
-              <h3 className="text-xs font-bold uppercase text-slate-300">Granulator Scrap Recovery</h3>
-              <strong className="text-3xl font-mono font-black text-emerald-400">{kpi.total_scrap_kg.toLocaleString()} KG</strong>
-              <p className="text-xs text-slate-400">Granulated regrind fed back into warehouse inventory at internal valuation ($0.90/kg).</p>
+            <div className="p-5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-xl space-y-3 hover:border-cyan-500/40 transition-all">
+              <h3 className="text-xs font-black uppercase text-slate-300 tracking-wider">{dict.granulatorScrap}</h3>
+              <strong className="text-3xl font-mono font-black text-emerald-400 block">{kpi.total_scrap_kg.toLocaleString()} KG</strong>
+              <p className="text-xs text-slate-400 font-medium leading-relaxed">{dict.granulatorScrapDesc}</p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-3">
-              <h3 className="text-xs font-bold uppercase text-slate-300">Machine Fleet Status</h3>
-              <strong className="text-3xl font-mono font-black text-cyan-400">{kpi.running_machines} / {kpi.total_machines} Running</strong>
-              <p className="text-xs text-slate-400">Live OEE telemetry streaming from injection molding PLC stations.</p>
+            <div className="p-5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-xl space-y-3 hover:border-cyan-500/40 transition-all sm:col-span-2 lg:col-span-1">
+              <h3 className="text-xs font-black uppercase text-slate-300 tracking-wider">{dict.fleetStatus}</h3>
+              <strong className="text-3xl font-mono font-black text-cyan-400 block">{kpi.running_machines} / {kpi.total_machines} Running</strong>
+              <p className="text-xs text-slate-400 font-medium leading-relaxed">{dict.fleetStatusDesc}</p>
             </div>
           </div>
 
         </div>
       )}
+
 
       {activeTab === 'CUSTOMERS' && <CustomerAccountsModule />}
       {activeTab === 'CALCULATOR' && <ResinProfitCalculator />}
@@ -182,8 +308,8 @@ export default function PlasticErpDashboard() {
       {/* 3. macOS FLOATING BOTTOM NAVIGATION DOCK (DIRECTIVE 2 REQUIREMENT) */}
 
 
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 no-print">
-        <div className="flex items-center gap-2 p-2 rounded-3xl bg-slate-900/80 backdrop-blur-2xl border border-white/15 shadow-2xl ring-1 ring-black/40">
+      <div className="fixed bottom-16 md:bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-[calc(100vw-24px)] no-print">
+        <div className="flex items-center gap-1.5 md:gap-2 p-2 rounded-3xl bg-slate-900/90 backdrop-blur-2xl border border-white/15 shadow-2xl ring-1 ring-black/40 overflow-x-auto no-scrollbar max-w-full">
           {dockItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;

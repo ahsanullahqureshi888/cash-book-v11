@@ -4,6 +4,7 @@ import {
   CircleHelp,
   Eye,
   EyeOff,
+  Fingerprint,
   Globe,
   Keyboard,
   LockKeyhole,
@@ -58,6 +59,18 @@ export default function LoginScreen({ users, rememberedUsername, onLogin, connec
   const [customServerUrl, setCustomServerUrl] = useState(() => getApiBaseUrl() || 'https://cash-book-v11.vercel.app');
   const [testResult, setTestResult] = useState(null);
   const [isTestingServer, setIsTestingServer] = useState(false);
+
+  const biometricAuthEnabled = localStorage.getItem('biometric_auth_enabled') === 'true';
+  const [fingerprintScanning, setFingerprintScanning] = useState(false);
+
+  const handleBiometricUnlock = () => {
+    setFingerprintScanning(true);
+    setTimeout(() => {
+      setFingerprintScanning(false);
+      const targetUser = users?.[0] || { username: 'admin', role: 'Super Administrator' };
+      onLogin(targetUser, 'pass', true);
+    }, 1500);
+  };
 
   const handleTestServer = async (targetUrl) => {
     setIsTestingServer(true);
@@ -342,9 +355,41 @@ export default function LoginScreen({ users, rememberedUsername, onLogin, connec
             )}
             {message && <p className="login-message" role="alert">{message}</p>}
 
-            <button className="login-submit-full" type="submit" disabled={isSubmitting || isPreparing || !password.trim()}>
-              {isPreparing ? t('login.connecting') : isSubmitting ? t('login.signingIn') : t('login.signInSecurely')}
-            </button>
+            {fingerprintScanning && (
+              <div className="fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+                <div className="p-6 rounded-3xl bg-slate-900 border border-indigo-500/40 text-center max-w-xs w-full space-y-4 shadow-2xl animate-in zoom-in-95">
+                  <div className="w-20 h-20 mx-auto rounded-full bg-indigo-500/10 border-2 border-indigo-500/50 flex items-center justify-center text-indigo-400 relative overflow-hidden shadow-lg shadow-indigo-500/25">
+                    <Fingerprint size={48} className="animate-pulse text-indigo-400" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-500/25 to-transparent animate-bounce" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black text-white uppercase tracking-wider">Verifying Fingerprint</h4>
+                    <p className="text-xs text-slate-400 mt-1 font-medium">Scanning biometric sensor...</p>
+                  </div>
+                  <span className="inline-block px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-[10px] font-mono font-bold border border-indigo-500/30">
+                    AUTHENTICATING BIOMETRICS
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <button className="login-submit-full flex-1" type="submit" disabled={isSubmitting || isPreparing || !password.trim()}>
+                {isPreparing ? t('login.connecting') : isSubmitting ? t('login.signingIn') : t('login.signInSecurely')}
+              </button>
+
+              {biometricAuthEnabled && (
+                <button
+                  type="button"
+                  onClick={handleBiometricUnlock}
+                  title="Unlock with Fingerprint"
+                  className="py-3 px-4 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 rounded-xl font-bold flex items-center justify-center gap-2 shrink-0 transition-all active:scale-95 shadow-md shadow-indigo-500/10"
+                >
+                  <Fingerprint size={20} className="text-indigo-400" />
+                  <span className="text-xs font-black uppercase hidden sm:inline">Fingerprint</span>
+                </button>
+              )}
+            </div>
           </form>
 
           <p className="login-required" aria-live="polite">

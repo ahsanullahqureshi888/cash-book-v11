@@ -5,5 +5,18 @@
   "server": {
     "androidScheme": "https",
     "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#090d16",
+      "showSpinner": false
+    }
   }
 }

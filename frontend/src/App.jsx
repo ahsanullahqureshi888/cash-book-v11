@@ -1485,97 +1485,102 @@ export default function App() {
         : `${jalaliDateLabel(tx.date)} | ${dateLabel(tx.date)}`;
 
     const logoHtml = companyLogo 
-      ? `<img src="${escapeHtml(companyLogo)}" alt="Logo" class="company-logo-img" />`
-      : `<div class="company-logo-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-            <polyline points="2 17 12 22 22 17"></polyline>
-            <polyline points="2 12 12 17 22 12"></polyline>
-          </svg>
-        </div>`;
+      ? '<img src="' + escapeHtml(companyLogo) + '" alt="Logo" class="company-logo-img" />'
+      : '<div class="company-logo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></div>';
 
-    return `
-      <div class="voucher-card">
-        <div class="voucher-header">
-          <div class="company-brand">
-            ${logoHtml}
-            <div>
-              <h1 class="company-name">${escapeHtml(companyName || 'BAWAR STAR PLASTIC INDUSTRY')}</h1>
-              <p class="company-contact">${escapeHtml(companyPhone || '+93 700 345 630')} ${companyEmail ? ' | ' + escapeHtml(companyEmail) : ''}</p>
-            </div>
-          </div>
-          <div class="voucher-meta">
-            <div class="copy-badge">${escapeHtml(copyLabel)}</div>
-            <h2 class="voucher-title">${isCashIn ? 'RECEIPT VOUCHER' : 'PAYMENT VOUCHER'}</h2>
-            <div class="meta-row"><strong>Voucher No:</strong> <span class="font-mono">${escapeHtml(tx.transaction_no || String(tx.id).slice(0, 8))}</span></div>
-            <div class="meta-row"><strong>Date:</strong> ${escapeHtml(formattedDate)}</div>
-          </div>
-        </div>
+    const voucherTitle = isCashIn ? 'RECEIPT VOUCHER' : 'PAYMENT VOUCHER';
+    const voucherNo = escapeHtml(tx.transaction_no || String(tx.id).slice(0, 8));
+    const safeCompName = escapeHtml(companyName || 'BAWAR STAR PLASTIC INDUSTRY');
+    const safeCompPhone = escapeHtml(companyPhone || '+93 700 345 630');
+    const safeCompEmail = companyEmail ? ' | ' + escapeHtml(companyEmail) : '';
+    const safeAccountName = escapeHtml(tx.account_name || 'General Account');
+    const safeCategory = escapeHtml(String(tx.category || 'General').replaceAll('_', ' '));
+    const safePaymentMethod = escapeHtml(tx.payment_method || 'CASH');
+    const safeRef = escapeHtml(tx.reference || '-');
+    const safeDetail = escapeHtml(tx.detail || 'Standard cashbook voucher transaction record');
+    const safeAfn = escapeHtml(currency(afnVal, 'AFN'));
+    const safeUsd = escapeHtml(currency(usdVal, 'USD'));
+    const safeExRate = escapeHtml(tx.exchange_rate || '-');
+    const safeTxId = escapeHtml(String(tx.id || '-'));
+    const safeIssuer = escapeHtml(currentUser?.full_name || 'System Accountant');
+    const noteHtml = tx.note ? '<div class="note-box"><span class="grid-label">Remarks / Notes:</span> <span class="note-content">' + escapeHtml(tx.note) + '</span></div>' : '';
 
-        <div class="voucher-body">
-          <div class="info-grid">
-            <div class="grid-pair">
-              <span class="grid-label">Account Name / Party</span>
-              <span class="grid-value font-bold">${escapeHtml(tx.account_name || 'General Account')}</span>
-            </div>
-            <div class="grid-pair">
-              <span class="grid-label">Category</span>
-              <span class="grid-value font-semibold category-tag">${escapeHtml(String(tx.category || 'General').replaceAll('_', ' '))}</span>
-            </div>
-            <div class="grid-pair">
-              <span class="grid-label">Payment Method</span>
-              <span class="grid-value font-semibold uppercase">${escapeHtml(tx.payment_method || 'CASH')}</span>
-            </div>
-            <div class="grid-pair">
-              <span class="grid-label">Ref / Doc No</span>
-              <span class="grid-value font-mono">${escapeHtml(tx.reference || '-')}</span>
-            </div>
-          </div>
-
-          <div class="detail-box">
-            <span class="grid-label">Details / Particulars Description</span>
-            <div class="detail-content">${escapeHtml(tx.detail || 'Standard cashbook voucher transaction record')}</div>
-          </div>
-
-          <div class="amount-highlight-box">
-            <div class="amount-col">
-              <span class="amount-label">AMOUNT AFN</span>
-              <strong class="amount-val text-emerald">${currency(afnVal, 'AFN')}</strong>
-            </div>
-            <div class="amount-col border-left">
-              <span class="amount-label">AMOUNT USD</span>
-              <strong class="amount-val text-blue">${currency(usdVal, 'USD')}</strong>
-            </div>
-            <div class="amount-col border-left">
-              <span class="amount-label">EXCHANGE RATE</span>
-              <span class="amount-subval">${tx.exchange_rate || '-'}</span>
-            </div>
-          </div>
-
-          ${tx.note ? `<div class="note-box"><span class="grid-label">Remarks / Notes:</span> <span class="note-content">${escapeHtml(tx.note)}</span></div>` : ''}
-
-          <div class="verification-strip">
-            <span><strong>System Record ID:</strong> ${escapeHtml(String(tx.id || '-'))} | <strong>Issuer:</strong> ${escapeHtml(currentUser?.full_name || 'System Accountant')}</span>
-            <span class="verification-tag">✓ AUDITED & VERIFIED</span>
-          </div>
-        </div>
-
-        <div class="signature-section">
-          <div class="signature-block">
-            <div class="sig-line"></div>
-            <span class="sig-label">Prepared By</span>
-          </div>
-          <div class="signature-block">
-            <div class="sig-line"></div>
-            <span class="sig-label">Receiver Signature</span>
-          </div>
-          <div class="signature-block">
-            <div class="sig-line"></div>
-            <span class="sig-label">Authorized Signature</span>
-          </div>
-        </div>
-      </div>
-    `;
+    return [
+      '<div class="voucher-card">',
+      '  <div class="voucher-header">',
+      '    <div class="company-brand">',
+      '      ' + logoHtml,
+      '      <div>',
+      '        <h1 class="company-name">' + safeCompName + '</h1>',
+      '        <p class="company-contact">' + safeCompPhone + safeCompEmail + '</p>',
+      '      </div>',
+      '    </div>',
+      '    <div class="voucher-meta">',
+      '      <div class="copy-badge">' + escapeHtml(copyLabel) + '</div>',
+      '      <h2 class="voucher-title">' + voucherTitle + '</h2>',
+      '      <div class="meta-row"><strong>Voucher No:</strong> <span class="font-mono">' + voucherNo + '</span></div>',
+      '      <div class="meta-row"><strong>Date:</strong> ' + escapeHtml(formattedDate) + '</div>',
+      '    </div>',
+      '  </div>',
+      '  <div class="voucher-body">',
+      '    <div class="info-grid">',
+      '      <div class="grid-pair">',
+      '        <span class="grid-label">Account Name / Party</span>',
+      '        <span class="grid-value font-bold">' + safeAccountName + '</span>',
+      '      </div>',
+      '      <div class="grid-pair">',
+      '        <span class="grid-label">Category</span>',
+      '        <span class="grid-value font-semibold category-tag">' + safeCategory + '</span>',
+      '      </div>',
+      '      <div class="grid-pair">',
+      '        <span class="grid-label">Payment Method</span>',
+      '        <span class="grid-value font-semibold uppercase">' + safePaymentMethod + '</span>',
+      '      </div>',
+      '      <div class="grid-pair">',
+      '        <span class="grid-label">Ref / Doc No</span>',
+      '        <span class="grid-value font-mono">' + safeRef + '</span>',
+      '      </div>',
+      '    </div>',
+      '    <div class="detail-box">',
+      '      <span class="grid-label">Details / Particulars Description</span>',
+      '      <div class="detail-content">' + safeDetail + '</div>',
+      '    </div>',
+      '    <div class="amount-highlight-box">',
+      '      <div class="amount-col">',
+      '        <span class="amount-label">AMOUNT AFN</span>',
+      '        <strong class="amount-val text-emerald">' + safeAfn + '</strong>',
+      '      </div>',
+      '      <div class="amount-col border-left">',
+      '        <span class="amount-label">AMOUNT USD</span>',
+      '        <strong class="amount-val text-blue">' + safeUsd + '</strong>',
+      '      </div>',
+      '      <div class="amount-col border-left">',
+      '        <span class="amount-label">EXCHANGE RATE</span>',
+      '        <span class="amount-subval">' + safeExRate + '</span>',
+      '      </div>',
+      '    </div>',
+      '    ' + noteHtml,
+      '    <div class="verification-strip">',
+      '      <span><strong>System Record ID:</strong> ' + safeTxId + ' | <strong>Issuer:</strong> ' + safeIssuer + '</span>',
+      '      <span class="verification-tag">✓ AUDITED & VERIFIED</span>',
+      '    </div>',
+      '  </div>',
+      '  <div class="signature-section">',
+      '    <div class="signature-block">',
+      '      <div class="sig-line"></div>',
+      '      <span class="sig-label">Prepared By</span>',
+      '    </div>',
+      '    <div class="signature-block">',
+      '      <div class="sig-line"></div>',
+      '      <span class="sig-label">Receiver Signature</span>',
+      '    </div>',
+      '    <div class="signature-block">',
+      '      <div class="sig-line"></div>',
+      '      <span class="sig-label">Authorized Signature</span>',
+      '    </div>',
+      '  </div>',
+      '</div>'
+    ].join('\n');
   };
 
   const receiptHtml = (tx) => `
