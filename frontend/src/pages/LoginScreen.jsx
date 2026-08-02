@@ -55,7 +55,7 @@ export default function LoginScreen({ users, rememberedUsername, onLogin, connec
 
   // Server Settings state
   const [serverModalOpen, setServerModalOpen] = useState(false);
-  const [customServerUrl, setCustomServerUrl] = useState(() => getApiBaseUrl() || 'https://cashbook-v11.vercel.app');
+  const [customServerUrl, setCustomServerUrl] = useState(() => getApiBaseUrl() || 'https://cash-book-v11.vercel.app');
   const [testResult, setTestResult] = useState(null);
   const [isTestingServer, setIsTestingServer] = useState(false);
 
@@ -278,8 +278,12 @@ export default function LoginScreen({ users, rememberedUsername, onLogin, connec
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
                     <button
                       type="button"
-                      onClick={() => { setCustomServerUrl('https://cashbook-v11.vercel.app'); handleTestServer('https://cashbook-v11.vercel.app'); }}
-                      style={{ padding: '10px 14px', borderRadius: '8px', border: customServerUrl === 'https://cashbook-v11.vercel.app' ? '2px solid #38bdf8' : '1px solid #334155', background: customServerUrl === 'https://cashbook-v11.vercel.app' ? 'rgba(56, 189, 248, 0.1)' : '#0f172a', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}
+                      onClick={() => {
+                        const target = 'https://cash-book-v11.vercel.app';
+                        setCustomServerUrl(target);
+                        handleTestServer(target);
+                      }}
+                      style={{ padding: '10px 14px', borderRadius: '8px', border: (customServerUrl.includes('cashbook-v11.vercel.app') || customServerUrl.includes('cash-book-v11.vercel.app')) ? '2px solid #38bdf8' : '1px solid #334155', background: (customServerUrl.includes('cashbook-v11.vercel.app') || customServerUrl.includes('cash-book-v11.vercel.app')) ? 'rgba(56, 189, 248, 0.1)' : '#0f172a', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}
                     >
                       <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Globe size={16} style={{ color: '#38bdf8' }} />
@@ -296,7 +300,7 @@ export default function LoginScreen({ users, rememberedUsername, onLogin, connec
                         type="url"
                         value={customServerUrl}
                         onChange={(e) => setCustomServerUrl(e.target.value)}
-                        placeholder="https://cashbook-v11.vercel.app"
+                        placeholder="https://cash-book-v11.vercel.app"
                         style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff', fontSize: '13px', outline: 'none' }}
                       />
                     </div>

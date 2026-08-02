@@ -1410,26 +1410,39 @@ function EmployeeCardRow({
   uploadingAvatarId,
   navigate
 }) {
+  function unescapeText(str) {
+    if (!str || typeof str !== 'string') return String(str ?? '');
+    let text = str;
+    while (text.includes('&amp;')) {
+      text = text.replace(/&amp;/g, '&');
+    }
+    return text
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'");
+  }
+
   const [menuOpen, setMenuOpen] = useState(false);
   const hasJoiningDate = Boolean(employee.joining_date);
 
   const getCompanyBadge = () => {
-    const comp = employee.company_id || 'all';
-    if (comp === 'bawar-star') {
-      return <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">BAWAR STAR PLASTIC</span>;
+    const companyId = employee.company_id || 'all';
+    if (companyId === 'bawar-star') {
+      return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25">BAWAR STAR PLASTIC</span>;
     }
-    if (comp === 'sky-ariana') {
-      return <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">SKY ARIANA LTD</span>;
+    if (companyId === 'sky-ariana') {
+      return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">SKY ARIANA LTD</span>;
     }
-    return <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">All Companies (Shared)</span>;
+    return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/25">ALL COMPANIES (SHARED)</span>;
   };
 
   const getStatusBadge = () => {
-    const status = row.payment_status || 'Unpaid';
-    if (status === 'Paid') return <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Fully Paid</span>;
-    if (status === 'Partial Paid') return <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Partially Paid</span>;
-    if (status === 'Advance') return <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Overpaid / Advance</span>;
-    return <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Unpaid</span>;
+    const status = row.payment_status;
+    if (status === 'Paid') return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">Fully Paid</span>;
+    if (status === 'Partial Paid') return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25">Partially Paid</span>;
+    if (status === 'Advance') return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25">Overpaid / Advance</span>;
+    return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25">Unpaid</span>;
   };
 
   const handleNavigateLedger = () => {
@@ -1440,141 +1453,142 @@ function EmployeeCardRow({
     }
   };
 
+  const cleanFullName = unescapeText(employee.full_name);
+  const cleanPosition = unescapeText(employee.position || 'Employee');
+  const cleanDept = unescapeText(employee.department || '');
+
   return (
-    <div className="salary-employee-row" key={employee.id}>
-      <EmployeeAvatar employee={employee} onChangeAvatar={onChangeAvatar} uploading={uploadingAvatarId === Number(employee.id)} />
-      
-      <div className="salary-employee-info">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <strong style={{ fontSize: '1.05rem', fontWeight: 700 }}>{employee.full_name}</strong>
-          {getCompanyBadge()}
-          {hasJoiningDate ? (
-            <span className="badge-carry-status badge-carry-enabled" title={`Carry forward since ${employee.joining_date}`}>
-              Carry Forward Enabled
-            </span>
-          ) : (
-            <span className="badge-carry-status badge-joining-required" title="Historical carry forward disabled">
-              Joining Date Required
-            </span>
-          )}
-          {getStatusBadge()}
+    <div className="salary-employee-row glass-card p-4 rounded-2xl mb-3 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 transition-all w-full overflow-hidden" key={employee.id}>
+      <div className="flex items-start gap-3.5 min-w-0 w-full lg:w-auto flex-1">
+        <EmployeeAvatar employee={employee} onChangeAvatar={onChangeAvatar} uploading={uploadingAvatarId === Number(employee.id)} />
+        
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight leading-snug break-words">
+              {cleanFullName}
+            </h4>
+            {getCompanyBadge()}
+            {hasJoiningDate ? (
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title={`Carry forward since ${employee.joining_date}`}>
+                Carry Forward Enabled
+              </span>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20" title="Historical carry forward disabled">
+                Joining Date Required
+              </span>
+            )}
+            {getStatusBadge()}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <span>{cleanPosition}</span>
+            <span>&bull;</span>
+            <span className="font-mono text-slate-700 dark:text-slate-300 font-bold">{employee.employee_code || `EMP-${employee.id}`}</span>
+            {cleanDept && (
+              <>
+                <span>&bull;</span>
+                <span>{cleanDept}</span>
+              </>
+            )}
+            <span>&bull;</span>
+            <span className="text-slate-700 dark:text-slate-300 font-semibold">Salary: {(employee.monthly_salary || row.monthly_salary || 0).toLocaleString()} {row.currency}</span>
+          </div>
         </div>
-        <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-          {employee.position || 'Employee'} · {employee.employee_code || `EMP-${employee.id}`} {employee.department ? `· ${employee.department}` : ''}
-        </span>
-        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-          Monthly Salary: {(employee.monthly_salary || row.monthly_salary || 0).toLocaleString()} {row.currency}
-        </span>
       </div>
 
-      <div className="salary-balance">
-        {hasJoiningDate ? (
-          <>
-            <span className="balance-title">Outstanding salary</span>
-            <strong className="balance-value">{row.remaining_salary.toLocaleString()} {row.currency}</strong>
-            <small className="balance-subtitle">Includes unpaid salary since {dateLabel(employee.joining_date)}</small>
-          </>
-        ) : (
-          <>
-            <span className="balance-title">Current month remaining</span>
-            <strong className="balance-value">{row.remaining_salary.toLocaleString()} {row.currency}</strong>
-            <small className="balance-subtitle amber-subtitle">Joining date required for historical carry forward</small>
-          </>
-        )}
+      <div className="w-full lg:w-auto bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-indigo-500/10 border border-amber-500/25 rounded-2xl p-3.5 flex items-center justify-between gap-3 shrink-0 my-0.5 lg:my-0 lg:min-w-[220px]">
+        <div>
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+            {hasJoiningDate ? "Outstanding Salary" : "Current Month Remaining"}
+          </span>
+          <strong className="text-lg sm:text-xl font-black font-mono tracking-tight text-amber-600 dark:text-amber-400 block">
+            {row.remaining_salary.toLocaleString()} {row.currency}
+          </strong>
+        </div>
+        <small className="text-[10px] text-slate-500 dark:text-slate-400 font-medium max-w-[120px] text-right leading-tight block">
+          {hasJoiningDate ? `Since ${dateLabel(employee.joining_date)}` : "Requires joining date"}
+        </small>
       </div>
 
-      <div className="salary-row-actions">
-        {/* Desktop Layout: [Pay Salary] [Ledger] [Edit] [⋯] */}
+      <div className="flex items-center gap-2 w-full lg:w-auto shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800">
         {onPay && (
-          <button className="primary-btn salary-pay-btn" type="button" onClick={() => onPay(row)}>
-            Pay Salary
+          <button 
+            className="flex-1 lg:flex-initial px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap" 
+            type="button" 
+            onClick={() => onPay(row)}
+          >
+            <CircleDollarSign size={15} />
+            <span>Pay Salary</span>
           </button>
         )}
+
         <button
-          className="ghost-btn salary-list-pay"
+          className="flex-1 lg:flex-initial px-3 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap"
           type="button"
           onClick={handleNavigateLedger}
           title="View Employee Salary Ledger"
         >
-          <BookOpenText size={15} />
+          <BookOpenText size={15} className="text-blue-500" />
           <span>Ledger</span>
         </button>
+
         {onEditEmployee && (
-          <button className="ghost-btn salary-list-pay" type="button" onClick={() => onEditEmployee(employee)}>
-            <Edit size={15} />
+          <button 
+            className="px-3 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap" 
+            type="button" 
+            onClick={() => onEditEmployee(employee)}
+          >
+            <Edit size={15} className="text-indigo-500" />
             <span>Edit</span>
           </button>
         )}
 
-        <div className="relative-action-menu" style={{ position: 'relative' }}>
+        <div className="relative-action-menu relative">
           <button
             type="button"
-            className="action-icon-btn"
+            className="p-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-700 transition-all"
             onClick={() => setMenuOpen(!menuOpen)}
-            title="More menu"
-            style={{ padding: '6px 8px', borderRadius: '8px' }}
+            title="More options"
           >
             <MoreVertical size={16} />
           </button>
+
           {menuOpen && (
             <div
-              className="action-dropdown-popup"
+              className="action-dropdown-popup absolute right-0 top-full mt-1.5 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-1.5 z-50 shadow-2xl min-w-[170px] flex flex-col gap-1"
               onMouseLeave={() => setMenuOpen(false)}
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: '100%',
-                marginTop: '4px',
-                backgroundColor: '#0f172a',
-                border: '1px solid #334155',
-                borderRadius: '12px',
-                padding: '6px',
-                zIndex: 50,
-                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)',
-                minWidth: '170px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '2px'
-              }}
             >
               {onEditSalary && (
                 <button
                   type="button"
                   onClick={() => { setMenuOpen(false); onEditSalary(row); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', color: '#cbd5e1', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', width: '100%' }}
+                  className="flex items-center gap-2 p-2 text-xs font-medium text-slate-200 hover:bg-slate-800 rounded-xl transition-all w-full text-left"
                 >
-                  <CircleDollarSign size={14} /> Edit Salary
+                  <CircleDollarSign size={14} className="text-blue-400" /> Edit Salary
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => { setMenuOpen(false); handleNavigateLedger(); }}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', color: '#cbd5e1', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', width: '100%' }}
+                className="flex items-center gap-2 p-2 text-xs font-medium text-slate-200 hover:bg-slate-800 rounded-xl transition-all w-full text-left"
               >
-                <Clock3 size={14} /> Salary History
+                <Clock3 size={14} className="text-indigo-400" /> Salary History
               </button>
               <button
                 type="button"
                 onClick={() => { setMenuOpen(false); handleNavigateLedger(); }}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', color: '#cbd5e1', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', width: '100%' }}
+                className="flex items-center gap-2 p-2 text-xs font-medium text-slate-200 hover:bg-slate-800 rounded-xl transition-all w-full text-left"
               >
-                <Printer size={14} /> Print Ledger
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMenuOpen(false); alert(`Employee ${employee.full_name} archived.`); }}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', width: '100%' }}
-              >
-                <FileSpreadsheet size={14} /> Archive
+                <Printer size={14} className="text-emerald-400" /> Print Ledger
               </button>
               {onDeleteEmployee && (
                 <button
                   type="button"
                   disabled={deletingEmployeeId === Number(employee.id)}
                   onClick={() => { setMenuOpen(false); onDeleteEmployee({ ...row, id: employee.id, full_name: employee.full_name, employee_code: employee.employee_code }); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', color: '#f43f5e', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', width: '100%' }}
+                  className="flex items-center gap-2 p-2 text-xs font-medium text-rose-400 hover:bg-rose-950/40 rounded-xl transition-all w-full text-left"
                 >
-                  <Trash2 size={14} /> {deletingEmployeeId === Number(employee.id) ? 'Deleting...' : 'Delete'}
+                  <Trash2 size={14} /> {deletingEmployeeId === Number(employee.id) ? 'Deleting...' : 'Delete Employee'}
                 </button>
               )}
             </div>

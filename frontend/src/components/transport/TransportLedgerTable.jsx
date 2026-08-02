@@ -19,7 +19,6 @@ import {
   Banknote
 } from 'lucide-react';
 import { useCompany } from '../../context/CompanyContext';
-import { INITIAL_TRANSPORT_DATA } from './TransportLedgerTable';
 
 export default function TransportLedgerTable() {
   const { currentCompany } = useCompany();

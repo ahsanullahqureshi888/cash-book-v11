@@ -943,4 +943,6 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-window.addEventListener('DOMContentLoaded', init);
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', init);
+}

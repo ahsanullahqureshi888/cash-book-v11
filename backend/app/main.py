@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import json
 import logging
@@ -42,14 +43,29 @@ from .routes import (
     transport,
 )
 
-app = FastAPI(title=APP_NAME)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Seed default settings on application startup."""
+    db = SessionLocal()
+    try:
+        if not db.query(models.Setting).first():
+            db.add(models.Setting())
+            db.commit()
+    except Exception as exc:
+        logger.warning(f"Initial seed notice: {exc}")
+    finally:
+        db.close()
+    yield
+
+
+app = FastAPI(title=APP_NAME, lifespan=lifespan)
 logger = logging.getLogger("cashbook")
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=FRONTEND_ORIGINS,
-    allow_origin_regex=FRONTEND_ORIGIN_REGEX,
+    allow_origin_regex=FRONTEND_ORIGIN_REGEX or r".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -175,16 +191,7 @@ def root():
     )
 
 
-@app.on_event("startup")
-def seed_settings():
-    """Seed default settings on application startup."""
-    db = SessionLocal()
-    try:
-        if not db.query(models.Setting).first():
-            db.add(models.Setting())
-            db.commit()
-    finally:
-        db.close()
+
 
 
 @app.get("/health")

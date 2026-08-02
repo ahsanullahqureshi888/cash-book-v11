@@ -33,3 +33,6 @@ bawar-star-plastic-industry-cashbook-
 *.pyc
 .pytest_cache
 .vite
+*.apk
+frontend/android
+android

@@ -10,6 +10,17 @@ export const currency = (value, code = 'AFN') => {
   return `${number < 0 ? '-' : ''}${label} ${formatted}`;
 };
 
+export const signedCurrency = (value, type = 'cash_in', code = 'AFN') => {
+  const number = Math.abs(Number(value || 0));
+  const sign = type === 'cash_out' ? '-' : '+';
+  const label = code === 'USD' ? 'USD' : 'AFN';
+  const formatted = number.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  return `${sign}${label} ${formatted}`;
+};
+
 export const currencyTone = (value) => {
   const number = Number(value || 0);
   if (number > 0) return 'success';

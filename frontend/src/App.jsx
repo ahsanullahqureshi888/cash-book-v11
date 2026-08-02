@@ -21,8 +21,10 @@ import { employeeSalarySnapshot, salaryMonthStart } from './utils/payroll';
 import useDebouncedValue from './hooks/useDebouncedValue';
 import { transactionSchema } from './utils/validation';
 import { useCompany } from './context/CompanyContext';
+import WorkspaceLoader from './components/WorkspaceLoader';
 
 const AccountLedger = lazy(() => import('./pages/AccountLedger'));
+const TenantModuleRouter = lazy(() => import('./components/layout/TenantModuleRouter'));
 const BawarStarLedger = lazy(() => import('./pages/BawarStarLedger'));
 const Accounts = lazy(() => import('./pages/Accounts'));
 const Reports = lazy(() => import('./pages/Reports'));
@@ -157,10 +159,38 @@ export default function App() {
   const [dateDisplayFormat, setDateDisplayFormat] = useState('dual');
   const [printFooterText, setPrintFooterText] = useState('Prepared by Cashbook Of All companies');
   const [autoLogoutMinutes, setAutoLogoutMinutes] = useState(30);
-  const [summary, setSummary] = useState({ cash_in_afn: 0, cash_out_afn: 0, afn_balance: 0, usd_in: 0, usd_out: 0, usd_balance: 0, today_transactions: 0, monthly_transactions: 0 });
-  const [transactions, setTransactions] = useState([]);
-  const [accounts, setAccounts] = useState([]);
-  const [employees, setEmployees] = useState([]);
+  const [summary, setSummary] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_summary');
+      return cached ? JSON.parse(cached) : { cash_in_afn: 0, cash_out_afn: 0, afn_balance: 0, usd_in: 0, usd_out: 0, usd_balance: 0, today_transactions: 0, monthly_transactions: 0 };
+    } catch {
+      return { cash_in_afn: 0, cash_out_afn: 0, afn_balance: 0, usd_in: 0, usd_out: 0, usd_balance: 0, today_transactions: 0, monthly_transactions: 0 };
+    }
+  });
+  const [transactions, setTransactions] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_transactions');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [accounts, setAccounts] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_accounts');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [employees, setEmployees] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_employees');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [ledger, setLedger] = useState(null);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [cashSearch, setCashSearch] = useState('');
@@ -199,7 +229,14 @@ export default function App() {
   const [confirm, setConfirm] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
   const [lastBackupAt, setLastBackupAt] = useState(() => localStorage.getItem('cashbook-last-backup-at') || '');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_summary') || localStorage.getItem('cached_transactions');
+      return !cached;
+    } catch {
+      return false;
+    }
+  });
   const [pageError, setPageError] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [loginUsers, setLoginUsers] = useState([]);
@@ -317,7 +354,10 @@ export default function App() {
   }, [converterAmount, converterDirection, converterRate, exchangeRate]);
 
   async function loadAll() {
-    setIsLoading(true);
+    const hasCachedData = Boolean(summary?.today_transactions || summary?.total_transactions || transactions.length > 0);
+    if (!hasCachedData) {
+      setIsLoading(true);
+    }
     setPageError('');
     try {
       const [summaryData, transactionData, accountData, employeeData, settingsData] = await Promise.all([
@@ -331,6 +371,12 @@ export default function App() {
       setTransactions(transactionData);
       setAccounts(accountData);
       setEmployees(employeeData);
+      try {
+        localStorage.setItem('cached_summary', JSON.stringify(summaryData));
+        localStorage.setItem('cached_transactions', JSON.stringify(transactionData));
+        localStorage.setItem('cached_accounts', JSON.stringify(accountData));
+        localStorage.setItem('cached_employees', JSON.stringify(employeeData));
+      } catch {}
       setTheme(settingsData.theme || 'dark');
       setCompanyName(settingsData.company_name || companyName);
       setCompanyPhone(settingsData.company_phone || '');
@@ -354,7 +400,7 @@ export default function App() {
         setLedger(null);
       }
     } catch (error) {
-      setPageError(error.message);
+      if (!hasCachedData) setPageError(error.message);
       showToast(error.message, 'error');
     } finally {
       setIsLoading(false);
@@ -1604,10 +1650,10 @@ export default function App() {
 
   return (
     <div className={`app-root relative overflow-hidden ${theme}`}>
-      {/* Background Spheres for macOS Glassmorphism */}
-      <div className="fixed top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-emerald-500/20 blur-[120px] pointer-events-none z-0" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-indigo-500/20 blur-[120px] pointer-events-none z-0" />
-      <div className="fixed top-[30%] left-[50%] w-[30vw] h-[30vw] rounded-full bg-violet-500/15 blur-[120px] pointer-events-none z-0" />
+      {/* Dynamic Ambient Spheres for Premium Liquid Glass Depth */}
+      <div className="fixed top-[-15%] left-[-15%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-br from-blue-500/25 via-emerald-400/20 to-teal-500/20 blur-[130px] pointer-events-none z-0 animate-pulse transition-all duration-1000" />
+      <div className="fixed bottom-[-15%] right-[-15%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tl from-indigo-600/25 via-purple-500/20 to-pink-500/20 blur-[130px] pointer-events-none z-0 animate-pulse transition-all duration-1000" style={{ animationDelay: '2s' }} />
+      <div className="fixed top-[25%] left-[35%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-tr from-cyan-400/15 via-blue-600/15 to-violet-500/15 blur-[140px] pointer-events-none z-0 animate-pulse transition-all duration-1000" style={{ animationDelay: '4s' }} />
       
       <div className="relative z-10 w-full h-full">
         <AppShell
@@ -1623,9 +1669,9 @@ export default function App() {
           onLogout={onLogout}
           onSearchClick={() => setSearchOpen(true)}
         >
-          <Suspense fallback={<div className="loading-strip">{t('Loading workspace...')}</div>}>
+          <Suspense fallback={<WorkspaceLoader />}>
             <>
-              {isLoading && <div className="loading-strip">{t('Loading latest cash book data...')}</div>}
+              {isLoading && transactions.length === 0 && <div className="loading-strip">{t('Loading latest cash book data...')}</div>}
               {pageError && <div className="error-banner">{pageError}</div>}
               <Routes>
                 <Route path="/" element={
@@ -1734,7 +1780,7 @@ export default function App() {
                   />
                 } />
                 <Route path="/ledger" element={
-                  <AccountLedger
+                  <TenantModuleRouter
                     accounts={accounts.filter((account) => !ledgerSearch || account.name.toLowerCase().includes(ledgerSearch.toLowerCase())).map((account) => ({
                       ...account,
                       balance: ledger && selectedAccount?.id === account.id ? ledger.final_balance_afn : account.opening_balance_afn
@@ -1919,11 +1965,7 @@ export default function App() {
                     lastBackup={lastBackupAt || 'Never'}
                   />
                 } />
-                <Route path="/exports" element={
-                  currentCompany?.id === 'sky-ariana'
-                    ? <MultiAccountDashboard />
-                    : <Navigate to="/" replace />
-                } />
+                <Route path="/exports" element={<MultiAccountDashboard />} />
                 <Route path="/plastic-erp" element={<PlasticErpDashboard />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

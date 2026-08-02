@@ -1,6 +1,7 @@
 import UserAccounts from '../components/UserAccounts';
 import SystemDiagnostics from '../components/SystemDiagnostics';
 import SettingsCompany from './SettingsCompany';
+import BiometricAndUpdateSettings from '../components/BiometricAndUpdateSettings';
 import { BadgeCheck, Building2, Factory, Printer, ShieldCheck } from 'lucide-react';
 
 export default function Settings(props) {
@@ -111,6 +112,8 @@ export default function Settings(props) {
           <p className="muted text-xs text-slate-500 mt-3 pt-2 border-t border-slate-200/60 dark:border-slate-800">Last backup: {props.lastBackup || 'Never'}</p>
         </div>
       </div>
+
+      <BiometricAndUpdateSettings />
 
       <SystemDiagnostics diagnostics={props.diagnostics} currentUser={props.currentUser} onRefresh={props.onRefreshDiagnostics} />
       

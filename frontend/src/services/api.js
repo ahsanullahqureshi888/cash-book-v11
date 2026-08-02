@@ -1,10 +1,20 @@
 import { formatApiErrorDetail } from './errorFormatting.js';
 
-// We default to relative paths when hosted on Vercel, but use https://cashbook-v11.vercel.app for mobile APKs and all other hosts.
+// We default to relative paths when hosted on Vercel, but use https://cash-book-v11.vercel.app for mobile APKs and all other hosts.
 export const getDynamicApiBaseUrl = () => {
   if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
     const customUrl = localStorage.getItem('cashbook_api_url');
-    if (customUrl) return customUrl.replace(/\/+$/, '');
+    if (customUrl) {
+      let trimmed = customUrl.trim().replace(/\/+$/, '');
+      if (trimmed && !/^https?:\/\//i.test(trimmed)) {
+        trimmed = 'https://' + trimmed;
+      }
+      if (trimmed.includes('cashbook-v11.vercel.app')) {
+        trimmed = 'https://cash-book-v11.vercel.app';
+        try { localStorage.setItem('cashbook_api_url', trimmed); } catch {}
+      }
+      return trimmed;
+    }
   }
   if (import.meta.env?.VITE_API_URL) {
     return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
@@ -15,20 +25,30 @@ export const getDynamicApiBaseUrl = () => {
       return import.meta.env?.PROD ? '' : '';
     }
   }
-  return 'https://cashbook-v11.vercel.app';
+  return 'https://cash-book-v11.vercel.app';
 };
 export const API_BASE = getDynamicApiBaseUrl();
 export const getApiBaseUrl = getDynamicApiBaseUrl;
 
 export function setApiBaseUrl(url) {
   if (typeof localStorage !== 'undefined') {
-    if (url) localStorage.setItem('cashbook_api_url', url.trim());
-    else localStorage.removeItem('cashbook_api_url');
+    if (url) {
+      let trimmed = url.trim().replace(/\/+$/, '');
+      if (trimmed && !/^https?:\/\//i.test(trimmed)) {
+        trimmed = 'https://' + trimmed;
+      }
+      localStorage.setItem('cashbook_api_url', trimmed);
+    } else {
+      localStorage.removeItem('cashbook_api_url');
+    }
   }
 }
 
 export async function testConnection(targetUrl) {
-  const base = (targetUrl || getDynamicApiBaseUrl()).replace(/\/+$/, '');
+  let base = (targetUrl || getDynamicApiBaseUrl()).trim().replace(/\/+$/, '');
+  if (base && !/^https?:\/\//i.test(base)) {
+    base = 'https://' + base;
+  }
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 12000);
   try {
@@ -44,7 +64,8 @@ export async function testConnection(targetUrl) {
     return { ok: true, status: 200, data, message: 'Server Connected (Online)' };
   } catch (err) {
     clearTimeout(timeoutId);
-    return { ok: false, status: 0, message: err.name === 'AbortError' ? 'Connection timed out' : 'Failed to reach server' };
+    const detail = err.message ? ` (${err.message})` : '';
+    return { ok: false, status: 0, message: err.name === 'AbortError' ? 'Connection timed out (12s)' : `Failed to reach server${detail}` };
   }
 }
 
@@ -66,13 +87,17 @@ export function setAuthToken(token) {
   }
 }
 
+const apiResponseCache = new Map();
+const CACHE_TTL_MS = 15000; // 15s TTL
+
+export function clearApiCache() {
+  apiResponseCache.clear();
+}
+
 async function request(path, options = {}, retries = 1) {
   let response;
+  const method = (options.method || 'GET').toUpperCase();
   const isFormData = options.body instanceof FormData;
-  
-  // Add a 90-second timeout to accommodate cloud cold starts and complex report queries
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 90000);
   
   const activeTenantId = (() => {
     try {
@@ -82,8 +107,32 @@ async function request(path, options = {}, retries = 1) {
     }
   })();
 
+  const cacheKey = `${method}:${path}:${authToken}:${activeTenantId}`;
+
+  // If POST/PUT/DELETE/PATCH, invalidate cache
+  if (method !== 'GET') {
+    apiResponseCache.clear();
+  } else if (!options.skipCache) {
+    const cached = apiResponseCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+      // Revalidate in background asynchronously
+      setTimeout(() => {
+        request(path, { ...options, skipCache: true }).catch(() => {});
+      }, 50);
+      return cached.data;
+    }
+  }
+
+  // Clean options so custom keys like skipCache are never passed to native fetch
+  const fetchOptions = { ...options };
+  delete fetchOptions.skipCache;
+
+  // Add a 90-second timeout to accommodate cloud cold starts and complex report queries
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+  const currentBase = getDynamicApiBaseUrl();
   try {
-    const currentBase = getDynamicApiBaseUrl();
     response = await fetch(`${currentBase}${path}`, {
       signal: controller.signal,
       headers: {
@@ -94,11 +143,18 @@ async function request(path, options = {}, retries = 1) {
         'X-Company-Id': activeTenantId,
         ...(options.headers || {})
       },
-      ...options
+      ...fetchOptions
     });
   } catch (error) {
     clearTimeout(timeoutId);
-    if (retries > 0 && (!options.method || options.method === 'GET') && error.name !== 'AbortError') {
+    // If currentBase is a custom URL and fails, reset to default production Vercel URL
+    if (currentBase && currentBase !== 'https://cash-book-v11.vercel.app') {
+      try {
+        localStorage.setItem('cashbook_api_url', 'https://cash-book-v11.vercel.app');
+      } catch {}
+      return request(path, options, retries);
+    }
+    if (retries > 0 && error.name !== 'AbortError') {
       await new Promise(r => setTimeout(r, 600));
       return request(path, options, retries - 1);
     }
@@ -111,7 +167,7 @@ async function request(path, options = {}, retries = 1) {
   }
   
   if (!response.ok) {
-    if (retries > 0 && (!options.method || options.method === 'GET') && [502, 503, 504].includes(response.status)) {
+    if (retries > 0 && method === 'GET' && [502, 503, 504].includes(response.status)) {
       await new Promise(r => setTimeout(r, 600));
       return request(path, options, retries - 1);
     }
@@ -147,7 +203,11 @@ async function request(path, options = {}, retries = 1) {
   // Clone the response so we can read it multiple times if needed
   const responseText = await response.clone().text();
   try {
-    return JSON.parse(responseText);
+    const parsedData = JSON.parse(responseText);
+    if (method === 'GET') {
+      apiResponseCache.set(cacheKey, { timestamp: Date.now(), data: parsedData });
+    }
+    return parsedData;
   } catch (error) {
     // If JSON parsing fails, provide helpful error message
     if (responseText.includes('<!doctype') || responseText.includes('<html')) {

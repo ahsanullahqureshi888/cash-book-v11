@@ -306,20 +306,23 @@ export default function EmployeeLedgerPage({ currentUser, companyName = 'Cashboo
 
   return (
     <div className="w-full max-w-none px-3 sm:px-4 lg:px-5 pb-8 space-y-4 text-slate-900 dark:text-slate-100" style={{ zoom: 0.90 }}>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <button
           onClick={() => navigate('/salary')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-800 shadow-xs transition-all"
+          className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-800 shadow-sm transition-all"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> {t('employeeLedger.backToList') || 'Back to Employees'}
+          <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <span>Back to Employees</span>
         </button>
-        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('employeeLedger.workspaceTitle') || 'Employee Salary Ledger Workspace'}</span>
+        <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          {t('employeeLedger.workspaceTitle') || 'Employee Salary Ledger Workspace'}
+        </span>
       </div>
 
       {/* Employee Profile Header */}
-      <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-bold text-lg text-white shadow-xs overflow-hidden shrink-0">
+      <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-sm">
+        <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-black text-xl text-white shadow-md overflow-hidden shrink-0 ring-2 ring-indigo-500/20">
             {(employee.avatar_url || employee.photo) ? (
               <img 
                 src={resolveAvatarUrl(employee.avatar_url || employee.photo)} 
@@ -331,22 +334,24 @@ export default function EmployeeLedgerPage({ currentUser, companyName = 'Cashboo
               employee.full_name.slice(0, 2).toUpperCase()
             )}
           </div>
-          <div className="space-y-0.5 flex-1 min-w-0">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight truncate">{employee.full_name}</h1>
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+          <div className="space-y-1 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight break-words">{employee.full_name}</h1>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                 {employee.employee_code || `EMP-${employee.id}`}
               </span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
                 employee.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
               }`}>
                 {employee.status || 'active'}
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs font-medium text-slate-600 dark:text-slate-400">
-              <span className="flex items-center gap-1"><Briefcase className="w-3.5 h-3.5 text-blue-500" /> {employee.position || 'Position not set'}</span>
-              <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5 text-indigo-500" /> {decodeHtmlEntities(employee.department) || 'General'}</span>
-              <span className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5 text-blue-500" /> {employee.position || 'Position not set'}</span>
+              <span>&bull;</span>
+              <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-indigo-500" /> {decodeHtmlEntities(employee.department) || 'General'}</span>
+              <span>&bull;</span>
+              <span className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-emerald-500" />
                 {employee.joining_date ? `Joined: ${dateLabel(employee.joining_date)}` : 'Joining Date Not Set'}
               </span>
@@ -354,37 +359,37 @@ export default function EmployeeLedgerPage({ currentUser, companyName = 'Cashboo
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
+        <div className="flex items-center gap-2 flex-wrap shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
           <button
             onClick={() => {
               setPayAmount(String(ledgerData?.summary?.outstanding_balance || employee.monthly_salary || ''));
               setShowPayModal(true);
             }}
-            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center gap-1.5"
+            className="flex-1 md:flex-initial px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-xl shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-95"
           >
-            <DollarSign className="w-3.5 h-3.5" /> Pay Salary
+            <DollarSign className="w-4 h-4" /> Pay Salary
           </button>
           <button
             onClick={() => setShowAdjustmentModal(true)}
-            className="px-3.5 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs transition-all flex items-center gap-1.5"
+            className="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-extrabold rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 active:scale-95"
           >
-            <PlusCircle className="w-3.5 h-3.5 text-emerald-500" /> Add Adjustment
+            <PlusCircle className="w-4 h-4 text-emerald-500" /> Add Adjustment
           </button>
           <button
             onClick={handlePrint}
             disabled={loading || !ledgerData}
-            className="p-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs transition-all disabled:opacity-50"
+            className="p-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-200 dark:border-slate-700 transition-all disabled:opacity-50"
             title="Print Ledger"
           >
-            <Printer className="w-3.5 h-3.5" />
+            <Printer className="w-4 h-4" />
           </button>
           <button
             onClick={exportCsv}
             disabled={loading || !ledgerData}
-            className="p-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs transition-all disabled:opacity-50"
+            className="p-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-200 dark:border-slate-700 transition-all disabled:opacity-50"
             title="Export CSV"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <FileSpreadsheet className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -436,9 +441,9 @@ export default function EmployeeLedgerPage({ currentUser, companyName = 'Cashboo
         </div>
       )}
 
-      {/* Summary Cards: Spans 100% full width across 4 responsive columns */}
+      {/* Summary Cards: Spans 100% full width across 4 responsive columns (2 cols on mobile) */}
       {ledgerData && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5 w-full">
           <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs relative overflow-hidden flex flex-col justify-between">
             <div>
               <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('employeeLedger.totalSalaryAccrued') || 'Total Salary Accrued'}</div>

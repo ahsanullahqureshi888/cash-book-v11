@@ -17,7 +17,11 @@ export async function POST(req: Request) {
     }
 
     // Initialize OAuth JWT client
-    const auth = new google.auth.JWT(clientEmail, undefined, privateKey, SCOPES);
+    const auth = new google.auth.JWT({
+      email: clientEmail,
+      key: privateKey,
+      scopes: SCOPES,
+    });
     const drive = google.drive({ version: 'v3', auth });
 
     // Extract Form Data

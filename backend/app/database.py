@@ -50,14 +50,19 @@ DATABASE_URL = resolve_database_url()
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 IS_PG8000 = DATABASE_URL.startswith("postgresql+pg8000")
 
-engine_options = {"pool_pre_ping": True, "pool_recycle": 240}
+engine_options = {"pool_pre_ping": True, "pool_recycle": 300}
 if IS_SQLITE:
     engine_options["connect_args"] = {"check_same_thread": False}
 elif IS_PG8000:
-    engine_options["connect_args"] = {
-        "ssl_context": ssl.create_default_context(),
-        "timeout": 30,
-    }
+    engine_options.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_timeout": 15,
+        "connect_args": {
+            "ssl_context": ssl.create_default_context(),
+            "timeout": 15,
+        },
+    })
 
 engine = create_engine(DATABASE_URL, **engine_options)
 
@@ -188,9 +193,17 @@ def ensure_sqlite_schema(bind_engine=None):
             )
 
 
+_checked_schema_engines = set()
+
+
 def ensure_user_schema(bind_engine=None):
     """Keep deployed user tables aligned with the current auth model."""
     target_engine = bind_engine or engine
+    engine_key = str(target_engine.url)
+    if engine_key in _checked_schema_engines:
+        return
+    _checked_schema_engines.add(engine_key)
+
     inspector = inspect(target_engine)
     if "users" not in inspector.get_table_names():
         return
@@ -233,6 +246,11 @@ def ensure_user_schema(bind_engine=None):
 def ensure_payroll_schema(bind_engine=None):
     """Add payroll columns to existing local/deployed tables."""
     target_engine = bind_engine or engine
+    engine_key = f"payroll_{target_engine.url}"
+    if engine_key in _checked_schema_engines:
+        return
+    _checked_schema_engines.add(engine_key)
+
     inspector = inspect(target_engine)
     tables = set(inspector.get_table_names())
     with target_engine.begin() as conn:
@@ -270,6 +288,11 @@ def ensure_payroll_schema(bind_engine=None):
 def ensure_company_schema(bind_engine=None):
     """Ensure company_id column exists on accounts, transactions, employees, and settings tables."""
     target_engine = bind_engine or engine
+    engine_key = f"company_{target_engine.url}"
+    if engine_key in _checked_schema_engines:
+        return
+    _checked_schema_engines.add(engine_key)
+
     inspector = inspect(target_engine)
     tables = set(inspector.get_table_names())
     with target_engine.begin() as conn:

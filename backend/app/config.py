@@ -12,16 +12,21 @@ DEFAULT_FRONTEND_ORIGINS = [
     "https://localhost",
     "http://localhost",
     "capacitor://localhost",
+    "ionic://localhost",
+    "null",
+    "file://",
 ]
 
-FRONTEND_ORIGINS = [
+env_origins = [
     origin.strip()
-    for origin in os.getenv(
-        "FRONTEND_ORIGINS", ",".join(DEFAULT_FRONTEND_ORIGINS)
-    ).split(",")
+    for origin in os.getenv("FRONTEND_ORIGINS", "").split(",")
     if origin.strip()
 ]
+FRONTEND_ORIGINS = list(dict.fromkeys(DEFAULT_FRONTEND_ORIGINS + env_origins))
+
 FRONTEND_ORIGIN_REGEX = os.getenv(
     "FRONTEND_ORIGIN_REGEX",
-    r"^(https://[a-z0-9-]+\.vercel\.app|https?://(localhost|127\.0\.0\.1)(:\d{1,5})?|capacitor://localhost)$",
+    r".*",
 )
+
+

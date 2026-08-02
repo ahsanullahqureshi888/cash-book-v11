@@ -35,6 +35,18 @@ export default class ErrorBoundary extends React.Component {
     this.setState({ hasError: false, error: null });
   };
 
+  handleResetAndGoHome = () => {
+    try {
+      localStorage.removeItem('cached_summary');
+      localStorage.removeItem('cached_transactions');
+      localStorage.removeItem('cached_accounts');
+    } catch {
+      // ignore
+    }
+    this.setState({ hasError: false, error: null });
+    window.location.href = '/';
+  };
+
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
@@ -110,6 +122,7 @@ export default class ErrorBoundary extends React.Component {
               flexDirection: 'column',
               gap: '12px'
             }}>
+
               <button
                 type="button"
                 onClick={this.handleRefresh}
@@ -128,6 +141,25 @@ export default class ErrorBoundary extends React.Component {
                 }}
               >
                 Refresh Page
+              </button>
+
+              <button
+                type="button"
+                onClick={this.handleResetAndGoHome}
+                className="error-btn-secondary"
+                style={{
+                  background: 'rgba(79, 70, 229, 0.1)',
+                  color: '#818cf8',
+                  border: '1px solid rgba(79, 70, 229, 0.3)',
+                  borderRadius: '10px',
+                  padding: '10px 24px',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Reset Workspace & Go Home
               </button>
               
               <button
@@ -150,32 +182,35 @@ export default class ErrorBoundary extends React.Component {
               </button>
             </div>
 
-            {isDev && this.state.error && (
-              <details style={{
-                marginTop: '32px',
+            {this.state.error && (
+              <details open style={{
+                marginTop: '20px',
                 textAlign: 'left',
-                background: 'rgba(0,0,0,0.2)',
-                borderRadius: '8px',
-                padding: '12px',
-                border: '1px solid rgba(255,255,255,0.05)'
+                background: 'rgba(239, 68, 68, 0.08)',
+                borderRadius: '10px',
+                padding: '12px 16px',
+                border: '1px solid rgba(239, 68, 68, 0.25)'
               }}>
                 <summary style={{
-                  fontSize: '0.75rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
                   cursor: 'pointer',
-                  color: 'var(--text-soft, #a1a1aa)',
+                  color: '#ef4444',
                   outline: 'none'
                 }}>
-                  Developer Diagnostics
+                  Error Details & Stack Trace
                 </summary>
                 <pre style={{
-                  fontSize: '0.7rem',
+                  fontSize: '0.72rem',
                   overflowX: 'auto',
                   marginTop: '8px',
-                  color: 'var(--danger, #ef4444)',
+                  color: '#f87171',
                   whiteSpace: 'pre-wrap',
-                  fontFamily: 'monospace'
+                  fontFamily: 'monospace',
+                  maxHeight: '200px'
                 }}>
                   {this.state.error.toString()}
+                  {this.state.errorInfo?.componentStack ? `\n\nComponent Stack:${this.state.errorInfo.componentStack}` : ''}
                 </pre>
               </details>
             )}

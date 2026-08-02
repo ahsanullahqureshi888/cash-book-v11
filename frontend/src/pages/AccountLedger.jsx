@@ -365,8 +365,28 @@ export default function AccountLedger(props) {
                 )}
               </div>
               
-              {/* 4 STAT CARDS IN 1 ROW (ULTRA-PREMIUM GLASS CARDS) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {/* MOBILE QUICK ACCOUNT SELECTOR (DROPDOWN FOR SMALL SCREENS) */}
+              <div className="block md:hidden mb-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Select Account / Partner</label>
+                <select
+                  value={props.selectedAccountName || ''}
+                  onChange={(e) => {
+                    const found = visibleAccounts.find(a => a.name === e.target.value);
+                    if (found) props.onSelectAccount(found);
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-amber-500/40 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none shadow-sm"
+                >
+                  <option value="" disabled>-- Select an Account --</option>
+                  {visibleAccounts.map(a => (
+                    <option key={a.id} value={a.name}>
+                      {unescapeText(a.name)} (AFN {Number(a.balance || a.opening_balance_afn || 0).toLocaleString()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 4 STAT CARDS IN 2x2 MOBILE GRID (ULTRA-PREMIUM GLASS CARDS) */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
                 {/* Opening Balance */}
                 <div className="p-4.5 bg-gradient-to-br from-slate-50 to-slate-100/80 dark:from-slate-800/90 dark:to-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-2 relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-600 transition-all">
                   <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">

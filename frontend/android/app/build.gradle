@@ -27,8 +27,24 @@ android {
             }
         }
     }
-    buildTypes {
+    signingConfigs {
         release {
+            storeFile file('cashbook-release-key.jks')
+            storePassword 'BawarStarCashBook2026'
+            keyAlias 'cashbook'
+            keyPassword 'BawarStarCashBook2026'
+        }
+    }
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.release
+        }
+        release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

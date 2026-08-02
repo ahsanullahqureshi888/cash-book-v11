@@ -1,5 +1,15 @@
 import { currency as formatCurrency, dateLabel } from './format';
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export function generateEmployeeLedgerPrintHtml({
   employee,
   ledgerData,
@@ -39,17 +49,17 @@ export function generateEmployeeLedgerPrintHtml({
 
     return `
       <tr class="${rowBg}">
-        <td class="col-date">${dateLabel(e.date)}</td>
-        <td class="col-period">${e.period || '-'}</td>
-        <td class="col-type"><span class="badge ${badgeClass}">${typeLabel}</span></td>
-        <td class="col-desc">${e.description || '-'}</td>
-        <td class="col-num text-blue">${acc}</td>
-        <td class="col-num text-green">${pay}</td>
-        <td class="col-num text-teal">${bonus}</td>
-        <td class="col-num text-red">${deduct}</td>
-        <td class="col-num text-amber">${adj}</td>
-        <td class="col-num text-bold ${e.running_balance < 0 ? 'text-negative' : ''}">${bal}</td>
-        <td class="col-ref">${e.reference || '-'}</td>
+        <td class="col-date">${escapeHtml(dateLabel(e.date))}</td>
+        <td class="col-period">${escapeHtml(e.period || '-')}</td>
+        <td class="col-type"><span class="badge ${badgeClass}">${escapeHtml(typeLabel)}</span></td>
+        <td class="col-desc">${escapeHtml(e.description || '-')}</td>
+        <td class="col-num text-blue">${escapeHtml(acc)}</td>
+        <td class="col-num text-green">${escapeHtml(pay)}</td>
+        <td class="col-num text-teal">${escapeHtml(bonus)}</td>
+        <td class="col-num text-red">${escapeHtml(deduct)}</td>
+        <td class="col-num text-amber">${escapeHtml(adj)}</td>
+        <td class="col-num text-bold ${e.running_balance < 0 ? 'text-negative' : ''}">${escapeHtml(bal)}</td>
+        <td class="col-ref">${escapeHtml(e.reference || '-')}</td>
       </tr>
     `;
   }).join('');
@@ -60,11 +70,19 @@ export function generateEmployeeLedgerPrintHtml({
   const totalAdjustments = formatCurrency(summary.total_adjustments || 0, currency);
   const outstandingBalance = formatCurrency(summary.outstanding_balance || 0, currency);
 
+  const safeEmpName = escapeHtml(employee?.full_name || 'Employee');
+  const safeEmpCode = escapeHtml(employee?.employee_code || `EMP-${employee?.id || ''}`);
+  const safeEmpPos = escapeHtml(employee?.position || 'N/A');
+  const safeEmpDept = escapeHtml(employee?.department || 'General');
+  const safeCompName = escapeHtml(companyName);
+  const logoHtml = companyLogo ? '<img src="' + escapeHtml(companyLogo) + '" class="company-logo" alt="Logo" />' : '';
+  const joiningDateStr = employee?.joining_date ? escapeHtml(dateLabel(employee.joining_date)) : 'Not Set';
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Salary Ledger - ${employee?.full_name || 'Employee'}</title>
+  <title>Salary Ledger - ${safeEmpName}</title>
   <style>
     @page {
       size: A4 landscape;
@@ -236,27 +254,27 @@ export function generateEmployeeLedgerPrintHtml({
   <!-- Branding Header -->
   <div class="brand-header">
     <div class="company-info">
-      ${companyLogo ? `<img src="${companyLogo}" class="company-logo" alt="Logo" />` : ''}
+      ${logoHtml}
       <div>
-        <div class="company-title">${companyName}</div>
+        <div class="company-title">${safeCompName}</div>
         <div class="company-sub">Official Employee Payroll System</div>
       </div>
     </div>
     <div class="doc-meta">
       <div class="doc-title">Employee Salary Ledger</div>
-      <div class="doc-date">Generated on: ${printedAt}</div>
+      <div class="doc-date">Generated on: ${escapeHtml(printedAt)}</div>
     </div>
   </div>
 
   <!-- Employee Profile -->
   <div class="profile-card">
     <div>
-      <span class="emp-name">${employee?.full_name || 'N/A'}</span>
-      <span class="emp-code">${employee?.employee_code || `EMP-${employee?.id || ''}`}</span>
+      <span class="emp-name">${safeEmpName}</span>
+      <span class="emp-code">${safeEmpCode}</span>
       <div class="emp-details">
-        <span>Position: <strong>${employee?.position || 'N/A'}</strong></span>
-        <span>Department: <strong>${employee?.department || 'General'}</strong></span>
-        <span>Joining Date: <strong>${employee?.joining_date ? dateLabel(employee.joining_date) : 'Not Set'}</strong></span>
+        <span>Position: <strong>${safeEmpPos}</strong></span>
+        <span>Department: <strong>${safeEmpDept}</strong></span>
+        <span>Joining Date: <strong>${joiningDateStr}</strong></span>
       </div>
     </div>
     <div style="text-align: right;">

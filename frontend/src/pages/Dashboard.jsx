@@ -13,13 +13,16 @@ import {
   TrendingUp,
   Receipt,
   CheckCircle2,
-  ListFilter
+  ListFilter,
+  UsersRound,
+  Users,
+  RefreshCw
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import SimpleCashChart from '../components/SimpleCashChart';
-import { currency, dateLabel } from '../utils/format';
+import { currency, signedCurrency, dateLabel } from '../utils/format';
 
 const companyFallback = 'Cashbook Of All Companies';
 
@@ -91,10 +94,34 @@ function QuickActions({ activeTransactionType, setActiveTransactionType, onNavig
 
         <button
           type="button"
+          className="btn-action bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300 font-bold"
+          onClick={() => onNavigate('employees')}
+        >
+          <UsersRound size={16} className="text-indigo-600 dark:text-indigo-400" /> <span>Employees & Salaries</span>
+        </button>
+
+        <button
+          type="button"
+          className="btn-action"
+          onClick={() => onNavigate('accounts')}
+        >
+          <Users size={16} /> <span>Accounts</span>
+        </button>
+
+        <button
+          type="button"
           className="btn-action"
           onClick={() => onNavigate('ledger')}
         >
           <Landmark size={16} /> <span>Account Ledger</span>
+        </button>
+
+        <button
+          type="button"
+          className="btn-action"
+          onClick={() => onNavigate('converter')}
+        >
+          <RefreshCw size={16} /> <span>Currency Converter</span>
         </button>
 
         <button
@@ -160,10 +187,17 @@ export default function Dashboard({
   const currentBalance = summary.afn_balance !== undefined ? Number(summary.afn_balance) : (cashInAfn - cashOutAfn);
   const totalTxCount = transactions.length || summary.today_transactions || 0;
 
-  const signedCurrency = (value, type = 'cash_in') => {
-    const amount = Math.abs(Number(value || 0));
-    return `${type === 'cash_in' ? '+' : '-'}${currency(amount)}`;
-  };
+  const todayCount = useMemo(() => {
+    if (summary?.today_transactions) return summary.today_transactions;
+    const todayStr = new Date().toISOString().split('T')[0];
+    return (transactions || []).filter(t => (t.date || t.created_at || '').startsWith(todayStr)).length;
+  }, [summary?.today_transactions, transactions]);
+
+  const monthCount = useMemo(() => {
+    if (summary?.monthly_transactions) return summary.monthly_transactions;
+    const monthStr = new Date().toISOString().slice(0, 7);
+    return (transactions || []).filter(t => (t.date || t.created_at || '').startsWith(monthStr)).length;
+  }, [summary?.monthly_transactions, transactions]);
 
   return (
     <div className="dashboard-page flex flex-col gap-4 sm:gap-6 w-full pb-28 sm:pb-8">
@@ -187,14 +221,14 @@ export default function Dashboard({
             <CalendarDays size={13} className="text-indigo-500 shrink-0" />
             <div className="flex flex-col">
               <span className="text-[8px] uppercase font-bold text-slate-400">Today</span>
-              <strong className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{summary.today_transactions || 0} entries</strong>
+              <strong className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{todayCount} entries</strong>
             </div>
           </div>
           <div className="stat-pill px-2.5 py-1 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2 text-xs">
             <CalendarRange size={13} className="text-indigo-500 shrink-0" />
             <div className="flex flex-col">
               <span className="text-[8px] uppercase font-bold text-slate-400">This Month</span>
-              <strong className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{summary.monthly_transactions || 0} entries</strong>
+              <strong className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{monthCount} entries</strong>
             </div>
           </div>
         </div>

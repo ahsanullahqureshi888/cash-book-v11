@@ -1,5 +1,15 @@
 import { resolveAvatarUrl } from './format';
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function formatUSD(val) {
   if (val === undefined || val === null || isNaN(val)) return '$0.00';
   const isNegative = val < 0;
@@ -41,22 +51,22 @@ export function generateExportLedgerPrintHtml({
 
     return `
       <tr class="${isEven ? 'row-even' : 'row-odd'}">
-        <td class="col-sn">${tx.sn || idx + 1}</td>
-        <td class="col-date">${tx.date || '-'}</td>
-        <td class="col-text font-bold">${tx.shipper || '-'}</td>
-        <td class="col-text">${tx.consignee || '-'}</td>
+        <td class="col-sn">${escapeHtml(tx.sn || idx + 1)}</td>
+        <td class="col-date">${escapeHtml(tx.date || '-')}</td>
+        <td class="col-text font-bold">${escapeHtml(tx.shipper || '-')}</td>
+        <td class="col-text">${escapeHtml(tx.consignee || '-')}</td>
         <td class="col-text">
-          <div class="font-bold">${tx.commodityInvoice || '-'}</div>
-          ${tx.notes ? `<div class="sub-notes dir-rtl">${tx.notes}</div>` : ''}
+          <div class="font-bold">${escapeHtml(tx.commodityInvoice || '-')}</div>
+          ${tx.notes ? `<div class="sub-notes dir-rtl">${escapeHtml(tx.notes)}</div>` : ''}
         </td>
         <td class="col-text font-mono">
-          <div>${tx.blContainer || '-'}</div>
+          <div>${escapeHtml(tx.blContainer || '-')}</div>
           ${tx.isSurrenderedBL ? `<span class="badge-surrendered">✓ SURRENDERED B/L</span>` : ''}
         </td>
-        <td class="col-qty">${tx.quantity > 0 ? tx.quantity : '-'}</td>
-        <td class="col-num text-amber">${creditStr}</td>
-        <td class="col-num text-emerald">${debitStr}</td>
-        <td class="col-num font-bold ${balanceColor}">${balanceStr}</td>
+        <td class="col-qty">${escapeHtml(tx.quantity > 0 ? tx.quantity : '-')}</td>
+        <td class="col-num text-amber">${escapeHtml(creditStr)}</td>
+        <td class="col-num text-emerald">${escapeHtml(debitStr)}</td>
+        <td class="col-num font-bold ${balanceColor}">${escapeHtml(balanceStr)}</td>
       </tr>
     `;
   }).join('');
@@ -364,15 +374,15 @@ export function generateExportLedgerPrintHtml({
         <div class="brand-box">
           ${logoHtml}
           <div class="brand-title">
-            <h1>${companyName}</h1>
-            <p>${companyTagline}</p>
+            <h1>${escapeHtml(companyName)}</h1>
+            <p>${escapeHtml(companyTagline)}</p>
           </div>
         </div>
         <div class="meta-box">
           <span class="meta-badge">STATEMENT OF ACCOUNT</span>
           <div class="meta-sub">
-            <div><strong>Lic:</strong> ${licenseNo} | <strong>Loc:</strong> ${location}</div>
-            <div><strong>Generated:</strong> ${printedAt} | <strong>Currency:</strong> USD ($)</div>
+            <div><strong>Lic:</strong> ${escapeHtml(licenseNo)} | <strong>Loc:</strong> ${escapeHtml(location)}</div>
+            <div><strong>Generated:</strong> ${escapeHtml(printedAt)} | <strong>Currency:</strong> USD ($)</div>
           </div>
         </div>
       </header>
@@ -381,8 +391,8 @@ export function generateExportLedgerPrintHtml({
       <section class="kpi-grid">
         <div class="kpi-card">
           <span>Account Holder / Client</span>
-          <strong>${clientName}</strong>
-          ${clientNameDari ? `<small class="dir-rtl">${clientNameDari}</small>` : '<small>Master Export Account</small>'}
+          <strong>${escapeHtml(clientName)}</strong>
+          ${clientNameDari ? `<small class="dir-rtl">${escapeHtml(clientNameDari)}</small>` : '<small>Master Export Account</small>'}
         </div>
         <div class="kpi-card kpi-amber">
           <span>Total Invoices (Credit)</span>
